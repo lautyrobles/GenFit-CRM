@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
+    "@hello-pangea/dnd": "^18.0.1",
     "@mercadopago/sdk-react": "^1.0.6",
     "axios": "^1.13.1",
     "jwt-decode": "^4.0.0",

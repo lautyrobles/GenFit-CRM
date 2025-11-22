@@ -15,6 +15,9 @@ import Configuracion from './Pages/Configuracion/Configuracion'
 import Soporte from './Pages/Soporte/Soporte'
 import Login from './Pages/Login/Login'
 
+// 🆕 Solo Movimientos (si corresponde)
+import Movimientos from './Pages/Movimientos/Movimientos'
+
 // ⚙️ Contexto
 import { useAuth } from './context/AuthContext'
 
@@ -24,11 +27,9 @@ const App = () => {
   return (
     <Router>
       <div className={styles.appContainer}>
-        {/* Sidebar siempre visible */}
         <Sidebar />
 
         <main className={styles.mainContent}>
-          {/* Si el usuario está logueado, renderizamos el CRM completo */}
           {user ? (
             <>
               <Header />
@@ -40,10 +41,12 @@ const App = () => {
                 <Route path="/planes" element={<Planes />} />
                 <Route path="/configuracion" element={<Configuracion />} />
                 <Route path="/soporte" element={<Soporte />} />
+
+                {/* ⚠️ Mantengo solo Movimientos */}
+                <Route path="/movimientos" element={<Movimientos />} />
               </Routes>
             </>
           ) : (
-            // Si no hay sesión → solo Login
             <Login />
           )}
         </main>

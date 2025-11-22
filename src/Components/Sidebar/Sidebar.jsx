@@ -1,6 +1,6 @@
 import React from 'react'
 import styles from './Sidebar.module.css'
-import { Home, Users, CreditCard, Gift, HelpCircle } from 'lucide-react'
+import { Home, Users, CreditCard, Gift, HelpCircle, Activity } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import userIcon from '/src/assets/user-icon.png'
 import { useAuth } from '../../context/AuthContext'
@@ -27,24 +27,22 @@ const Sidebar = () => {
   const role = user.roles?.[0] || user.role
 
   // =====================================================
-  // 🔹 Permisos de navegación según jerarquía
+  // 🔹 Permisos
   // =====================================================
-  const canViewPagos = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR"].includes(role)
-  const canViewPlanes = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR"].includes(role)
+  const canViewPagos = ["SUPER_ADMIN", "ADMIN", "ENCARGADO"].includes(role)
+  const canViewPlanes = ["SUPER_ADMIN", "ADMIN", "ENCARGADO"].includes(role)
   const canViewPermisos = ["SUPER_ADMIN", "ADMIN"].includes(role)
+  const canViewMovimientos = ["SUPER_ADMIN", "ADMIN"].includes(role)
 
   const mostrarRol = () => {
     switch (role) {
       case "SUPER_ADMIN": return "Super Admin"
       case "ADMIN": return "Admin"
-      case "SUPERVISOR": return "Encargado"
+      case "ENCARGADO": return "Encargado"
       default: return "Usuario"
     }
   }
 
-  // =====================================================
-  // 🔹 RENDER
-  // =====================================================
   return (
     <aside className={styles.sidebar}>
       <h1 className={styles.logo}>
@@ -106,6 +104,21 @@ const Sidebar = () => {
             </li>
           )}
 
+          {/* 🆕 MOVIMIENTOS - Solo Admins */}
+          {canViewMovimientos && (
+            <li>
+              <NavLink
+                to="/movimientos"
+                className={({ isActive }) =>
+                  `${styles.navItem} ${isActive ? styles.active : ''}`
+                }
+              >
+                <Activity size={18} />
+                <span>Movimientos</span>
+              </NavLink>
+            </li>
+          )}
+
           {canViewPermisos && (
             <li>
               <NavLink
@@ -131,7 +144,6 @@ const Sidebar = () => {
 
       <div className={styles.userInfo}>
         <img src={userIcon} alt="Usuario" />
-
         <div className={styles.userTitle}>
           <h4>
             {user.name} {user.lastName}
@@ -139,7 +151,6 @@ const Sidebar = () => {
           <span>{mostrarRol()}</span>
         </div>
       </div>
-
 
       <button onClick={logout} className={styles.logoutBtn}>
         Cerrar sesión
