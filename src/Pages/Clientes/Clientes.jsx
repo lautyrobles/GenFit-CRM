@@ -1,4 +1,3 @@
-// src/Pages/Clientes/Clientes.jsx
 import React, { useState, useEffect, useMemo } from "react"
 import styles from "./Clientes.module.css"
 
@@ -9,8 +8,8 @@ import {
 } from "../../assets/services/clientesService"
 import { obtenerPagosPorCliente } from "../../assets/services/pagosService"
 
-// 🧩 Tabs accesibles
-import { Tab } from "@headlessui/react"
+// 🧩 Componentes
+import RutinaNutricion from "./RutinaNutricion" // 👈 AJUSTA ESTA RUTA SI ES NECESARIO
 
 const Clientes = () => {
   const [busqueda, setBusqueda] = useState("")
@@ -29,27 +28,9 @@ const Clientes = () => {
   const [pagosLoading, setPagosLoading] = useState(false)
   const [pagosError, setPagosError] = useState("")
 
-  // 🏋️ Form Rutina (a futuro se conecta al endpoint)
-  const [rutinaForm, setRutinaForm] = useState({
-    objetivo: "",
-    frecuenciaSemanal: "",
-    nivel: "",
-    duracionSesion: "",
-    notas: "",
-  })
-
-  // 🥗 Form Nutrición (a futuro se conecta al endpoint)
-  const [dietaForm, setDietaForm] = useState({
-    objetivo: "",
-    caloriasDiarias: "",
-    tipoDieta: "",
-    restricciones: "",
-    notas: "",
-  })
-
   /* ===================================================
-     📆 Asistencia simulada (ejemplo visual)
-     =================================================== */
+      📆 Asistencia simulada (ejemplo visual)
+      =================================================== */
   const asistencia30dias = useMemo(
     () =>
       Array.from({ length: 30 }, () =>
@@ -59,8 +40,8 @@ const Clientes = () => {
   )
 
   /* ===================================================
-     📊 Resumen de asistencia (para mini-cards footer)
-     =================================================== */
+      📊 Resumen de asistencia (para mini-cards footer)
+      =================================================== */
   const asistenciaResumen = useMemo(() => {
     if (!asistencia30dias || asistencia30dias.length === 0) return null
 
@@ -78,8 +59,8 @@ const Clientes = () => {
   }, [asistencia30dias])
 
   /* ===================================================
-     🔹 Buscar cliente
-     =================================================== */
+      🔹 Buscar cliente
+      =================================================== */
   const handleBuscar = async () => {
     if (!busqueda.trim()) {
       setInputInvalido(true)
@@ -160,8 +141,8 @@ const Clientes = () => {
   }
 
   /* ===================================================
-     🔹 Limpiar búsqueda
-     =================================================== */
+      🔹 Limpiar búsqueda
+      =================================================== */
   const handleLimpiar = () => {
     setBusqueda("")
     setFiltroActivo("nombre")
@@ -178,8 +159,8 @@ const Clientes = () => {
   }
 
   /* ===================================================
-     🔹 Enter para buscar
-     =================================================== */
+      🔹 Enter para buscar
+      =================================================== */
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault()
@@ -188,16 +169,16 @@ const Clientes = () => {
   }
 
   /* ===================================================
-     🔹 Seleccionar cliente desde el modal
-     =================================================== */
+      🔹 Seleccionar cliente desde el modal
+      =================================================== */
   const handleSeleccionarCliente = (c) => {
     setCliente(c)
     setMostrarModal(false)
   }
 
   /* ===================================================
-     💳 Cargar pagos cuando cambia el cliente
-     =================================================== */
+      💳 Cargar pagos cuando cambia el cliente
+      =================================================== */
   useEffect(() => {
     const fetchPagos = async () => {
       if (!cliente?.document) return
@@ -221,46 +202,17 @@ const Clientes = () => {
   }, [cliente])
 
   /* ===================================================
-     🏋️ Handlers Rutina / 🥗 Dieta (mock por ahora)
-     =================================================== */
-  const handleRutinaChange = (e) => {
-    const { name, value } = e.target
-    setRutinaForm((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleDietaChange = (e) => {
-    const { name, value } = e.target
-    setDietaForm((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleGuardarRutina = () => {
-    console.log("💾 Guardar rutina (mock):", {
-      clienteId: cliente?.id || cliente?.document,
-      ...rutinaForm,
-    })
-    alert("Rutina guardada localmente (mock). Luego la conectamos al backend.")
-  }
-
-  const handleGuardarDieta = () => {
-    console.log("💾 Guardar dieta (mock):", {
-      clienteId: cliente?.id || cliente?.document,
-      ...dietaForm,
-    })
-    alert("Dieta guardada localmente (mock). Luego la conectamos al backend.")
-  }
-
-  /* ===================================================
-     🧩 Iniciales del avatar
-     =================================================== */
+      🧩 Iniciales del avatar
+      =================================================== */
   const getInitials = (nombre = "", apellido = "") => {
     const n = (nombre || "").trim().charAt(0).toUpperCase()
     const a = (apellido || "").trim().charAt(0).toUpperCase()
-    return (n + a) || "CL"
+    return n + a || "CL"
   }
 
   /* ===================================================
-     🔔 Badges del footer (mini-cards)
-     =================================================== */
+      🔔 Badges del footer (mini-cards)
+      =================================================== */
   const footerBadges = useMemo(() => {
     if (!cliente) return []
 
@@ -369,8 +321,8 @@ const Clientes = () => {
   }, [cliente, pagos, pagosLoading, pagosError, asistenciaResumen])
 
   /* ===================================================
-     🔹 Render principal
-     =================================================== */
+      🔹 Render principal
+      =================================================== */
   return (
     <section className={styles.clientesContainer}>
       {/* 🔍 Buscador */}
@@ -479,8 +431,7 @@ const Clientes = () => {
                   <div className={styles.infoColumn}>
                     <h4>Datos personales</h4>
                     <p>
-                      <span>Dirección:</span>{" "}
-                      {cliente?.address || "No registrada"}
+                      <span>Dirección:</span> {cliente?.address || "No registrada"}
                     </p>
                     <p>
                       <span>Teléfono:</span> {cliente?.phoneNumber || "-"}
@@ -550,9 +501,7 @@ const Clientes = () => {
                         key={idx}
                         className={`${styles.calendarDay} ${
                           dia ? styles.calendarDayActive : ""
-                        } ${
-                          dayOfWeek === 6 ? styles.calendarSunday : ""
-                        }`}
+                        } ${dayOfWeek === 6 ? styles.calendarSunday : ""}`}
                         title={`Día ${idx + 1}: ${
                           dia ? "Asistió" : "No asistió"
                         }`}
@@ -605,243 +554,9 @@ const Clientes = () => {
               </div>
 
               {/* =========================
-                  🏋️ RUTINA + 🥗 NUTRICIÓN (TABS)
+                  🏋️ RUTINA + 🥗 NUTRICIÓN (COMPONENTE SEPARADO)
                  ========================= */}
-              <div className={`${styles.card} ${styles.rutinaNutricionCard}`}>
-                <div className={styles.sectionHeaderRow}>
-                  <h3>Rutina & Nutrición</h3>
-                  <span className={styles.badgeSecondary}>
-                    Editable por Admin / Encargado
-                  </span>
-                </div>
-
-                <Tab.Group>
-                  <Tab.List className={styles.tabList}>
-                    <Tab
-                      className={({ selected }) =>
-                        `${styles.tabItem} ${
-                          selected ? styles.tabItemActive : ""
-                        }`
-                      }
-                    >
-                      Rutina
-                    </Tab>
-                    <Tab
-                      className={({ selected }) =>
-                        `${styles.tabItem} ${
-                          selected ? styles.tabItemActive : ""
-                        }`
-                      }
-                    >
-                      Nutrición
-                    </Tab>
-                  </Tab.List>
-
-                  <Tab.Panels className={styles.tabPanels}>
-                    {/* 🏋️ TAB RUTINA */}
-                    <Tab.Panel>
-                      <div className={styles.formGrid}>
-                        <div className={styles.formField}>
-                          <label htmlFor="objetivoRutina">Objetivo</label>
-                          <input
-                            id="objetivoRutina"
-                            name="objetivo"
-                            value={rutinaForm.objetivo}
-                            onChange={handleRutinaChange}
-                            placeholder="Hipertrofia, fuerza, rendimiento..."
-                          />
-                        </div>
-
-                        <div className={styles.formField}>
-                          <label htmlFor="frecuenciaSemanal">
-                            Frecuencia semanal
-                          </label>
-                          <select
-                            id="frecuenciaSemanal"
-                            name="frecuenciaSemanal"
-                            value={rutinaForm.frecuenciaSemanal}
-                            onChange={handleRutinaChange}
-                          >
-                            <option value="">Seleccionar...</option>
-                            <option value="2">2 veces/semana</option>
-                            <option value="3">3 veces/semana</option>
-                            <option value="4">4 veces/semana</option>
-                            <option value="5">5 veces/semana</option>
-                            <option value="6">6 veces/semana</option>
-                          </select>
-                        </div>
-
-                        <div className={styles.formField}>
-                          <label htmlFor="nivel">Nivel</label>
-                          <select
-                            id="nivel"
-                            name="nivel"
-                            value={rutinaForm.nivel}
-                            onChange={handleRutinaChange}
-                          >
-                            <option value="">Seleccionar...</option>
-                            <option value="principiante">Principiante</option>
-                            <option value="intermedio">Intermedio</option>
-                            <option value="avanzado">Avanzado</option>
-                          </select>
-                        </div>
-
-                        <div className={styles.formField}>
-                          <label htmlFor="duracionSesion">
-                            Duración por sesión (min)
-                          </label>
-                          <input
-                            id="duracionSesion"
-                            name="duracionSesion"
-                            type="number"
-                            min="0"
-                            value={rutinaForm.duracionSesion}
-                            onChange={handleRutinaChange}
-                            placeholder="Ej: 60"
-                          />
-                        </div>
-
-                        <div
-                          className={`${styles.formField} ${styles.formFieldFull}`}
-                        >
-                          <label htmlFor="notasRutina">
-                            Detalle de la rutina / notas
-                          </label>
-                          <textarea
-                            id="notasRutina"
-                            name="notas"
-                            rows={3}
-                            value={rutinaForm.notas}
-                            onChange={handleRutinaChange}
-                            placeholder="Listado de ejercicios, series, reps, etc."
-                          />
-                        </div>
-
-                        <div className={styles.formActions}>
-                          <button
-                            type="button"
-                            className={styles.btnPrimaryOutline}
-                            onClick={() =>
-                              setRutinaForm({
-                                objetivo: "",
-                                frecuenciaSemanal: "",
-                                nivel: "",
-                                duracionSesion: "",
-                                notas: "",
-                              })
-                            }
-                          >
-                            Limpiar
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.btnPrimary}
-                            onClick={handleGuardarRutina}
-                          >
-                            Guardar rutina
-                          </button>
-                        </div>
-                      </div>
-                    </Tab.Panel>
-
-                    {/* 🥗 TAB NUTRICIÓN */}
-                    <Tab.Panel>
-                      <div className={styles.formGrid}>
-                        <div className={styles.formField}>
-                          <label htmlFor="objetivoDieta">Objetivo</label>
-                          <input
-                            id="objetivoDieta"
-                            name="objetivo"
-                            value={dietaForm.objetivo}
-                            onChange={handleDietaChange}
-                            placeholder="Pérdida de grasa, mantenimiento, volumen..."
-                          />
-                        </div>
-
-                        <div className={styles.formField}>
-                          <label htmlFor="caloriasDiarias">
-                            Calorías diarias (aprox.)
-                          </label>
-                          <input
-                            id="caloriasDiarias"
-                            name="caloriasDiarias"
-                            type="number"
-                            min="0"
-                            value={dietaForm.caloriasDiarias}
-                            onChange={handleDietaChange}
-                            placeholder="Ej: 2200"
-                          />
-                        </div>
-
-                        <div className={styles.formField}>
-                          <label htmlFor="tipoDieta">Tipo de dieta</label>
-                          <input
-                            id="tipoDieta"
-                            name="tipoDieta"
-                            value={dietaForm.tipoDieta}
-                            onChange={handleDietaChange}
-                            placeholder="Equilibrada, low-carb, high-protein..."
-                          />
-                        </div>
-
-                        <div className={styles.formField}>
-                          <label htmlFor="restricciones">
-                            Restricciones / alergias
-                          </label>
-                          <input
-                            id="restricciones"
-                            name="restricciones"
-                            value={dietaForm.restricciones}
-                            onChange={handleDietaChange}
-                            placeholder="Sin gluten, sin lácteos, etc."
-                          />
-                        </div>
-
-                        <div
-                          className={`${styles.formField} ${styles.formFieldFull}`}
-                        >
-                          <label htmlFor="notasDieta">
-                            Detalle de la dieta / notas
-                          </label>
-                          <textarea
-                            id="notasDieta"
-                            name="notas"
-                            rows={3}
-                            value={dietaForm.notas}
-                            onChange={handleDietaChange}
-                            placeholder="Distribución de comidas, horarios, etc."
-                          />
-                        </div>
-
-                        <div className={styles.formActions}>
-                          <button
-                            type="button"
-                            className={styles.btnPrimaryOutline}
-                            onClick={() =>
-                              setDietaForm({
-                                objetivo: "",
-                                caloriasDiarias: "",
-                                tipoDieta: "",
-                                restricciones: "",
-                                notas: "",
-                              })
-                            }
-                          >
-                            Limpiar
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.btnPrimary}
-                            onClick={handleGuardarDieta}
-                          >
-                            Guardar dieta
-                          </button>
-                        </div>
-                      </div>
-                    </Tab.Panel>
-                  </Tab.Panels>
-                </Tab.Group>
-              </div>
+              <RutinaNutricion cliente={cliente} styles={styles} />
             </div>
           ) : (
             <div className={styles.centerMessage}>

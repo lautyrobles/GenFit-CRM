@@ -1,0 +1,427 @@
+/* ================================
+   🎨 ESTILO "DASHBOARD CLEAN"
+   (Basado en la imagen subida)
+   ================================ */
+
+/* La tarjeta contenedora (se fusiona con la clase .card del padre) */
+/* Usamos !important en background y shadow para asegurar que
+   sobreescriba cualquier estilo heredado y se vea igual a la imagen */
+.rutinaNutricionCard {
+  background: #ffffff !important;
+  border-radius: 12px !important; /* Bordes un poco menos agresivos que 16px */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 
+              0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+  border: 1px solid #eef0f3; /* Borde sutil */
+  padding: 24px !important; /* Más espacio interno */
+}
+
+/* ================================
+   🧩 HEADER
+   ================================ */
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f3f4f6; /* Línea separadora sutil */
+}
+
+.sectionHeaderRow h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827; /* Negro suave de la imagen */
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+/* Badge estilo "Activo" de la imagen */
+.badgeSecondary {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: #e6fffa; /* Fondo menta muy suave */
+  color: #10b981; /* Verde texto estilo "Activo" */
+  font-weight: 600;
+  border: 1px solid #d1fae5;
+}
+
+/* ================================
+   🎛️ TABS (Estilo Segmentado)
+   ================================ */
+.tabList {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 8px;
+  background: #f3f4f6; /* Fondo gris de la imagen */
+  gap: 4px;
+  margin-bottom: 20px;
+  width: 100%; /* Ocupa el ancho para parecer un panel de control */
+}
+
+.tabItem {
+  flex: 1; /* Distribución equitativa */
+  border: none;
+  background: transparent;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280; /* Gris texto secundario */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.tabItem:hover {
+  color: #374151;
+}
+
+/* Estado Activo: Blanco con sombra, como un botón flotante */
+.tabItemActive {
+  background: #ffffff;
+  color: #10b981; /* Verde de la marca */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  font-weight: 700;
+}
+
+.tabPanels {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ================================
+   📝 FORMULARIOS
+   ================================ */
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px; /* Más espacio entre inputs */
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formFieldFull {
+  grid-column: 1 / -1;
+}
+
+.formField label {
+  font-size: 13px;
+  color: #4b5563; /* Gris medio */
+  font-weight: 600;
+  margin-left: 2px;
+}
+
+/* Inputs estilo "Tabla limpia" */
+.formField input,
+.formField select,
+.formField textarea {
+  border-radius: 8px;
+  border: 1px solid #e5e7eb; /* Borde muy suave */
+  background: #f9fafb; /* Fondo ligerísimamente gris para diferenciar del blanco */
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #1f2937;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.formField textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.formField input:focus,
+.formField select:focus,
+.formField textarea:focus {
+  border-color: #10b981; /* Verde al enfocar */
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); /* Anillo verde suave */
+}
+
+/* Placeholder styling */
+.formField input::placeholder,
+.formField textarea::placeholder {
+  color: #9ca3af;
+}
+
+/* ================================
+   🟩 BOTONES DE ACCIÓN
+   ================================ */
+.formActions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+/* Botón Guardar: Imita al botón "+ Crear usuario" */
+.btnPrimary {
+  background: #10b981; /* Verde esmeralda exacto o muy cercano */
+  color: #ffffff;
+  border: none;
+  border-radius: 8px; /* Radio similar a la imagen */
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+  transition: transform 0.1s ease, background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnPrimary:hover {
+  background: #059669; /* Verde un poco más oscuro */
+}
+
+.btnPrimary:active {
+  transform: scale(0.98);
+}
+
+/* Botón Limpiar: Imita al botón "Editar" (Amarillo/Naranja) o estilo secundario */
+/* Opción A: Estilo amarillo "Editar" para mantener la paleta */
+.btnPrimaryOutline {
+  background: #fffbeb; /* Fondo amarillo muy pálido */
+  color: #d97706; /* Texto naranja/ámbar */
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnPrimaryOutline:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
+/* ================================
+   📱 RESPONSIVE
+   ================================ */
+@media (max-width: 640px) {
+  .formGrid {
+    grid-template-columns: 1fr; /* Una sola columna en móvil */
+  }
+  
+  .formActions {
+    flex-direction: column-reverse; /* Botón guardar arriba en móvil */
+  }
+  
+  .btnPrimary, .btnPrimaryOutline {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ... MANTÉN TUS ESTILOS ANTERIORES DEL FORMULARIO ... */
+
+/* ================================
+   🪟 MODAL EDITABLE (POP-UP)
+   ================================ */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.6); /* Fondo oscuro semi-transparente */
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modalContent {
+  background: #ffffff;
+  width: 90%;
+  max-width: 1000px;
+  height: 85vh; /* Alto fijo */
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modalHeader {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f9fafb;
+}
+
+.modalTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modalCloseBtn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.modalCloseBtn:hover {
+  color: #ef4444;
+}
+
+/* Cuerpo del modal con scroll */
+.modalBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  background: #ffffff;
+}
+
+.modalFooter {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* ================================
+   ✏️ INPUTS EDITABLES (Estilo limpio)
+   ================================ */
+
+.editableCard {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.editableHeader {
+  background: #f3f4f6;
+  padding: 10px 16px;
+  font-weight: 700;
+  color: #374151;
+  font-size: 14px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+}
+
+.editableRow {
+  display: grid;
+  /* Grid dinámico para ejercicios: Nombre | Sets | Reps | Descanso */
+  grid-template-columns: 2fr 0.5fr 0.5fr 0.8fr 30px; 
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #f9fafb;
+  align-items: center;
+}
+
+.editableRowDiet {
+  display: grid;
+  /* Grid para dieta: Comida | Calorías */
+  grid-template-columns: 2fr 0.5fr; 
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #f9fafb;
+  align-items: center;
+}
+
+.editableRow:last-child {
+  border-bottom: none;
+}
+
+/* El input que parece texto */
+.inputClean {
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #374151;
+  width: 100%;
+  transition: all 0.2s;
+}
+
+.inputClean:hover {
+  background: #f3f4f6;
+}
+
+.inputClean:focus {
+  background: #ffffff;
+  border-color: #10b981; /* Verde focus */
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
+
+.groupLabel {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #10b981;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  padding-left: 8px;
+}
+
+/* Botones del Modal */
+.btnSave {
+  background: #10b981;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btnSave:hover {
+  background: #059669;
+}
+
+.btnCancel {
+  background: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnCancel:hover {
+  background: #f3f4f6;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
