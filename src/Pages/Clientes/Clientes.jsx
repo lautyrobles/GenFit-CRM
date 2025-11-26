@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react"
 import styles from "./Clientes.module.css"
 
-// 📦 Servicios
+// 📦 Servicios (Ahora usando Supabase por dentro)
 import {
   obtenerClientes,
   obtenerClientePorDocumento,
@@ -9,7 +9,7 @@ import {
 import { obtenerPagosPorCliente } from "../../assets/services/pagosService"
 
 // 🧩 Componentes
-import RutinaNutricion from "./RutinaNutricion" // 👈 AJUSTA ESTA RUTA SI ES NECESARIO
+import RutinaNutricion from "./RutinaNutricion"
 
 const Clientes = () => {
   const [busqueda, setBusqueda] = useState("")
@@ -23,25 +23,25 @@ const Clientes = () => {
   const [inputInvalido, setInputInvalido] = useState(false)
   const [mensajeTemporal, setMensajeTemporal] = useState("")
 
-  // 💳 Pagos del cliente (estructura lista para futuro endpoint)
+  // 💳 Pagos
   const [pagos, setPagos] = useState([])
   const [pagosLoading, setPagosLoading] = useState(false)
   const [pagosError, setPagosError] = useState("")
 
   /* ===================================================
-      📆 Asistencia simulada (ejemplo visual)
-      =================================================== */
+     📆 Asistencia simulada (Se conectará a access_logs luego)
+     =================================================== */
   const asistencia30dias = useMemo(
     () =>
       Array.from({ length: 30 }, () =>
         Math.random() > 0.3 // 70% asistencia aprox
       ),
-    [cliente?.document]
+    [cliente?.dni]
   )
 
   /* ===================================================
-      📊 Resumen de asistencia (para mini-cards footer)
-      =================================================== */
+     📊 Resumen de asistencia
+     =================================================== */
   const asistenciaResumen = useMemo(() => {
     if (!asistencia30dias || asistencia30dias.length === 0) return null
 
@@ -49,18 +49,14 @@ const Clientes = () => {
     const presentes = asistencia30dias.filter(Boolean).length
     const ratio = (presentes / total) * 100
 
-    if (ratio >= 80) {
-      return { label: "Asistencia alta", variant: "success" }
-    }
-    if (ratio >= 50) {
-      return { label: "Asistencia media", variant: "warning" }
-    }
+    if (ratio >= 80) return { label: "Asistencia alta", variant: "success" }
+    if (ratio >= 50) return { label: "Asistencia media", variant: "warning" }
     return { label: "Asistencia baja", variant: "danger" }
   }, [asistencia30dias])
 
   /* ===================================================
-      🔹 Buscar cliente
-      =================================================== */
+     🔹 Buscar cliente
+     =================================================== */
   const handleBuscar = async () => {
     if (!busqueda.trim()) {
       setInputInvalido(true)
@@ -81,16 +77,22 @@ const Clientes = () => {
     try {
       let resultados = []
 
+      // 1. Búsqueda por DNI
       if (filtroActivo === "dni" && /^\d+$/.test(busqueda)) {
+        // Supabase buscará en la columna 'dni'
         const data = await obtenerClientePorDocumento(busqueda)
+        // Normalizamos respuesta a array
         resultados = Array.isArray(data) ? data : data ? [data] : []
+      
+      // 2. Búsqueda por Nombre (Filtrado en cliente por ahora)
       } else if (filtroActivo === "nombre") {
-        const clientes = await obtenerClientes()
+        const clientes = await obtenerClientes() // Trae todos los users con rol client
         const termino = busqueda.toLowerCase().trim()
 
         resultados = clientes.filter((c) => {
-          const nombre = c.name?.toLowerCase().trim() || ""
-          const apellido = c.lastName?.toLowerCase().trim() || ""
+          // ⚠️ CAMBIO CLAVE: first_name / last_name en lugar de name/lastName
+          const nombre = c.first_name?.toLowerCase().trim() || ""
+          const apellido = c.last_name?.toLowerCase().trim() || ""
           const nombreCompleto = `${nombre} ${apellido}`.trim()
           const nombreReverso = `${apellido} ${nombre}`.trim()
 
@@ -102,11 +104,11 @@ const Clientes = () => {
           )
         })
 
+        // Lógica para coincidencias exactas
         const mismoNombreCompleto = clientes.filter((c) => {
-          const nombre = c.name?.toLowerCase().trim() || ""
-          const apellido = c.lastName?.toLowerCase().trim() || ""
-          const nombreCompleto = `${nombre} ${apellido}`.trim()
-          return nombreCompleto === termino
+          const nombre = c.first_name?.toLowerCase().trim() || ""
+          const apellido = c.last_name?.toLowerCase().trim() || ""
+          return `${nombre} ${apellido}`.trim() === termino
         })
 
         if (mismoNombreCompleto.length > 1) {
@@ -126,6 +128,7 @@ const Clientes = () => {
         }
       }
 
+      // Resultado único encontrado
       if (resultados.length === 1) {
         setCliente(resultados[0])
         return
@@ -140,9 +143,6 @@ const Clientes = () => {
     }
   }
 
-  /* ===================================================
-      🔹 Limpiar búsqueda
-      =================================================== */
   const handleLimpiar = () => {
     setBusqueda("")
     setFiltroActivo("nombre")
@@ -158,9 +158,6 @@ const Clientes = () => {
     setPagosLoading(false)
   }
 
-  /* ===================================================
-      🔹 Enter para buscar
-      =================================================== */
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault()
@@ -168,31 +165,29 @@ const Clientes = () => {
     }
   }
 
-  /* ===================================================
-      🔹 Seleccionar cliente desde el modal
-      =================================================== */
   const handleSeleccionarCliente = (c) => {
     setCliente(c)
     setMostrarModal(false)
   }
 
   /* ===================================================
-      💳 Cargar pagos cuando cambia el cliente
-      =================================================== */
+     💳 Cargar pagos cuando cambia el cliente
+     =================================================== */
   useEffect(() => {
     const fetchPagos = async () => {
-      if (!cliente?.document) return
+      // Usamos DNI porque es tu clave de negocio, aunque Supabase prefiere ID
+      if (!cliente?.dni) return
 
       setPagosLoading(true)
       setPagosError("")
 
       try {
-        const data = await obtenerPagosPorCliente(cliente.document)
-        // Hoy te devuelve 204 ⇒ dejamos array vacío.
+        const data = await obtenerPagosPorCliente(cliente.dni)
         setPagos(Array.isArray(data) ? data : [])
       } catch (err) {
-        console.warn("⚠️ No se pudieron obtener pagos:", err.message)
-        setPagosError("No se pudieron cargar los pagos del cliente.")
+        console.warn("⚠️ Sin historial de pagos (aún no implementado tabla pagos):", err.message)
+        // No mostramos error rojo, solo array vacío
+        setPagos([]) 
       } finally {
         setPagosLoading(false)
       }
@@ -202,8 +197,8 @@ const Clientes = () => {
   }, [cliente])
 
   /* ===================================================
-      🧩 Iniciales del avatar
-      =================================================== */
+     🧩 Iniciales del avatar (Adaptado a first_name)
+     =================================================== */
   const getInitials = (nombre = "", apellido = "") => {
     const n = (nombre || "").trim().charAt(0).toUpperCase()
     const a = (apellido || "").trim().charAt(0).toUpperCase()
@@ -211,58 +206,36 @@ const Clientes = () => {
   }
 
   /* ===================================================
-      🔔 Badges del footer (mini-cards)
-      =================================================== */
+     🔔 Badges del footer
+     =================================================== */
   const footerBadges = useMemo(() => {
     if (!cliente) return []
 
     const badges = []
 
     // Estado del usuario
-    const estado = cliente.status || "Activo"
+    const estado = cliente.enabled ? "Activo" : "Inactivo" // Usamos boolean 'enabled' de Supabase
     if (estado === "Activo") {
-      badges.push({
-        label: "Cliente activo",
-        variant: "success",
-      })
+      badges.push({ label: "Cliente activo", variant: "success" })
     } else {
-      badges.push({
-        label: "Cliente inactivo",
-        variant: "danger",
-      })
+      badges.push({ label: "Cliente inactivo", variant: "danger" })
     }
 
-    // Plan
-    if (cliente.namePlan) {
-      badges.push({
-        label: `Plan: ${cliente.namePlan}`,
-        variant: "info",
-      })
+    // Plan (Nota: Esto requerirá un JOIN en el futuro)
+    // Por ahora mostramos si tiene o no
+    if (cliente.plan_name) {
+       badges.push({ label: `Plan: ${cliente.plan_name}`, variant: "info" })
     } else {
-      badges.push({
-        label: "Sin plan asignado",
-        variant: "warning",
-      })
+       badges.push({ label: "Sin plan visual", variant: "warning" })
     }
 
-    // Contacto (mail + teléfono)
+    // Contacto
     const tieneEmail = !!cliente.email
-    const tieneTelefono = !!cliente.phoneNumber
-    if (tieneEmail && tieneTelefono) {
-      badges.push({
-        label: "Contacto completo",
-        variant: "success",
-      })
-    } else if (tieneEmail || tieneTelefono) {
-      badges.push({
-        label: "Contacto parcial",
-        variant: "warning",
-      })
+    const tieneTelefono = !!cliente.phone // Asumiendo que agregaremos phone luego
+    if (tieneEmail) {
+      badges.push({ label: "Email verificado", variant: "success" })
     } else {
-      badges.push({
-        label: "Sin datos de contacto",
-        variant: "danger",
-      })
+      badges.push({ label: "Sin contacto", variant: "danger" })
     }
 
     // Asistencia
@@ -273,56 +246,17 @@ const Clientes = () => {
       })
     }
 
-    // Pagos (estructura para cuando haya API real)
-    if (pagosLoading) {
-      badges.push({
-        label: "Cargando pagos...",
-        variant: "info",
-      })
-    } else if (pagosError) {
-      badges.push({
-        label: "Error al cargar pagos",
-        variant: "danger",
-      })
-    } else if (pagos.length > 0) {
-      badges.push({
-        label: `Pagos registrados (${pagos.length})`,
-        variant: "success",
-      })
-    } else {
-      badges.push({
-        label: "Sin registros de pago",
-        variant: "warning",
-      })
-    }
-
     // ID interno
-    if (cliente.id || cliente._id || cliente.document) {
-      badges.push({
-        label: `ID: ${cliente.id || cliente._id || cliente.document}`,
-        variant: "neutral",
-      })
-    }
-
-    // Última actualización (si existe)
-    if (cliente.updatedAt) {
-      const fecha = new Date(cliente.updatedAt).toLocaleString("es-AR", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-      badges.push({
-        label: `Actualizado: ${fecha}`,
-        variant: "neutral",
-      })
+    if (cliente.dni) {
+      badges.push({ label: `DNI: ${cliente.dni}`, variant: "neutral" })
     }
 
     return badges
-  }, [cliente, pagos, pagosLoading, pagosError, asistenciaResumen])
+  }, [cliente, asistenciaResumen])
 
   /* ===================================================
-      🔹 Render principal
-      =================================================== */
+     🔹 Render principal
+     =================================================== */
   return (
     <section className={styles.clientesContainer}>
       {/* 🔍 Buscador */}
@@ -376,7 +310,7 @@ const Clientes = () => {
       {loading && (
         <div className={styles.loaderContainer}>
           <div className={styles.loader}></div>
-          <p>Buscando cliente...</p>
+          <p>Buscando cliente en base de datos...</p>
         </div>
       )}
 
@@ -396,16 +330,16 @@ const Clientes = () => {
                 <header className={styles.infoHeader}>
                   <div className={styles.infoMain}>
                     <div className={styles.avatar}>
-                      {getInitials(cliente?.name, cliente?.lastName)}
+                      {getInitials(cliente?.first_name, cliente?.last_name)}
                     </div>
 
                     <div>
                       <h3>
-                        {cliente?.name || "Sin nombre"}{" "}
-                        {cliente?.lastName || ""}
+                        {cliente?.first_name || "Sin nombre"}{" "}
+                        {cliente?.last_name || ""}
                       </h3>
                       <p className={styles.infoSubtitle}>
-                        DNI {cliente?.document || "-"}
+                        DNI {cliente?.dni || "-"}
                       </p>
                     </div>
                   </div>
@@ -413,16 +347,12 @@ const Clientes = () => {
                   <div className={styles.infoTags}>
                     <span
                       className={
-                        (cliente?.status || "Activo") === "Activo"
+                        cliente?.enabled
                           ? styles.badgeEstadoActivo
                           : styles.badgeEstadoInactivo
                       }
                     >
-                      {cliente?.status || "Activo"}
-                    </span>
-
-                    <span className={styles.planPill}>
-                      {cliente?.namePlan || "Sin plan asignado"}
+                      {cliente?.enabled ? "Activo" : "Inactivo"}
                     </span>
                   </div>
                 </header>
@@ -431,38 +361,32 @@ const Clientes = () => {
                   <div className={styles.infoColumn}>
                     <h4>Datos personales</h4>
                     <p>
-                      <span>Dirección:</span> {cliente?.address || "No registrada"}
+                      <span>ID Sistema:</span> {cliente?.id?.slice(0, 8)}...
                     </p>
                     <p>
-                      <span>Teléfono:</span> {cliente?.phoneNumber || "-"}
+                      <span>Altura:</span> {cliente?.height_cm || "-"} cm
+                    </p>
+                    <p>
+                      <span>Peso:</span> {cliente?.weight_kg || "-"} kg
                     </p>
                   </div>
 
                   <div className={styles.infoColumn}>
-                    <h4>Contacto & fiscal</h4>
+                    <h4>Contacto</h4>
                     <p>
                       <span>Email:</span> {cliente?.email || "-"}
-                    </p>
-                    <p>
-                      <span>CUIT:</span> {cliente?.cuit || "No registrado"}
                     </p>
                   </div>
                 </div>
 
-                {/* 🔔 Mini-cards de estado del cliente */}
+                {/* 🔔 Footer Badges */}
                 <footer className={styles.infoFooter}>
                   {footerBadges.map((badge, index) => {
                     let variantClass = styles.footerBadgeNeutral
-
-                    if (badge.variant === "success") {
-                      variantClass = styles.footerBadgeSuccess
-                    } else if (badge.variant === "warning") {
-                      variantClass = styles.footerBadgeWarning
-                    } else if (badge.variant === "danger") {
-                      variantClass = styles.footerBadgeDanger
-                    } else if (badge.variant === "info") {
-                      variantClass = styles.footerBadgeInfo
-                    }
+                    if (badge.variant === "success") variantClass = styles.footerBadgeSuccess
+                    else if (badge.variant === "warning") variantClass = styles.footerBadgeWarning
+                    else if (badge.variant === "danger") variantClass = styles.footerBadgeDanger
+                    else if (badge.variant === "info") variantClass = styles.footerBadgeInfo
 
                     return (
                       <span
@@ -477,22 +401,18 @@ const Clientes = () => {
               </section>
 
               {/* =========================
-                  📆 ASISTENCIA
+                  📆 ASISTENCIA (Placeholder)
                  ========================= */}
               <div className={`${styles.card} ${styles.asistenciaCard}`}>
                 <div className={styles.sectionHeaderRow}>
-                  <h3>Asistencia (últimos 30 días)</h3>
+                  <h3>Asistencia (Simulada)</h3>
                   <span className={styles.badgeSecondary}>Vista rápida</span>
                 </div>
-
                 <div className={styles.weekDays}>
                   {["L", "M", "X", "J", "V", "S", "D"].map((d, idx) => (
-                    <div key={idx} className={styles.weekDay}>
-                      {d}
-                    </div>
+                    <div key={idx} className={styles.weekDay}>{d}</div>
                   ))}
                 </div>
-
                 <div className={styles.calendar}>
                   {asistencia30dias.map((dia, idx) => {
                     const dayOfWeek = idx % 7
@@ -502,9 +422,6 @@ const Clientes = () => {
                         className={`${styles.calendarDay} ${
                           dia ? styles.calendarDayActive : ""
                         } ${dayOfWeek === 6 ? styles.calendarSunday : ""}`}
-                        title={`Día ${idx + 1}: ${
-                          dia ? "Asistió" : "No asistió"
-                        }`}
                       >
                         {idx + 1}
                       </div>
@@ -514,47 +431,29 @@ const Clientes = () => {
               </div>
 
               {/* =========================
-                  💳 PAGOS
+                  💳 PAGOS (Placeholder)
                  ========================= */}
               <div className={`${styles.card} ${styles.pagosCard}`}>
                 <div className={styles.sectionHeaderRow}>
                   <h3>Historial de pagos</h3>
-                  <span className={styles.badgeSecondary}>
-                    Últimos movimientos
-                  </span>
                 </div>
-
                 {pagosLoading ? (
-                  <p className={styles.placeholderText}>Cargando pagos...</p>
-                ) : pagosError ? (
-                  <p className={styles.placeholderText}>{pagosError}</p>
+                  <p className={styles.placeholderText}>Cargando...</p>
                 ) : pagos.length > 0 ? (
                   <ul className={styles.listaPagos}>
-                    {pagos.map((pago, index) => (
-                      <li key={index}>
-                        <div>
-                          <span className={styles.fechaPago}>
-                            {pago.fechaPago || "Sin fecha"}
-                          </span>
-                          <span className={styles.medioPago}>
-                            {pago.metodoPago || "Método no especificado"}
-                          </span>
-                        </div>
-                        <span className={styles.montoPago}>
-                          ${pago.monto || 0}
-                        </span>
-                      </li>
+                    {pagos.map((p, i) => (
+                      <li key={i}>{/* Renderizar pago real aqui */}</li>
                     ))}
                   </ul>
                 ) : (
                   <p className={styles.placeholderText}>
-                    💳 Sin registros de pago disponibles
+                    Sin pagos registrados en base de datos.
                   </p>
                 )}
               </div>
 
               {/* =========================
-                  🏋️ RUTINA + 🥗 NUTRICIÓN (COMPONENTE SEPARADO)
+                  🏋️ RUTINA + NUTRICIÓN
                  ========================= */}
               <RutinaNutricion cliente={cliente} styles={styles} />
             </div>
@@ -578,20 +477,16 @@ const Clientes = () => {
                   <th>Nombre</th>
                   <th>Apellido</th>
                   <th>Email</th>
-                  <th>Teléfono</th>
-                  <th>Plan</th>
                   <th>Acción</th>
                 </tr>
               </thead>
               <tbody>
                 {clientesCoincidentes.map((c) => (
-                  <tr key={c.document}>
-                    <td>{c.document}</td>
-                    <td>{c.name}</td>
-                    <td>{c.lastName}</td>
+                  <tr key={c.id}>
+                    <td>{c.dni}</td>
+                    <td>{c.first_name}</td>
+                    <td>{c.last_name}</td>
                     <td>{c.email}</td>
-                    <td>{c.phoneNumber}</td>
-                    <td>{c.namePlan || "-"}</td>
                     <td>
                       <button
                         onClick={() => handleSeleccionarCliente(c)}
@@ -604,7 +499,6 @@ const Clientes = () => {
                 ))}
               </tbody>
             </table>
-
             <div className={styles.modalFooter}>
               <button
                 onClick={() => setMostrarModal(false)}

@@ -1,13 +1,16 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom"; // 👈 Importante para redirigir
 import styles from "./Login.module.css";
 import { useAuth } from "../../context/AuthContext";
 
 const Login = () => {
   const { login } = useAuth();
+  const navigate = useNavigate(); // 👈 Hook para navegar
   const [loading, setLoading] = useState(false);
 
+  // Supabase usa EMAIL, no "usuario" genérico
   const [formData, setFormData] = useState({
-    usuario: "",
+    email: "",
     password: "",
   });
 
@@ -23,12 +26,20 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const ok = await login(formData);
+      // Enviamos 'email' como 'usuario' porque así lo espera tu AuthContext
+      const ok = await login({ 
+        usuario: formData.email, 
+        password: formData.password 
+      });
 
-      if (!ok) {
+      if (ok) {
+        // ✅ Login exitoso -> Vamos al Dashboard
+        navigate("/"); 
+      } else {
         setError("Credenciales incorrectas o error de conexión.");
       }
     } catch (err) {
+      // Aquí capturamos errores como "Tu cuenta es de alumno..."
       setError(err.message || "Error al iniciar sesión.");
     } finally {
       setLoading(false);
@@ -43,12 +54,13 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.inputGroup}>
-            <label htmlFor="usuario">Usuario</label>
+            <label htmlFor="email">Correo Electrónico</label>
             <input
-              type="text"
-              name="usuario"
-              placeholder="Usuario"
-              value={formData.usuario}
+              type="email" 
+              name="email"
+              id="email"
+              placeholder="admin@fitseo.com"
+              value={formData.email}
               onChange={handleChange}
               required
             />
@@ -59,6 +71,7 @@ const Login = () => {
             <input
               type="password"
               name="password"
+              id="password"
               placeholder="Contraseña"
               value={formData.password}
               onChange={handleChange}

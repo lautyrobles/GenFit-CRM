@@ -1,56 +1,22 @@
-// 📁 src/assets/services/clientesService.js
-import api from "./api";
+import { supabase } from "./supabaseClient";
 
 /* ===================================================
    🔹 OBTENER TODOS LOS CLIENTES
    =================================================== */
 export const obtenerClientes = async () => {
   try {
-    console.log("📡 Obteniendo clientes desde el backend...");
-    const res = await api.get("/clients");
-    console.log("✅ Clientes recibidos:", res.data);
-    return res.data;
-  } catch (error) {
-    console.error(
-      "❌ Error al obtener clientes:",
-      error.response?.data || error.message
-    );
-    throw error;
-  }
-};
+    console.log("📡 Obteniendo clientes desde Supabase...");
+    
+    // Filtramos por rol CLIENT para no traer admins
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('role', 'CLIENT');
 
-/* ===================================================
-   🔹 OBTENER UN CLIENTE POR DOCUMENTO (DNI)
-   =================================================== */
-export const obtenerClientePorDocumento = async (documento) => {
-  try {
-    console.log(`🔍 Buscando cliente con documento ${documento}...`);
-    const res = await api.get(`/clients/${documento}`);
-    console.log("✅ Cliente encontrado:", res.data);
-    return res.data;
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error(
-      `❌ Error al obtener cliente ${documento}:`,
-      error.response?.data || error.message
-    );
-    throw error;
-  }
-};
-
-/* ===================================================
-   🔹 BUSCAR CLIENTES POR NOMBRE
-   =================================================== */
-export const buscarClientesPorNombre = async (nombre) => {
-  try {
-    console.log(`🔍 Buscando clientes por nombre: ${nombre}`);
-    const res = await api.get(`/clients/search?name=${nombre}`);
-    console.log("✅ Resultados de búsqueda:", res.data);
-    return res.data;
-  } catch (error) {
-    console.error(
-      "❌ Error al buscar clientes por nombre:",
-      error.response?.data || error.message
-    );
+    console.error("❌ Error al obtener clientes:", error.message);
     throw error;
   }
 };
@@ -60,51 +26,60 @@ export const buscarClientesPorNombre = async (nombre) => {
    =================================================== */
 export const crearCliente = async (cliente) => {
   try {
-    console.log("📦 Enviando cliente al backend:", cliente);
-    const res = await api.post("/clients", cliente);
-    console.log("✅ Cliente creado correctamente:", res.data);
-    return res.data;
+    // ⚠️ ASIGNACIÓN AUTOMÁTICA DE PASSWORD
+    // Creamos una copia del cliente y le asignamos el DNI como contraseña
+    const clienteConPass = {
+      ...cliente,
+      password: String(cliente.dni) // Convertimos a string por seguridad
+    };
+
+    const { data, error } = await supabase
+      .from('users')
+      .insert([clienteConPass])
+      .select();
+
+    if (error) throw error;
+    return data[0];
   } catch (error) {
-    console.error(
-      "❌ Error al crear cliente:",
-      error.response?.data || error.message
-    );
+    console.error("❌ Error crear cliente:", error.message);
     throw error;
   }
 };
 
 /* ===================================================
-   🔹 ACTUALIZAR UN CLIENTE EXISTENTE
+   🔹 ACTUALIZAR CLIENTE
    =================================================== */
-export const actualizarCliente = async (idClient, cliente) => {
+export const actualizarCliente = async (id, datos) => {
   try {
-    console.log(`🛠️ Actualizando cliente ID ${idClient}...`);
-    const res = await api.put(`/clients/${idClient}`, cliente);
-    console.log("✅ Cliente actualizado:", res.data);
-    return res.data;
+    const { data, error } = await supabase
+      .from('users')
+      .update(datos)
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error(
-      `❌ Error al actualizar cliente ${idClient}:`,
-      error.response?.data || error.message
-    );
+    console.error("❌ Error actualizar cliente:", error.message);
     throw error;
   }
 };
 
 /* ===================================================
-   🔹 ELIMINAR UN CLIENTE
+   🔹 BUSCAR POR DNI (Auxiliar)
    =================================================== */
-export const eliminarCliente = async (idClient) => {
+export const obtenerClientePorDocumento = async (dni) => {
   try {
-    console.log(`🗑️ Eliminando cliente ID ${idClient}...`);
-    const res = await api.delete(`/clients/${idClient}`);
-    console.log("✅ Cliente eliminado:", res.data);
-    return res.data;
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('dni', dni)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // Ignoramos error "no encontrado"
+    return data;
   } catch (error) {
-    console.error(
-      `❌ Error al eliminar cliente ${idClient}:`,
-      error.response?.data || error.message
-    );
-    throw error;
+    console.error("❌ Error buscar DNI:", error.message);
+    return null;
   }
 };

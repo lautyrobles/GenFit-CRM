@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import styles from "./CustomersTable.module.css";
 import Loader from "../../Components/Loader/Loader";
 
+// 📦 Servicios (Ya conectados a Supabase)
 import {
   obtenerClientes,
   crearCliente,
@@ -20,16 +21,16 @@ const CustomersTable = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const itemsPerPage = mostrarFormulario ? 6 : 7; // fijo para evitar confusión
+  const itemsPerPage = mostrarFormulario ? 6 : 7;
 
-  // Estado inicial del usuario
+  // Estado del formulario (Adaptado a campos de Supabase)
   const [nuevoUsuario, setNuevoUsuario] = useState({
-    document: "",
-    name: "",
-    lastName: "",
+    dni: "",         // Antes document
+    first_name: "",  // Antes name
+    last_name: "",   // Antes lastName
     email: "",
-    phoneNumber: "",
-    idPlan: "",
+    phone: "",       // Antes phoneNumber
+    plan_id: "",     // ID del plan seleccionado
   });
 
   /* ===================================================
@@ -42,10 +43,11 @@ const CustomersTable = () => {
         obtenerClientes(),
         obtenerPlanes(),
       ]);
-      setUsuarios(clientesData);
-      setPlanesDisponibles(planesData);
+      setUsuarios(clientesData || []);
+      setPlanesDisponibles(planesData || []);
     } catch (error) {
       console.error("❌ Error al cargar datos:", error);
+      mostrarToast("Error de conexión con la base de datos", "error");
     } finally {
       setLoading(false);
     }
@@ -56,21 +58,18 @@ const CustomersTable = () => {
   }, []);
 
   /* ===================================================
-     🔹 Resolver nombre del plan aunque backend no lo mande
+     🔹 Resolver nombre del plan
      =================================================== */
   const resolverNombrePlan = (u) => {
-    if (u.namePlan) return u.namePlan;
+    // 1. Si el usuario ya trae el nombre (por alguna vista SQL futura)
+    if (u.plan_name) return u.plan_name;
 
-    if (u.idPlan) {
-      const plan = planesDisponibles.find((p) => p.idPlan === u.idPlan);
-      if (plan) return plan.namePlan;
-    }
-
-    if (u.currentPlan?.idPlan) {
-      const plan = planesDisponibles.find(
-        (p) => p.idPlan === u.currentPlan.idPlan
-      );
-      if (plan) return plan.namePlan;
+    // 2. Si tenemos el ID del plan en el usuario (simulado)
+    const idBusqueda = u.plan_id || (u.subscription && u.subscription.plan_id);
+    
+    if (idBusqueda) {
+      const plan = planesDisponibles.find((p) => p.id === idBusqueda);
+      if (plan) return plan.name;
     }
 
     return "-";
@@ -81,12 +80,12 @@ const CustomersTable = () => {
      =================================================== */
   const limpiarFormulario = () => {
     setNuevoUsuario({
-      document: "",
-      name: "",
-      lastName: "",
+      dni: "",
+      first_name: "",
+      last_name: "",
       email: "",
-      phoneNumber: "",
-      idPlan: "",
+      phone: "",
+      plan_id: "",
     });
   };
 
@@ -120,13 +119,12 @@ const CustomersTable = () => {
      =================================================== */
   const validarCampos = () => {
     if (
-      !nuevoUsuario.document ||
-      !nuevoUsuario.name ||
-      !nuevoUsuario.lastName ||
-      !nuevoUsuario.email ||
-      !nuevoUsuario.idPlan
+      !nuevoUsuario.dni ||
+      !nuevoUsuario.first_name ||
+      !nuevoUsuario.last_name ||
+      !nuevoUsuario.email
     ) {
-      mostrarToast("⚠️ Todos los campos son obligatorios.", "error");
+      mostrarToast("⚠️ DNI, Nombre, Apellido y Email son obligatorios.", "error");
       return false;
     }
     return true;
@@ -142,54 +140,58 @@ const CustomersTable = () => {
     try {
       setSaving(true);
 
+      // Objeto mapeado para Supabase
       const clienteBody = {
-        document: parseInt(nuevoUsuario.document),
-        name: nuevoUsuario.name,
-        lastName: nuevoUsuario.lastName,
+        dni: nuevoUsuario.dni,
+        first_name: nuevoUsuario.first_name,
+        last_name: nuevoUsuario.last_name,
         email: nuevoUsuario.email,
-        phoneNumber: nuevoUsuario.phoneNumber,
-        isActive: true,
-        currentPlan: { idPlan: parseInt(nuevoUsuario.idPlan) },
+        // Si tienes campo phone en DB, descomenta:
+        // phone: nuevoUsuario.phone, 
+        enabled: true, // Por defecto activo
+        role: 'CLIENT'
+        // Nota: El plan_id se debería manejar creando una fila en la tabla 'subscriptions'
       };
 
       if (editIndex !== null) {
+        // --- ACTUALIZAR ---
         const usuarioEditado = usuarios[editIndex];
-        await actualizarCliente(usuarioEditado.document, clienteBody);
+        // Usamos el ID (UUID) para actualizar, no el DNI
+        await actualizarCliente(usuarioEditado.id, clienteBody);
         mostrarToast("✅ Usuario actualizado correctamente");
       } else {
+        // --- CREAR ---
         await crearCliente(clienteBody);
         mostrarToast("✅ Usuario creado exitosamente");
       }
 
-      await fetchData();
+      await fetchData(); // Recargar tabla
       limpiarFormulario();
       setMostrarFormulario(false);
       setEditIndex(null);
     } catch (error) {
       console.error("❌ Error en el envío:", error);
-      mostrarToast("❌ Error al guardar usuario", "error");
+      mostrarToast("❌ Error al guardar usuario. Verifica si el DNI o Email ya existen.", "error");
     } finally {
       setSaving(false);
     }
   };
 
   /* ===================================================
-     🔹 Editar usuario
+     🔹 Editar usuario (Cargar datos al form)
      =================================================== */
   const editarUsuario = (index) => {
     const cliente = usuarios[index];
 
-    const planSeleccionado =
-      planesDisponibles.find((p) => p.namePlan === cliente.namePlan)?.idPlan ||
-      "";
-
+    // Intentamos buscar el plan actual
+    // Nota: Esto mejorará cuando hagamos el JOIN con subscriptions
     setNuevoUsuario({
-      document: cliente.document,
-      name: cliente.name,
-      lastName: cliente.lastName,
-      email: cliente.email,
-      phoneNumber: cliente.phoneNumber,
-      idPlan: planSeleccionado,
+      dni: cliente.dni || "",
+      first_name: cliente.first_name || "",
+      last_name: cliente.last_name || "",
+      email: cliente.email || "",
+      phone: cliente.phone || "",
+      plan_id: cliente.plan_id || "", 
     });
 
     setEditIndex(index);
@@ -210,7 +212,7 @@ const CustomersTable = () => {
     currentPage > 1 && setCurrentPage(currentPage - 1);
 
   /* ===================================================
-     🔹 Render
+     🔹 Render UI
      =================================================== */
   return (
     <>
@@ -251,26 +253,26 @@ const CustomersTable = () => {
               <form className={styles.formContainer} onSubmit={handleSubmit}>
                 <input
                   type="text"
-                  name="document"
+                  name="dni"
                   placeholder="DNI"
-                  value={nuevoUsuario.document}
+                  value={nuevoUsuario.dni}
                   onChange={handleChange}
-                  disabled={editIndex !== null}
+                  // En Supabase a veces es mejor no editar DNI si es único, pero lo dejo habilitado
                 />
 
                 <input
                   type="text"
-                  name="name"
+                  name="first_name"
                   placeholder="Nombre"
-                  value={nuevoUsuario.name}
+                  value={nuevoUsuario.first_name}
                   onChange={handleChange}
                 />
 
                 <input
                   type="text"
-                  name="lastName"
+                  name="last_name"
                   placeholder="Apellido"
-                  value={nuevoUsuario.lastName}
+                  value={nuevoUsuario.last_name}
                   onChange={handleChange}
                 />
 
@@ -284,21 +286,21 @@ const CustomersTable = () => {
 
                 <input
                   type="text"
-                  name="phoneNumber"
+                  name="phone"
                   placeholder="Teléfono"
-                  value={nuevoUsuario.phoneNumber}
+                  value={nuevoUsuario.phone}
                   onChange={handleChange}
                 />
 
                 <select
-                  name="idPlan"
-                  value={nuevoUsuario.idPlan}
+                  name="plan_id"
+                  value={nuevoUsuario.plan_id}
                   onChange={handleChange}
                 >
                   <option value="">Seleccionar plan...</option>
                   {planesDisponibles.map((plan) => (
-                    <option key={plan.idPlan} value={plan.idPlan}>
-                      {plan.namePlan} — ${plan.value}
+                    <option key={plan.id} value={plan.id}>
+                      {plan.name} — ${plan.price}
                     </option>
                   ))}
                 </select>
@@ -330,18 +332,20 @@ const CustomersTable = () => {
                     {usuariosPagina.map((u, i) => {
                       const indexReal = inicio + i;
                       const isEditing = editIndex === indexReal;
-                      const isActive = u.status === "Activo";
+                      // Supabase usa 'enabled' (boolean), lo mapeamos a texto
+                      const statusTexto = u.enabled ? "Activo" : "Inactivo";
+                      const isActive = u.enabled;
 
                       return (
                         <tr
-                          key={u.document}
+                          key={u.id} // Usamos UUID como key
                           className={isEditing ? styles.editingRow : ""}
                         >
-                          <td>{u.document}</td>
-                          <td>{u.name}</td>
-                          <td>{u.lastName}</td>
+                          <td>{u.dni || "-"}</td>
+                          <td>{u.first_name}</td>
+                          <td>{u.last_name}</td>
                           <td>{u.email}</td>
-                          <td>{u.phoneNumber}</td>
+                          <td>{u.phone || "-"}</td>
 
                           <td>{resolverNombrePlan(u)}</td>
 
@@ -351,7 +355,7 @@ const CustomersTable = () => {
                                 isActive ? styles.active : styles.inactive
                               }
                             >
-                              {u.status}
+                              {statusTexto}
                             </span>
                           </td>
 

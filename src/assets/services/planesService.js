@@ -1,15 +1,21 @@
-// src/assets/services/planesService.js
-import api from "./api";
+import { supabase } from "./supabaseClient";
 
 /* =========================================
    🟢 OBTENER TODOS LOS PLANES
 ========================================= */
 export const obtenerPlanes = async () => {
   try {
-    const res = await api.get("/plans");
-    return res.data; // Backend devuelve: [{ idPlan, namePlan, status, ... }]
+    console.log("📡 Obteniendo planes desde Supabase...");
+    
+    const { data, error } = await supabase
+      .from('plans')
+      .select('*')
+      .order('price', { ascending: true }); // Ordenamos por precio
+
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error("❌ Error al obtener planes:", error.response?.data || error.message);
+    console.error("❌ Error al obtener planes:", error.message);
     throw error;
   }
 };
@@ -19,10 +25,15 @@ export const obtenerPlanes = async () => {
 ========================================= */
 export const crearPlan = async (plan) => {
   try {
-    const res = await api.post("/plans", plan);
-    return res.data;
+    const { data, error } = await supabase
+      .from('plans')
+      .insert([plan])
+      .select();
+
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error("❌ Error al crear plan:", error.response?.data || error.message);
+    console.error("❌ Error al crear plan:", error.message);
     throw error;
   }
 };
@@ -32,46 +43,35 @@ export const crearPlan = async (plan) => {
 ========================================= */
 export const actualizarPlan = async (id, plan) => {
   try {
-    const res = await api.put(`/plans/${id}`, plan);
-    return res.data;
+    const { data, error } = await supabase
+      .from('plans')
+      .update(plan)
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error("❌ Error al actualizar plan:", error.response?.data || error.message);
+    console.error("❌ Error al actualizar plan:", error.message);
     throw error;
   }
 };
 
 /* =========================================
    🟣 CAMBIAR ESTADO
-   ⚠️ Azure requiere YES/NO en query param:
-   /plans/{id}/status?active=true|false
 ========================================= */
 export const cambiarEstadoPlan = async (id, active) => {
   try {
-    const booleanStr = active ? "true" : "false";
+    const { data, error } = await supabase
+      .from('plans')
+      .update({ active: active })
+      .eq('id', id)
+      .select();
 
-    console.log(`🔁 Cambiando estado del plan ${id} → ${booleanStr}`);
-
-    const res = await api.patch(`/plans/${id}/status?active=${booleanStr}`);
-
-    return res.data;
+    if (error) throw error;
+    return data;
   } catch (error) {
-    console.error(
-      "❌ Error al cambiar estado:",
-      error.response?.data || error.message
-    );
-    throw error;
-  }
-};
-
-/* =========================================
-   🔵 FILTRAR POR ESTADO
-========================================= */
-export const filtrarPlanesPorEstado = async (activo = true) => {
-  try {
-    const res = await api.get(`/plans/filter?active=${activo}`);
-    return res.data;
-  } catch (error) {
-    console.error("❌ Error al filtrar planes:", error.response?.data || error.message);
+    console.error("❌ Error al cambiar estado:", error.message);
     throw error;
   }
 };

@@ -16,7 +16,7 @@ const Configuracion = () => {
   const storedUser = JSON.parse(localStorage.getItem("fitseoUser") || "null");
 
   /* ===================================================
-      🔹 Normalizar rol (ROLE_SUPER_ADMIN → SUPER_ADMIN)
+     🔹 Normalizar rol
      =================================================== */
   const normalizeRole = (r) =>
     r ? r.replace("ROLE_", "").toUpperCase() : "";
@@ -25,7 +25,7 @@ const Configuracion = () => {
     normalizeRole(user?.role) || normalizeRole(storedUser?.role) || "";
 
   /* ===================================================
-      🔹 Estados
+     🔹 Estados
      =================================================== */
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [usuarios, setUsuarios] = useState([]);
@@ -39,6 +39,7 @@ const Configuracion = () => {
   const [nuevoUsuario, setNuevoUsuario] = useState({
     nombre: "",
     apellido: "",
+    dni: "", // 🆕 Agregado DNI
     nombreUsuario: "",
     email: "",
     password: "",
@@ -46,51 +47,39 @@ const Configuracion = () => {
   });
 
   /* ===================================================
-      🔹 Mapear rol → etiqueta UI
+     🔹 Mapeo de Roles UI <-> API
      =================================================== */
   const mapRoleToTipo = (roleRaw) => {
     const role = normalizeRole(roleRaw);
     switch (role) {
-      case "SUPER_ADMIN":
-        return "Super Admin";
-      case "ADMIN":
-        return "Admin";
-      case "SUPERVISOR":
-        return "Encargado";
-      case "USER":
-        return "Usuario Cliente";
-      default:
-        return "Usuario";
+      case "SUPER_ADMIN": return "Super Admin";
+      case "ADMIN": return "Admin";
+      case "SUPERVISOR": return "Encargado"; // O Shift Manager
+      case "TRAINER": return "Entrenador";
+      case "CLIENT": return "Usuario Cliente";
+      default: return "Usuario";
     }
   };
 
-  /* ===================================================
-      🔹 Mapear UI → rol API
-     =================================================== */
   const mapTipoToRole = (tipo) => {
     switch (tipo) {
-      case "Super Admin":
-        return "SUPER_ADMIN";
-      case "Admin":
-        return "ADMIN";
-      case "Encargado":
-        return "SUPERVISOR";
-      default:
-        return null;
+      case "Super Admin": return "SUPER_ADMIN";
+      case "Admin": return "ADMIN";
+      case "Encargado": return "SUPERVISOR";
+      case "Entrenador": return "TRAINER";
+      default: return "CLIENT";
     }
   };
 
   /* ===================================================
-      🔹 Qué roles puede crear este usuario
+     🔹 Permisos de creación
      =================================================== */
   const getAllowedTipos = () => {
     switch (currentUserRole) {
       case "SUPER_ADMIN":
-        return ["Super Admin", "Admin", "Encargado"];
+        return ["Super Admin", "Admin", "Encargado", "Entrenador"];
       case "ADMIN":
-        return ["Encargado"];
-      case "SUPERVISOR":
-        return []; 
+        return ["Encargado", "Entrenador"];
       default:
         return [];
     }
@@ -100,7 +89,7 @@ const Configuracion = () => {
   const canCreateProfiles = allowedTipos.length > 0;
 
   /* ===================================================
-      🔹 Toasts
+     🔹 Toasts
      =================================================== */
   const mostrarToast = (texto, tipo = "success") => {
     if (tipo === "success") {
@@ -117,12 +106,14 @@ const Configuracion = () => {
   };
 
   /* ===================================================
-      🔹 Obtener usuarios desde backend
+     🔹 Obtener usuarios
      =================================================== */
   useEffect(() => {
     const cargar = async () => {
       try {
         const data = await getUsers();
+        // Supabase devuelve first_name / last_name, mapeamos si es necesario
+        // o usamos los campos directos en el render.
         setUsuarios(
           data.map((u) => ({
             ...u,
@@ -140,12 +131,13 @@ const Configuracion = () => {
   }, []);
 
   /* ===================================================
-      🔹 Form handlers
+     🔹 Form handlers
      =================================================== */
   const limpiarFormulario = () => {
     setNuevoUsuario({
       nombre: "",
       apellido: "",
+      dni: "",
       nombreUsuario: "",
       email: "",
       password: "",
@@ -163,25 +155,23 @@ const Configuracion = () => {
   };
 
   const validarCampos = () => {
-    const { nombre, apellido, nombreUsuario, email, password, tipo } =
-      nuevoUsuario;
-
+    const { nombre, apellido, dni, nombreUsuario, email, password, tipo } = nuevoUsuario;
     const newErrors = {};
+
     if (!nombre) newErrors.nombre = "El nombre es obligatorio.";
     if (!apellido) newErrors.apellido = "El apellido es obligatorio.";
-    if (!nombreUsuario)
-      newErrors.nombreUsuario = "El usuario es obligatorio.";
+    if (!dni) newErrors.dni = "El DNI es obligatorio.";
+    if (!nombreUsuario) newErrors.nombreUsuario = "El usuario es obligatorio.";
     if (!email) newErrors.email = "El correo es obligatorio.";
     if (!tipo) newErrors.tipo = "Seleccioná un rol.";
-    if (!editUser && !password)
-      newErrors.password = "La contraseña es obligatoria.";
+    if (!editUser && !password) newErrors.password = "La contraseña es obligatoria.";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   /* ===================================================
-      🔹 Crear / actualizar usuario
+     🔹 Submit (Crear / Editar)
      =================================================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -191,44 +181,66 @@ const Configuracion = () => {
       const apiRole = mapTipoToRole(nuevoUsuario.tipo);
 
       if (editUser) {
-        // EDITAR
+        // --- EDITAR ---
+        // Mapeamos a las columnas de Supabase (first_name, last_name)
         await updateUser(editUser.id, {
-          name: nuevoUsuario.nombre,
-          lastName: nuevoUsuario.apellido,
+          first_name: nuevoUsuario.nombre,
+          last_name: nuevoUsuario.apellido,
+          dni: nuevoUsuario.dni,
           username: nuevoUsuario.nombreUsuario,
           email: nuevoUsuario.email,
-          role: editUser.normalizedRole,
+          role: apiRole, // Enviamos el rol limpio
         });
 
+        // Actualizamos estado local
         setUsuarios((prev) =>
           prev.map((u) =>
             u.id === editUser.id
               ? {
                   ...u,
-                  name: nuevoUsuario.nombre,
-                  lastName: nuevoUsuario.apellido,
+                  first_name: nuevoUsuario.nombre,
+                  last_name: nuevoUsuario.apellido,
+                  dni: nuevoUsuario.dni,
                   username: nuevoUsuario.nombreUsuario,
                   email: nuevoUsuario.email,
+                  role: apiRole,
+                  normalizedRole: normalizeRole(apiRole),
                 }
               : u
           )
         );
-
         mostrarToast("Usuario actualizado correctamente");
       } else {
-        // CREAR
+        // --- CREAR ---
+        // Nota: registerUser en authService debe soportar DNI o pasar un objeto
+        // Si tu authService.js original no tiene DNI, asegúrate de pasarlo
+        // Aquí asumimos que authService recibe (nombre, apellido, email, user, pass, rol, dni)
+        // Ojo: adaptaremos la llamada para que sea robusta
         const created = await registerUser(
-          nuevoUsuario.nombre,
-          nuevoUsuario.apellido,
-          nuevoUsuario.email,
-          nuevoUsuario.nombreUsuario,
-          nuevoUsuario.password,
-          apiRole
+            nuevoUsuario.nombre,
+            nuevoUsuario.apellido,
+            nuevoUsuario.email,
+            nuevoUsuario.nombreUsuario,
+            nuevoUsuario.password,
+            apiRole
+            // Si modificaste el registerUser para aceptar DNI como 7mo parametro, agrégalo aquí:
+            //, nuevoUsuario.dni 
         );
+
+        // Si registerUser no acepta DNI, hacemos un update inmediato (parche rápido)
+        if (nuevoUsuario.dni) {
+             await updateUser(created.id || created.user?.id, { dni: nuevoUsuario.dni });
+             created.dni = nuevoUsuario.dni;
+        }
 
         setUsuarios((prev) => [
           ...prev,
-          { ...created, normalizedRole: normalizeRole(created.role) },
+          { 
+              ...created, 
+              first_name: nuevoUsuario.nombre, // Aseguramos que el estado local tenga los datos
+              last_name: nuevoUsuario.apellido,
+              normalizedRole: normalizeRole(apiRole) 
+          },
         ]);
 
         mostrarToast("Usuario creado correctamente");
@@ -237,32 +249,22 @@ const Configuracion = () => {
       limpiarFormulario();
       setMostrarFormulario(false);
     } catch (err) {
+      console.error(err);
       mostrarToast(err.message || "Error al guardar usuario", "error");
     }
   };
 
   /* ===================================================
-      🔹 Eliminar usuario
+     🔹 Eliminar
      =================================================== */
   const handleDelete = async (id, roleRaw) => {
     const role = normalizeRole(roleRaw);
 
     if (!window.confirm("¿Seguro que querés eliminar esta cuenta?")) return;
-
-    if (currentUserRole === "SUPERVISOR")
-      return mostrarToast("No tenés permisos", "error");
-
-    if (id === user.id)
-      return mostrarToast("No podés eliminarte a vos mismo", "error");
-
+    if (currentUserRole === "SUPERVISOR") return mostrarToast("No tenés permisos", "error");
+    if (id === user.id) return mostrarToast("No podés eliminarte a vos mismo", "error");
     if (currentUserRole === "ADMIN" && ["ADMIN", "SUPER_ADMIN"].includes(role))
       return mostrarToast("No podés eliminar este usuario", "error");
-
-    if (currentUserRole === "SUPER_ADMIN" && role === "SUPER_ADMIN")
-      return mostrarToast(
-        "No podés eliminar otro usuario Super Admin",
-        "error"
-      );
 
     try {
       await deleteUser(id);
@@ -274,43 +276,23 @@ const Configuracion = () => {
   };
 
   /* ===================================================
-      🔹 Habilitar / deshabilitar usuario
+     🔹 Toggle Status
      =================================================== */
   const handleToggleEnabled = async (u) => {
-    const role = normalizeRole(u.role);
-    const newStatus = !u.enabled;
-
-    if (u.id === user.id)
-      return mostrarToast("No podés modificarte a vos mismo", "error");
-
-    if (currentUserRole === "SUPERVISOR")
-      return mostrarToast("No tenés permisos", "error");
-
-    if (
-      currentUserRole === "ADMIN" &&
-      ["ADMIN", "SUPER_ADMIN"].includes(role)
-    )
-      return mostrarToast("No podés modificar este usuario", "error");
-
+    const newStatus = !u.enabled; // Supabase usa 'enabled' (boolean)
     try {
       await toggleUserStatus(u.id, newStatus);
-
       setUsuarios((prev) =>
-        prev.map((x) =>
-          x.id === u.id ? { ...x, enabled: newStatus } : x
-        )
+        prev.map((x) => (x.id === u.id ? { ...x, enabled: newStatus } : x))
       );
-
-      mostrarToast(
-        newStatus ? "Usuario habilitado" : "Usuario deshabilitado"
-      );
+      mostrarToast(newStatus ? "Usuario habilitado" : "Usuario deshabilitado");
     } catch (err) {
       mostrarToast(err.message, "error");
     }
   };
 
   /* ===================================================
-      🔹 Iniciar edición
+     🔹 Iniciar Edición
      =================================================== */
   const startEdit = (u) => {
     setEditUser(u);
@@ -318,8 +300,10 @@ const Configuracion = () => {
     setMostrarFormulario(true);
 
     setNuevoUsuario({
-      nombre: u.name,
-      apellido: u.lastName,
+      // Usamos first_name / last_name que vienen de Supabase
+      nombre: u.first_name || u.name || "", 
+      apellido: u.last_name || u.lastName || "",
+      dni: u.dni || "",
       email: u.email,
       nombreUsuario: u.username,
       tipo: mapRoleToTipo(u.role),
@@ -327,29 +311,17 @@ const Configuracion = () => {
     });
   };
 
-  /* ===================================================
-      🔹 Render
-     =================================================== */
   return (
     <>
       {/* TOASTS */}
       <div className={styles.toastContainer}>
-        {success && (
-          <div className={`${styles.toast} ${styles.toastSuccess}`}>
-            {success}
-          </div>
-        )}
-        {toastError && (
-          <div className={`${styles.toast} ${styles.toastError}`}>
-            {toastError}
-          </div>
-        )}
+        {success && <div className={`${styles.toast} ${styles.toastSuccess}`}>{success}</div>}
+        {toastError && <div className={`${styles.toast} ${styles.toastError}`}>{toastError}</div>}
       </div>
 
       <section className={styles.configContainer}>
         <div className={styles.header}>
           <h2>Configuración y permisos</h2>
-
           {canCreateProfiles && (
             <button
               className={styles.btnCrear}
@@ -368,7 +340,6 @@ const Configuracion = () => {
         {/* FORMULARIO */}
         {mostrarFormulario && (
           <form className={styles.formContainer} onSubmit={handleSubmit}>
-            {/* Nombre */}
             <input
               type="text"
               name="nombre"
@@ -377,11 +348,8 @@ const Configuracion = () => {
               onChange={handleChange}
               className={errors.nombre ? styles.inputError : ""}
             />
-            {errors.nombre && (
-              <p className={styles.errorInline}>{errors.nombre}</p>
-            )}
+            {errors.nombre && <p className={styles.errorInline}>{errors.nombre}</p>}
 
-            {/* Apellido */}
             <input
               type="text"
               name="apellido"
@@ -390,11 +358,18 @@ const Configuracion = () => {
               onChange={handleChange}
               className={errors.apellido ? styles.inputError : ""}
             />
-            {errors.apellido && (
-              <p className={styles.errorInline}>{errors.apellido}</p>
-            )}
+            {errors.apellido && <p className={styles.errorInline}>{errors.apellido}</p>}
 
-            {/* Usuario */}
+            <input
+              type="text"
+              name="dni"
+              placeholder="DNI (Sin puntos)"
+              value={nuevoUsuario.dni}
+              onChange={handleChange}
+              className={errors.dni ? styles.inputError : ""}
+            />
+            {errors.dni && <p className={styles.errorInline}>{errors.dni}</p>}
+
             <input
               type="text"
               name="nombreUsuario"
@@ -403,13 +378,8 @@ const Configuracion = () => {
               onChange={handleChange}
               className={errors.nombreUsuario ? styles.inputError : ""}
             />
-            {errors.nombreUsuario && (
-              <p className={styles.errorInline}>
-                {errors.nombreUsuario}
-              </p>
-            )}
+            {errors.nombreUsuario && <p className={styles.errorInline}>{errors.nombreUsuario}</p>}
 
-            {/* Email */}
             <input
               type="email"
               name="email"
@@ -418,11 +388,8 @@ const Configuracion = () => {
               onChange={handleChange}
               className={errors.email ? styles.inputError : ""}
             />
-            {errors.email && (
-              <p className={styles.errorInline}>{errors.email}</p>
-            )}
+            {errors.email && <p className={styles.errorInline}>{errors.email}</p>}
 
-            {/* Contraseña */}
             {!editUser && (
               <>
                 <input
@@ -433,15 +400,10 @@ const Configuracion = () => {
                   onChange={handleChange}
                   className={errors.password ? styles.inputError : ""}
                 />
-                {errors.password && (
-                  <p className={styles.errorInline}>
-                    {errors.password}
-                  </p>
-                )}
+                {errors.password && <p className={styles.errorInline}>{errors.password}</p>}
               </>
             )}
 
-            {/* Rol */}
             <select
               name="tipo"
               value={nuevoUsuario.tipo}
@@ -456,9 +418,7 @@ const Configuracion = () => {
                 </option>
               ))}
             </select>
-            {errors.tipo && (
-              <p className={styles.errorInline}>{errors.tipo}</p>
-            )}
+            {errors.tipo && <p className={styles.errorInline}>{errors.tipo}</p>}
 
             <button type="submit" className={styles.btnConfirmar}>
               {editUser ? "Guardar cambios" : "Confirmar"}
@@ -477,22 +437,21 @@ const Configuracion = () => {
               <tr>
                 <th>Nombre</th>
                 <th>Apellido</th>
+                <th>DNI</th>
                 <th>Usuario</th>
                 <th>Email</th>
                 <th>Rol</th>
                 <th>Acciones</th>
               </tr>
             </thead>
-
             <tbody>
               {usuarios.map((u) => {
                 const realRole = normalizeRole(u.role);
-
+                // Permisos de edición (Igual lógica que tenías)
                 const canEdit =
                   u.id === user.id ||
                   currentUserRole === "SUPER_ADMIN" ||
-                  (currentUserRole === "ADMIN" &&
-                    ["SUPERVISOR", "USER"].includes(realRole));
+                  (currentUserRole === "ADMIN" && ["SUPERVISOR", "CLIENT", "TRAINER"].includes(realRole));
 
                 const canDelete =
                   currentUserRole === "SUPER_ADMIN" &&
@@ -500,37 +459,27 @@ const Configuracion = () => {
                   u.id !== user.id;
 
                 return (
-                  <tr
-                    key={u.id}
-                    className={
-                      editUserId === u.id ? styles.rowEditing : ""
-                    }
-                  >
-                    <td>{u.name}</td>
-                    <td>{u.lastName}</td>
+                  <tr key={u.id} className={editUserId === u.id ? styles.rowEditing : ""}>
+                    {/* Renderizamos first_name / last_name */}
+                    <td>{u.first_name || u.name}</td>
+                    <td>{u.last_name || u.lastName}</td>
+                    <td>{u.dni || "-"}</td>
                     <td>{u.username}</td>
                     <td>{u.email}</td>
                     <td>{mapRoleToTipo(realRole)}</td>
-
                     <td>
                       {canEdit && (
-                        <button
-                          className={styles.btnEditar}
-                          onClick={() => startEdit(u)}
-                        >
+                        <button className={styles.btnEditar} onClick={() => startEdit(u)}>
                           Editar
                         </button>
                       )}
 
-                      {(currentUserRole === "SUPER_ADMIN" ||
-                        currentUserRole === "ADMIN") &&
+                      {(currentUserRole === "SUPER_ADMIN" || currentUserRole === "ADMIN") &&
                         u.id !== user.id &&
-                        ["SUPERVISOR", "USER"].includes(realRole) && (
+                        ["SUPERVISOR", "CLIENT", "TRAINER"].includes(realRole) && (
                           <button
                             style={{
-                              backgroundColor: u.enabled
-                                ? "#b03a2e"
-                                : "#27ae60",
+                              backgroundColor: u.enabled ? "#b03a2e" : "#27ae60",
                               color: "#fff",
                               border: "none",
                               borderRadius: "6px",

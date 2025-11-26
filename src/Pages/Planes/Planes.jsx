@@ -13,14 +13,14 @@ const Planes = () => {
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
 
+  // Estado adaptado a la tabla 'plans' de Supabase
   const [nuevoPlan, setNuevoPlan] = useState({
-    namePlan: "",
-    daysEnabled: "",
-    hoursEnabled: "",
-    value: "",
-    notes: "",
+    name: "",
+    price: "",
+    days_per_week_limit: "", // Vacío = Ilimitado
+    entries_per_day_limit: 1, // Por defecto 1 entrada al día
+    description: "",
     active: true,
-    lateFeeAmount: 0, // ✔ requerido pero oculto
   });
 
   const [toast, setToast] = useState({ message: "", type: "" });
@@ -28,15 +28,15 @@ const Planes = () => {
   const [saving, setSaving] = useState(false);
 
   /* ================================
-     🔹 Obtener planes
-     ================================ */
+      🔹 Obtener planes
+      ================================ */
   const fetchPlanes = async () => {
     try {
       setLoading(true);
       const data = await obtenerPlanes();
-      console.log("📌 PLANES DEL BACKEND:", data);
-      setPlanes(data);
+      setPlanes(data || []);
     } catch (error) {
+      console.error(error);
       mostrarToast("❌ Error al cargar los planes", "error");
     } finally {
       setLoading(false);
@@ -48,26 +48,29 @@ const Planes = () => {
   }, []);
 
   /* ================================
-     🔹 Form handlers
-     ================================ */
+      🔹 Form handlers
+      ================================ */
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Manejo especial para booleanos y números
+    let finalValue = value;
+    if (name === "active") finalValue = value === "true";
 
     setNuevoPlan((prev) => ({
       ...prev,
-      [name]: name === "active" ? value === "true" : value,
+      [name]: finalValue,
     }));
   };
 
   const limpiarFormulario = () => {
     setNuevoPlan({
-      namePlan: "",
-      daysEnabled: "",
-      hoursEnabled: "",
-      value: "",
-      notes: "",
+      name: "",
+      price: "",
+      days_per_week_limit: "",
+      entries_per_day_limit: 1,
+      description: "",
       active: true,
-      lateFeeAmount: 0,
     });
     setEditIndex(null);
   };
@@ -89,16 +92,16 @@ const Planes = () => {
   };
 
   const validarCampos = () => {
-    if (!nuevoPlan.namePlan || !nuevoPlan.value) {
-      mostrarToast("⚠️ El nombre y el valor son obligatorios.", "error");
+    if (!nuevoPlan.name || !nuevoPlan.price) {
+      mostrarToast("⚠️ El nombre y el precio son obligatorios.", "error");
       return false;
     }
     return true;
   };
 
   /* ================================
-     🔹 Crear / Actualizar
-     ================================ */
+      🔹 Crear / Actualizar
+      ================================ */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validarCampos()) return;
@@ -106,21 +109,25 @@ const Planes = () => {
     try {
       setSaving(true);
 
+      // Preparamos el objeto para Supabase
       const body = {
-        namePlan: nuevoPlan.namePlan,
-        daysEnabled: Number(nuevoPlan.daysEnabled) || 0,
-        hoursEnabled: Number(nuevoPlan.hoursEnabled) || 0,
-        value: Number(nuevoPlan.value),
-        notes: nuevoPlan.notes || "",
-        isActive: nuevoPlan.active === true || nuevoPlan.active === "true",
-        lateFeeAmount: 0, // ✔ siempre enviamos 0, sin mostrarlo
+        name: nuevoPlan.name,
+        price: Number(nuevoPlan.price),
+        // Si está vacío, mandamos NULL (significa ilimitado)
+        days_per_week_limit: nuevoPlan.days_per_week_limit ? Number(nuevoPlan.days_per_week_limit) : null,
+        entries_per_day_limit: Number(nuevoPlan.entries_per_day_limit) || 1,
+        description: nuevoPlan.description || "",
+        active: nuevoPlan.active,
       };
 
       if (editIndex !== null) {
+        // --- ACTUALIZAR ---
         const plan = planes[editIndex];
-        await actualizarPlan(plan.idPlan, body);
+        // Usamos el ID real de la base de datos
+        await actualizarPlan(plan.id, body);
         mostrarToast("✔️ Plan actualizado correctamente");
       } else {
+        // --- CREAR ---
         await crearPlan(body);
         mostrarToast("✔️ Plan creado exitosamente");
       }
@@ -136,36 +143,33 @@ const Planes = () => {
   };
 
   /* ================================
-     🔹 Cambiar estado
-     ================================ */
-  const toggleEstado = async (id, statusActual) => {
+      🔹 Cambiar estado (Activar/Desactivar)
+      ================================ */
+  const toggleEstado = async (id, estadoActual) => {
     try {
-      const next = statusActual === "Activo" ? false : true;
-
+      // estadoActual es booleano en Supabase
+      const next = !estadoActual;
       await cambiarEstadoPlan(id, next);
-
-      mostrarToast("🔁 Estado actualizado");
+      mostrarToast(next ? "Plan Activado" : "Plan Desactivado");
       await fetchPlanes();
     } catch (error) {
       mostrarToast("❌ Error al cambiar estado", "error");
-      console.error(error);
     }
   };
 
   /* ================================
-     🔹 Editar plan
-     ================================ */
+      🔹 Editar plan (Cargar datos)
+      ================================ */
   const editarPlan = (index) => {
     const p = planes[index];
 
     setNuevoPlan({
-      namePlan: p.namePlan,
-      daysEnabled: p.daysEnabled,
-      hoursEnabled: p.hoursEnabled,
-      value: p.value,
-      notes: p.notes,
-      active: p.status === "Activo",
-      lateFeeAmount: 0, // ✔ siempre oculto
+      name: p.name,
+      price: p.price,
+      days_per_week_limit: p.days_per_week_limit || "", // Si es null, mostramos vacío
+      entries_per_day_limit: p.entries_per_day_limit || 1,
+      description: p.description || "",
+      active: p.active,
     });
 
     setEditIndex(index);
@@ -173,8 +177,8 @@ const Planes = () => {
   };
 
   /* ================================
-     🔹 Render
-     ================================ */
+      🔹 Render
+      ================================ */
   return (
     <section className={styles.planesContainer}>
       {toast.message && (
@@ -190,7 +194,7 @@ const Planes = () => {
       <div className={styles.header}>
         <div>
           <h2>Planes Disponibles</h2>
-          <p>Administrá los planes ofrecidos a los clientes.</p>
+          <p>Configura las membresías y reglas de acceso (Básico vs Libre).</p>
         </div>
 
         {editIndex === null ? (
@@ -213,50 +217,68 @@ const Planes = () => {
           {/* FORMULARIO */}
           {mostrarFormulario && (
             <form className={styles.formContainer} onSubmit={handleSubmit}>
-              <input
-                type="text"
-                name="namePlan"
-                placeholder="Nombre del plan"
-                value={nuevoPlan.namePlan}
-                onChange={handleChange}
-              />
+              <div className={styles.inputGroup}>
+                <label>Nombre del Plan</label>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Ej: Pase Libre"
+                  value={nuevoPlan.name}
+                  onChange={handleChange}
+                />
+              </div>
 
-              <input
-                type="number"
-                name="daysEnabled"
-                placeholder="Días"
-                value={nuevoPlan.daysEnabled}
-                onChange={handleChange}
-              />
+              <div className={styles.inputGroup}>
+                <label>Precio ($)</label>
+                <input
+                  type="number"
+                  name="price"
+                  placeholder="Ej: 25000"
+                  value={nuevoPlan.price}
+                  onChange={handleChange}
+                />
+              </div>
 
-              <input
-                type="number"
-                name="hoursEnabled"
-                placeholder="Horas"
-                value={nuevoPlan.hoursEnabled}
-                onChange={handleChange}
-              />
+              <div className={styles.inputGroup}>
+                <label>Días x Semana (Vacío = Ilimitado)</label>
+                <input
+                  type="number"
+                  name="days_per_week_limit"
+                  placeholder="Ej: 3 (Para Básico)"
+                  value={nuevoPlan.days_per_week_limit}
+                  onChange={handleChange}
+                />
+              </div>
 
-              <input
-                type="number"
-                name="value"
-                placeholder="Precio ($)"
-                value={nuevoPlan.value}
-                onChange={handleChange}
-              />
+              <div className={styles.inputGroup}>
+                <label>Accesos x Día</label>
+                <input
+                  type="number"
+                  name="entries_per_day_limit"
+                  placeholder="Ej: 1"
+                  value={nuevoPlan.entries_per_day_limit}
+                  onChange={handleChange}
+                />
+              </div>
 
-              <input
-                type="text"
-                name="notes"
-                placeholder="Notas"
-                value={nuevoPlan.notes}
-                onChange={handleChange}
-              />
+              <div className={styles.inputGroup}>
+                <label>Descripción / Notas</label>
+                <input
+                  type="text"
+                  name="description"
+                  placeholder="Notas internas..."
+                  value={nuevoPlan.description}
+                  onChange={handleChange}
+                />
+              </div>
 
-              <select name="active" value={nuevoPlan.active} onChange={handleChange}>
-                <option value={true}>Activo</option>
-                <option value={false}>Inactivo</option>
-              </select>
+              <div className={styles.inputGroup}>
+                <label>Estado Inicial</label>
+                <select name="active" value={nuevoPlan.active} onChange={handleChange}>
+                  <option value={true}>Activo</option>
+                  <option value={false}>Inactivo</option>
+                </select>
+              </div>
 
               <button type="submit" className={styles.btnConfirmar}>
                 {editIndex !== null ? "Guardar cambios" : "Confirmar"}
@@ -269,12 +291,11 @@ const Planes = () => {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Nombre</th>
-                  <th>Días</th>
-                  <th>Horas</th>
-                  <th>Valor</th>
-                  <th>Notas</th>
+                  <th>Días/Semana</th>
+                  <th>Accesos/Día</th>
+                  <th>Precio</th>
+                  <th>Descripción</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
@@ -282,17 +303,24 @@ const Planes = () => {
 
               <tbody>
                 {planes.map((p, i) => (
-                  <tr key={p.idPlan}>
-                    <td>{p.idPlan}</td>
-                    <td>{p.namePlan}</td>
-                    <td>{p.daysEnabled}</td>
-                    <td>{p.hoursEnabled}</td>
-                    <td>${p.value}</td>
-                    <td>{p.notes}</td>
+                  <tr key={p.id}>
+                    <td><strong>{p.name}</strong></td>
+                    
+                    <td>
+                      {p.days_per_week_limit 
+                        ? `${p.days_per_week_limit} días` 
+                        : <span style={{color: '#27ae60'}}>Ilimitado</span>}
+                    </td>
+                    
+                    <td>{p.entries_per_day_limit || "∞"}</td>
+                    
+                    <td>${p.price}</td>
+                    
+                    <td>{p.description || "-"}</td>
 
                     <td>
-                      <span className={p.status === "Activo" ? styles.active : styles.inactive}>
-                        {p.status}
+                      <span className={p.active ? styles.active : styles.inactive}>
+                        {p.active ? "Activo" : "Inactivo"}
                       </span>
                     </td>
 
@@ -303,9 +331,9 @@ const Planes = () => {
 
                       <button
                         className={styles.btnEstado}
-                        onClick={() => toggleEstado(p.idPlan, p.status)}
+                        onClick={() => toggleEstado(p.id, p.active)}
                       >
-                        {p.status === "Activo" ? "Desactivar" : "Activar"}
+                        {p.active ? "Desactivar" : "Activar"}
                       </button>
                     </td>
                   </tr>
