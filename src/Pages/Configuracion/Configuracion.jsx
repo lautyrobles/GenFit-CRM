@@ -21,6 +21,7 @@ const Configuracion = () => {
   const normalizeRole = (r) =>
     r ? r.replace("ROLE_", "").toUpperCase() : "";
 
+  // Rol del usuario que está logueado actualmente
   const currentUserRole =
     normalizeRole(user?.role) || normalizeRole(storedUser?.role) || "";
 
@@ -39,7 +40,7 @@ const Configuracion = () => {
   const [nuevoUsuario, setNuevoUsuario] = useState({
     nombre: "",
     apellido: "",
-    dni: "", // 🆕 Agregado DNI
+    dni: "",
     nombreUsuario: "",
     email: "",
     password: "",
@@ -48,39 +49,40 @@ const Configuracion = () => {
 
   /* ===================================================
      🔹 Mapeo de Roles UI <-> API
+     Solo mostramos lo que pediste
      =================================================== */
   const mapRoleToTipo = (roleRaw) => {
     const role = normalizeRole(roleRaw);
     switch (role) {
-      case "SUPER_ADMIN": return "Super Admin";
-      case "ADMIN": return "Admin";
-      case "SUPERVISOR": return "Encargado"; // O Shift Manager
-      case "TRAINER": return "Entrenador";
-      case "CLIENT": return "Usuario Cliente";
-      default: return "Usuario";
+      case "SUPER_ADMIN": return "Superadministrador";
+      case "ADMIN": return "Administrador";
+      case "SUPERVISOR": return "Supervisor";
+      default: return role; // Por si aparece algún legacy
     }
   };
 
   const mapTipoToRole = (tipo) => {
     switch (tipo) {
-      case "Super Admin": return "SUPER_ADMIN";
-      case "Admin": return "ADMIN";
-      case "Encargado": return "SUPERVISOR";
-      case "Entrenador": return "TRAINER";
+      case "Superadministrador": return "SUPER_ADMIN";
+      case "Administrador": return "ADMIN";
+      case "Supervisor": return "SUPERVISOR";
       default: return "CLIENT";
     }
   };
 
   /* ===================================================
-     🔹 Permisos de creación
+     🔹 LÓGICA DE PERMISOS DE CREACIÓN (Dropdown)
      =================================================== */
   const getAllowedTipos = () => {
     switch (currentUserRole) {
       case "SUPER_ADMIN":
-        return ["Super Admin", "Admin", "Encargado", "Entrenador"];
+        // El Super Admin puede crear a cualquiera de los 3 niveles
+        return ["Superadministrador", "Administrador", "Supervisor"];
       case "ADMIN":
-        return ["Encargado", "Entrenador"];
+        // El Dueño solo puede crear Supervisores
+        return ["Supervisor"];
       default:
+        // El Supervisor no configura staff
         return [];
     }
   };
@@ -112,10 +114,16 @@ const Configuracion = () => {
     const cargar = async () => {
       try {
         const data = await getUsers();
-        // Supabase devuelve first_name / last_name, mapeamos si es necesario
-        // o usamos los campos directos en el render.
+        
+        // Filtramos para que en esta pantalla NO aparezcan los clientes,
+        // solo el staff (Super Admin, Admin, Supervisor)
+        const staffUsers = data.filter(u => {
+            const r = normalizeRole(u.role);
+            return ["SUPER_ADMIN", "ADMIN", "SUPERVISOR"].includes(r);
+        });
+
         setUsuarios(
-          data.map((u) => ({
+          staffUsers.map((u) => ({
             ...u,
             normalizedRole: normalizeRole(u.role),
           }))
@@ -171,7 +179,7 @@ const Configuracion = () => {
   };
 
   /* ===================================================
-     🔹 Submit (Crear / Editar)
+     🔹 Submit
      =================================================== */
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -182,17 +190,16 @@ const Configuracion = () => {
 
       if (editUser) {
         // --- EDITAR ---
-        // Mapeamos a las columnas de Supabase (first_name, last_name)
         await updateUser(editUser.id, {
           first_name: nuevoUsuario.nombre,
           last_name: nuevoUsuario.apellido,
           dni: nuevoUsuario.dni,
           username: nuevoUsuario.nombreUsuario,
           email: nuevoUsuario.email,
-          role: apiRole, // Enviamos el rol limpio
+          role: apiRole,
         });
 
-        // Actualizamos estado local
+        // Actualizar UI localmente
         setUsuarios((prev) =>
           prev.map((u) =>
             u.id === editUser.id
@@ -212,60 +219,42 @@ const Configuracion = () => {
         mostrarToast("Usuario actualizado correctamente");
       } else {
         // --- CREAR ---
-        // Nota: registerUser en authService debe soportar DNI o pasar un objeto
-        // Si tu authService.js original no tiene DNI, asegúrate de pasarlo
-        // Aquí asumimos que authService recibe (nombre, apellido, email, user, pass, rol, dni)
-        // Ojo: adaptaremos la llamada para que sea robusta
         const created = await registerUser(
             nuevoUsuario.nombre,
             nuevoUsuario.apellido,
             nuevoUsuario.email,
             nuevoUsuario.nombreUsuario,
             nuevoUsuario.password,
-            apiRole
-            // Si modificaste el registerUser para aceptar DNI como 7mo parametro, agrégalo aquí:
-            //, nuevoUsuario.dni 
+            apiRole,
+            nuevoUsuario.dni 
         );
 
-        // Si registerUser no acepta DNI, hacemos un update inmediato (parche rápido)
-        if (nuevoUsuario.dni) {
-             await updateUser(created.id || created.user?.id, { dni: nuevoUsuario.dni });
-             created.dni = nuevoUsuario.dni;
-        }
-
         setUsuarios((prev) => [
-          ...prev,
           { 
               ...created, 
-              first_name: nuevoUsuario.nombre, // Aseguramos que el estado local tenga los datos
+              first_name: nuevoUsuario.nombre,
               last_name: nuevoUsuario.apellido,
               normalizedRole: normalizeRole(apiRole) 
           },
+          ...prev,
         ]);
 
-        mostrarToast("Usuario creado correctamente");
+        mostrarToast("Perfil creado correctamente");
       }
 
       limpiarFormulario();
       setMostrarFormulario(false);
     } catch (err) {
       console.error(err);
-      mostrarToast(err.message || "Error al guardar usuario", "error");
+      mostrarToast(err.message || "Error al guardar", "error");
     }
   };
 
   /* ===================================================
      🔹 Eliminar
      =================================================== */
-  const handleDelete = async (id, roleRaw) => {
-    const role = normalizeRole(roleRaw);
-
-    if (!window.confirm("¿Seguro que querés eliminar esta cuenta?")) return;
-    if (currentUserRole === "SUPERVISOR") return mostrarToast("No tenés permisos", "error");
-    if (id === user.id) return mostrarToast("No podés eliminarte a vos mismo", "error");
-    if (currentUserRole === "ADMIN" && ["ADMIN", "SUPER_ADMIN"].includes(role))
-      return mostrarToast("No podés eliminar este usuario", "error");
-
+  const handleDelete = async (id) => {
+    if (!window.confirm("¿Seguro que querés eliminar este perfil?")) return;
     try {
       await deleteUser(id);
       setUsuarios((prev) => prev.filter((u) => u.id !== id));
@@ -279,7 +268,7 @@ const Configuracion = () => {
      🔹 Toggle Status
      =================================================== */
   const handleToggleEnabled = async (u) => {
-    const newStatus = !u.enabled; // Supabase usa 'enabled' (boolean)
+    const newStatus = !u.enabled;
     try {
       await toggleUserStatus(u.id, newStatus);
       setUsuarios((prev) =>
@@ -300,7 +289,6 @@ const Configuracion = () => {
     setMostrarFormulario(true);
 
     setNuevoUsuario({
-      // Usamos first_name / last_name que vienen de Supabase
       nombre: u.first_name || u.name || "", 
       apellido: u.last_name || u.lastName || "",
       dni: u.dni || "",
@@ -313,7 +301,6 @@ const Configuracion = () => {
 
   return (
     <>
-      {/* TOASTS */}
       <div className={styles.toastContainer}>
         {success && <div className={`${styles.toast} ${styles.toastSuccess}`}>{success}</div>}
         {toastError && <div className={`${styles.toast} ${styles.toastError}`}>{toastError}</div>}
@@ -335,30 +322,35 @@ const Configuracion = () => {
           )}
         </div>
 
-        <p>Gestión del personal según jerarquía de roles.</p>
+        <p>Gestión del personal del gimnasio.</p>
 
         {/* FORMULARIO */}
         {mostrarFormulario && (
           <form className={styles.formContainer} onSubmit={handleSubmit}>
-            <input
-              type="text"
-              name="nombre"
-              placeholder="Nombre"
-              value={nuevoUsuario.nombre}
-              onChange={handleChange}
-              className={errors.nombre ? styles.inputError : ""}
-            />
-            {errors.nombre && <p className={styles.errorInline}>{errors.nombre}</p>}
-
-            <input
-              type="text"
-              name="apellido"
-              placeholder="Apellido"
-              value={nuevoUsuario.apellido}
-              onChange={handleChange}
-              className={errors.apellido ? styles.inputError : ""}
-            />
-            {errors.apellido && <p className={styles.errorInline}>{errors.apellido}</p>}
+            <div style={{display: 'flex', gap: '10px'}}>
+                <div style={{flex: 1}}>
+                    <input
+                    type="text"
+                    name="nombre"
+                    placeholder="Nombre"
+                    value={nuevoUsuario.nombre}
+                    onChange={handleChange}
+                    className={errors.nombre ? styles.inputError : ""}
+                    />
+                    {errors.nombre && <p className={styles.errorInline}>{errors.nombre}</p>}
+                </div>
+                <div style={{flex: 1}}>
+                    <input
+                    type="text"
+                    name="apellido"
+                    placeholder="Apellido"
+                    value={nuevoUsuario.apellido}
+                    onChange={handleChange}
+                    className={errors.apellido ? styles.inputError : ""}
+                    />
+                    {errors.apellido && <p className={styles.errorInline}>{errors.apellido}</p>}
+                </div>
+            </div>
 
             <input
               type="text"
@@ -404,12 +396,14 @@ const Configuracion = () => {
               </>
             )}
 
+            <label style={{fontSize: '0.9rem', marginBottom: '5px', display: 'block'}}>Rol del usuario:</label>
             <select
               name="tipo"
               value={nuevoUsuario.tipo}
               onChange={handleChange}
               className={errors.tipo ? styles.inputError : ""}
-              disabled={!!editUser}
+              // 🔒 REGLA: Si el Admin se edita a sí mismo, NO puede cambiar su rol.
+              disabled={!!editUser && editUser.id === user.id} 
             >
               <option value="">Seleccionar rol</option>
               {allowedTipos.map((tipo) => (
@@ -417,6 +411,11 @@ const Configuracion = () => {
                   {tipo}
                 </option>
               ))}
+              {/* Si estamos editando un usuario que tiene un rol que yo no puedo crear (ej: admin editandose a sí mismo),
+                  necesitamos que aparezca la opción en el select para que no se rompa, aunque esté disabled */}
+              {editUser && editUser.id === user.id && !allowedTipos.includes(mapRoleToTipo(editUser.role)) && (
+                  <option value={mapRoleToTipo(editUser.role)}>{mapRoleToTipo(editUser.role)}</option>
+              )}
             </select>
             {errors.tipo && <p className={styles.errorInline}>{errors.tipo}</p>}
 
@@ -429,7 +428,7 @@ const Configuracion = () => {
         {/* TABLA */}
         {loading ? (
           <div className={styles.placeholderBox}>
-            <p>Cargando usuarios...</p>
+            <p>Cargando personal...</p>
           </div>
         ) : usuarios.length > 0 ? (
           <table className={styles.tablaUsuarios}>
@@ -446,27 +445,50 @@ const Configuracion = () => {
             </thead>
             <tbody>
               {usuarios.map((u) => {
-                const realRole = normalizeRole(u.role);
-                // Permisos de edición (Igual lógica que tenías)
-                const canEdit =
-                  u.id === user.id ||
-                  currentUserRole === "SUPER_ADMIN" ||
-                  (currentUserRole === "ADMIN" && ["SUPERVISOR", "CLIENT", "TRAINER"].includes(realRole));
+                const targetRole = normalizeRole(u.role);
+                const isMe = u.id === user.id;
 
-                const canDelete =
-                  currentUserRole === "SUPER_ADMIN" &&
-                  realRole !== "SUPER_ADMIN" &&
-                  u.id !== user.id;
+                /* =============================================
+                   🔒 LÓGICA DE PERMISOS DE EDICIÓN / BORRADO
+                   ============================================= */
+                let canEdit = false;
+                let canDelete = false;
+
+                if (currentUserRole === "SUPER_ADMIN") {
+                    // Super Admin: Puede editar y borrar a todos (menos borrarse a sí mismo)
+                    canEdit = true;
+                    canDelete = !isMe;
+                } 
+                else if (currentUserRole === "ADMIN") {
+                    // Admin: 
+                    // 1. Puede editarse a sí mismo
+                    // 2. Puede editar/borrar Supervisores
+                    // 3. NO puede tocar a otros Admins ni Super Admins
+                    if (isMe) {
+                        canEdit = true;
+                        canDelete = false;
+                    } else if (targetRole === "SUPERVISOR") {
+                        canEdit = true;
+                        canDelete = true;
+                    }
+                }
 
                 return (
                   <tr key={u.id} className={editUserId === u.id ? styles.rowEditing : ""}>
-                    {/* Renderizamos first_name / last_name */}
                     <td>{u.first_name || u.name}</td>
                     <td>{u.last_name || u.lastName}</td>
                     <td>{u.dni || "-"}</td>
                     <td>{u.username}</td>
                     <td>{u.email}</td>
-                    <td>{mapRoleToTipo(realRole)}</td>
+                    <td>
+                        <span className={
+                            targetRole === 'SUPER_ADMIN' ? styles.badgeSuper : 
+                            targetRole === 'ADMIN' ? styles.badgeAdmin : 
+                            styles.badgeSupervisor
+                        }>
+                            {mapRoleToTipo(targetRole)}
+                        </span>
+                    </td>
                     <td>
                       {canEdit && (
                         <button className={styles.btnEditar} onClick={() => startEdit(u)}>
@@ -474,9 +496,8 @@ const Configuracion = () => {
                         </button>
                       )}
 
-                      {(currentUserRole === "SUPER_ADMIN" || currentUserRole === "ADMIN") &&
-                        u.id !== user.id &&
-                        ["SUPERVISOR", "CLIENT", "TRAINER"].includes(realRole) && (
+                      {/* Botón Habilitar/Deshabilitar (Solo si tienes permiso de editar y no eres tú mismo) */}
+                      {canEdit && !isMe && (
                           <button
                             style={{
                               backgroundColor: u.enabled ? "#b03a2e" : "#27ae60",
@@ -497,7 +518,7 @@ const Configuracion = () => {
                       {canDelete && (
                         <button
                           className={styles.btnEliminar}
-                          onClick={() => handleDelete(u.id, realRole)}
+                          onClick={() => handleDelete(u.id)}
                         >
                           Eliminar
                         </button>
@@ -510,7 +531,7 @@ const Configuracion = () => {
           </table>
         ) : (
           <div className={styles.placeholderBox}>
-            <p>⚙️ No hay perfiles creados todavía...</p>
+            <p>⚙️ No hay personal registrado.</p>
           </div>
         )}
       </section>
