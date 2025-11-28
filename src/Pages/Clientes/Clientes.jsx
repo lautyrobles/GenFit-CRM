@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useMemo } from "react"
+import { useLocation } from "react-router-dom"
 import styles from "./Clientes.module.css"
 
-// 📦 Servicios (Ahora usando Supabase por dentro)
+// 📦 Servicios (Tus rutas originales)
 import {
   obtenerClientes,
   obtenerClientePorDocumento,
+  actualizarCliente, // Importamos servicio de actualización
 } from "../../assets/services/clientesService"
 import { obtenerPagosPorCliente } from "../../assets/services/pagosService"
+import { obtenerPlanes } from "../../assets/services/planesService" // Importamos servicio de planes
 
 // 🧩 Componentes
 import RutinaNutricion from "./RutinaNutricion"
 
 const Clientes = () => {
+  const location = useLocation()
   const [busqueda, setBusqueda] = useState("")
   const [filtroActivo, setFiltroActivo] = useState("nombre")
   const [cliente, setCliente] = useState(null)
@@ -28,19 +32,67 @@ const Clientes = () => {
   const [pagosLoading, setPagosLoading] = useState(false)
   const [pagosError, setPagosError] = useState("")
 
+  // ✏️ Estados para Edición (Modal Popup)
+  const [mostrarModalEdicion, setMostrarModalEdicion] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [planes, setPlanes] = useState([])
+  const [formEdicion, setFormEdicion] = useState({
+    dni: "",
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    plan_id: "",
+  })
+
   /* ===================================================
-     📆 Asistencia simulada (Se conectará a access_logs luego)
+      🚀 EFECTO PARA CARGA DESDE TABLA
+     =================================================== */
+  useEffect(() => {
+    if (location.state && location.state.clienteSeleccionado) {
+      const clienteRecibido = location.state.clienteSeleccionado
+      
+      setCliente(clienteRecibido)
+      setBusquedaRealizada(true)
+      
+      if (clienteRecibido.dni) {
+        setBusqueda(clienteRecibido.dni.toString())
+        setFiltroActivo("dni")
+      } else {
+        setBusqueda(`${clienteRecibido.first_name} ${clienteRecibido.last_name}`)
+        setFiltroActivo("nombre")
+      }
+      
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
+
+  // Cargar planes al montar (para el select del modal de edición)
+  useEffect(() => {
+    const loadPlanes = async () => {
+      try {
+        const data = await obtenerPlanes()
+        setPlanes(data || [])
+      } catch (err) {
+        console.error("Error cargando planes", err)
+      }
+    }
+    loadPlanes()
+  }, [])
+
+  /* ===================================================
+      📆 Asistencia simulada
      =================================================== */
   const asistencia30dias = useMemo(
     () =>
       Array.from({ length: 30 }, () =>
-        Math.random() > 0.3 // 70% asistencia aprox
+        Math.random() > 0.3
       ),
     [cliente?.dni]
   )
 
   /* ===================================================
-     📊 Resumen de asistencia
+      📊 Resumen de asistencia
      =================================================== */
   const asistenciaResumen = useMemo(() => {
     if (!asistencia30dias || asistencia30dias.length === 0) return null
@@ -55,7 +107,7 @@ const Clientes = () => {
   }, [asistencia30dias])
 
   /* ===================================================
-     🔹 Buscar cliente
+      🔹 Buscar cliente
      =================================================== */
   const handleBuscar = async () => {
     if (!busqueda.trim()) {
@@ -77,20 +129,14 @@ const Clientes = () => {
     try {
       let resultados = []
 
-      // 1. Búsqueda por DNI
       if (filtroActivo === "dni" && /^\d+$/.test(busqueda)) {
-        // Supabase buscará en la columna 'dni'
         const data = await obtenerClientePorDocumento(busqueda)
-        // Normalizamos respuesta a array
         resultados = Array.isArray(data) ? data : data ? [data] : []
-      
-      // 2. Búsqueda por Nombre (Filtrado en cliente por ahora)
       } else if (filtroActivo === "nombre") {
-        const clientes = await obtenerClientes() // Trae todos los users con rol client
+        const clientes = await obtenerClientes()
         const termino = busqueda.toLowerCase().trim()
 
         resultados = clientes.filter((c) => {
-          // ⚠️ CAMBIO CLAVE: first_name / last_name en lugar de name/lastName
           const nombre = c.first_name?.toLowerCase().trim() || ""
           const apellido = c.last_name?.toLowerCase().trim() || ""
           const nombreCompleto = `${nombre} ${apellido}`.trim()
@@ -104,7 +150,6 @@ const Clientes = () => {
           )
         })
 
-        // Lógica para coincidencias exactas
         const mismoNombreCompleto = clientes.filter((c) => {
           const nombre = c.first_name?.toLowerCase().trim() || ""
           const apellido = c.last_name?.toLowerCase().trim() || ""
@@ -128,7 +173,6 @@ const Clientes = () => {
         }
       }
 
-      // Resultado único encontrado
       if (resultados.length === 1) {
         setCliente(resultados[0])
         return
@@ -171,11 +215,68 @@ const Clientes = () => {
   }
 
   /* ===================================================
-     💳 Cargar pagos cuando cambia el cliente
+      ✏️ Lógica de Edición (Modal)
+     =================================================== */
+  const abrirModalEdicion = () => {
+    if (!cliente) return
+    setFormEdicion({
+      dni: cliente.dni || "",
+      first_name: cliente.first_name || "",
+      last_name: cliente.last_name || "",
+      email: cliente.email || "",
+      phone: cliente.phone || "",
+      plan_id: cliente.plan_id || "",
+    })
+    setMostrarModalEdicion(true)
+  }
+
+  const cerrarModalEdicion = () => {
+    setMostrarModalEdicion(false)
+  }
+
+  const handleChangeEdicion = (e) => {
+    const { name, value } = e.target
+    setFormEdicion({
+      ...formEdicion,
+      [name]: value,
+    })
+  }
+
+  const handleGuardarEdicion = async (e) => {
+    e.preventDefault()
+    if (!cliente) return
+
+    try {
+      setSaving(true)
+      // Actualizar en DB
+      await actualizarCliente(cliente.id, {
+        ...formEdicion,
+        enabled: cliente.enabled, // Mantener estado
+        role: cliente.role || 'CLIENT'
+      })
+
+      // Actualizar estado local
+      const nombrePlan = planes.find(p => p.id === formEdicion.plan_id)?.name
+      
+      setCliente({
+        ...cliente,
+        ...formEdicion,
+        plan_name: nombrePlan || cliente.plan_name 
+      })
+
+      setMostrarModalEdicion(false)
+    } catch (err) {
+      console.error("Error al actualizar:", err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  /* ===================================================
+      💳 Cargar pagos
      =================================================== */
   useEffect(() => {
     const fetchPagos = async () => {
-      // Usamos DNI porque es tu clave de negocio, aunque Supabase prefiere ID
       if (!cliente?.dni) return
 
       setPagosLoading(true)
@@ -185,8 +286,7 @@ const Clientes = () => {
         const data = await obtenerPagosPorCliente(cliente.dni)
         setPagos(Array.isArray(data) ? data : [])
       } catch (err) {
-        console.warn("⚠️ Sin historial de pagos (aún no implementado tabla pagos):", err.message)
-        // No mostramos error rojo, solo array vacío
+        console.warn("⚠️ Sin historial de pagos:", err.message)
         setPagos([]) 
       } finally {
         setPagosLoading(false)
@@ -196,9 +296,6 @@ const Clientes = () => {
     fetchPagos()
   }, [cliente])
 
-  /* ===================================================
-     🧩 Iniciales del avatar (Adaptado a first_name)
-     =================================================== */
   const getInitials = (nombre = "", apellido = "") => {
     const n = (nombre || "").trim().charAt(0).toUpperCase()
     const a = (apellido || "").trim().charAt(0).toUpperCase()
@@ -206,39 +303,33 @@ const Clientes = () => {
   }
 
   /* ===================================================
-     🔔 Badges del footer
+      🔔 Badges
      =================================================== */
   const footerBadges = useMemo(() => {
     if (!cliente) return []
 
     const badges = []
 
-    // Estado del usuario
-    const estado = cliente.enabled ? "Activo" : "Inactivo" // Usamos boolean 'enabled' de Supabase
+    const estado = cliente.enabled ? "Activo" : "Inactivo"
     if (estado === "Activo") {
       badges.push({ label: "Cliente activo", variant: "success" })
     } else {
       badges.push({ label: "Cliente inactivo", variant: "danger" })
     }
 
-    // Plan (Nota: Esto requerirá un JOIN en el futuro)
-    // Por ahora mostramos si tiene o no
     if (cliente.plan_name) {
        badges.push({ label: `Plan: ${cliente.plan_name}`, variant: "info" })
     } else {
        badges.push({ label: "Sin plan visual", variant: "warning" })
     }
 
-    // Contacto
     const tieneEmail = !!cliente.email
-    const tieneTelefono = !!cliente.phone // Asumiendo que agregaremos phone luego
     if (tieneEmail) {
       badges.push({ label: "Email verificado", variant: "success" })
     } else {
       badges.push({ label: "Sin contacto", variant: "danger" })
     }
 
-    // Asistencia
     if (asistenciaResumen) {
       badges.push({
         label: asistenciaResumen.label,
@@ -246,7 +337,6 @@ const Clientes = () => {
       })
     }
 
-    // ID interno
     if (cliente.dni) {
       badges.push({ label: `DNI: ${cliente.dni}`, variant: "neutral" })
     }
@@ -254,9 +344,6 @@ const Clientes = () => {
     return badges
   }, [cliente, asistenciaResumen])
 
-  /* ===================================================
-     🔹 Render principal
-     =================================================== */
   return (
     <section className={styles.clientesContainer}>
       {/* 🔍 Buscador */}
@@ -354,6 +441,10 @@ const Clientes = () => {
                     >
                       {cliente?.enabled ? "Activo" : "Inactivo"}
                     </span>
+                    {/* ✏️ BOTÓN EDITAR */}
+                    <button className={styles.btnEditarPerfil} onClick={abrirModalEdicion}>
+                      Editar datos
+                    </button>
                   </div>
                 </header>
 
@@ -376,10 +467,12 @@ const Clientes = () => {
                     <p>
                       <span>Email:</span> {cliente?.email || "-"}
                     </p>
+                    <p>
+                      <span>Teléfono:</span> {cliente?.phone || "-"}
+                    </p>
                   </div>
                 </div>
 
-                {/* 🔔 Footer Badges */}
                 <footer className={styles.infoFooter}>
                   {footerBadges.map((badge, index) => {
                     let variantClass = styles.footerBadgeNeutral
@@ -401,7 +494,7 @@ const Clientes = () => {
               </section>
 
               {/* =========================
-                  📆 ASISTENCIA (Placeholder)
+                  📆 ASISTENCIA
                  ========================= */}
               <div className={`${styles.card} ${styles.asistenciaCard}`}>
                 <div className={styles.sectionHeaderRow}>
@@ -431,7 +524,7 @@ const Clientes = () => {
               </div>
 
               {/* =========================
-                  💳 PAGOS (Placeholder)
+                  💳 PAGOS
                  ========================= */}
               <div className={`${styles.card} ${styles.pagosCard}`}>
                 <div className={styles.sectionHeaderRow}>
@@ -507,6 +600,98 @@ const Clientes = () => {
                 Cerrar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✏️ MODAL EDICIÓN CLIENTE (Nuevo Popup) */}
+      {mostrarModalEdicion && (
+        <div className={styles.editModalOverlay} onClick={(e) => {
+            if (e.target === e.currentTarget) cerrarModalEdicion();
+        }}>
+          <div className={styles.editModalContent}>
+            <div className={styles.editModalHeader}>
+              <h3>Editar Cliente</h3>
+              <button className={styles.editModalCloseBtn} onClick={cerrarModalEdicion}>&times;</button>
+            </div>
+
+            <form className={styles.editModalForm} onSubmit={handleGuardarEdicion}>
+              <div className={styles.editModalBody}>
+                <div className={styles.inputGroup}>
+                  <label>DNI</label>
+                  <input 
+                    type="text" 
+                    name="dni" 
+                    value={formEdicion.dni} 
+                    onChange={handleChangeEdicion} 
+                  />
+                </div>
+                
+                <div className={styles.row}>
+                  <div className={styles.inputGroup}>
+                    <label>Nombre</label>
+                    <input 
+                      type="text" 
+                      name="first_name" 
+                      value={formEdicion.first_name} 
+                      onChange={handleChangeEdicion} 
+                    />
+                  </div>
+                  <div className={styles.inputGroup}>
+                    <label>Apellido</label>
+                    <input 
+                      type="text" 
+                      name="last_name" 
+                      value={formEdicion.last_name} 
+                      onChange={handleChangeEdicion} 
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label>Email</label>
+                  <input 
+                    type="email" 
+                    name="email" 
+                    value={formEdicion.email} 
+                    onChange={handleChangeEdicion} 
+                  />
+                </div>
+
+                <div className={styles.inputGroup}>
+                  <label>Teléfono</label>
+                  <input 
+                    type="text" 
+                    name="phone" 
+                    value={formEdicion.phone} 
+                    onChange={handleChangeEdicion} 
+                  />
+                </div>
+                
+                <div className={styles.inputGroup}>
+                  <label>Plan</label>
+                  <select 
+                    name="plan_id" 
+                    value={formEdicion.plan_id} 
+                    onChange={handleChangeEdicion}
+                  >
+                    <option value="">Seleccionar plan...</option>
+                    {planes.map((plan) => (
+                      <option key={plan.id} value={plan.id}>{plan.name} — ${plan.price}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className={styles.editModalFooter}>
+                <button type="button" className={styles.btnCancelarEdicion} onClick={cerrarModalEdicion}>
+                  Cancelar
+                </button>
+                <button type="submit" className={styles.btnGuardarEdicion} disabled={saving}>
+                  {saving ? "Guardando..." : "Guardar Cambios"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
