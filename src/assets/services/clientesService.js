@@ -1,17 +1,16 @@
 import { supabase } from "./supabaseClient";
+import { registerUser } from "./authService"; // 👈 IMPORTANTE: Usamos la lógica segura de creación
 
 /* ===================================================
    🔹 OBTENER TODOS LOS CLIENTES
    =================================================== */
 export const obtenerClientes = async () => {
   try {
-    console.log("📡 Obteniendo clientes desde Supabase...");
-    
-    // Filtramos por rol CLIENT para no traer admins
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('role', 'CLIENT');
+      .eq('role', 'CLIENT')
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data;
@@ -22,24 +21,28 @@ export const obtenerClientes = async () => {
 };
 
 /* ===================================================
-   🔹 CREAR UN NUEVO CLIENTE
+   🔹 CREAR UN NUEVO CLIENTE (Conectado a Auth)
    =================================================== */
 export const crearCliente = async (cliente) => {
   try {
-    // ⚠️ ASIGNACIÓN AUTOMÁTICA DE PASSWORD
-    // Creamos una copia del cliente y le asignamos el DNI como contraseña
-    const clienteConPass = {
-      ...cliente,
-      password: String(cliente.dni) // Convertimos a string por seguridad
-    };
+    console.log("📦 Creando cliente en Auth y DB...", cliente);
 
-    const { data, error } = await supabase
-      .from('users')
-      .insert([clienteConPass])
-      .select();
+    // Llamamos a registerUser que ejecuta la función SQL 'crear_usuario_crm'
+    // Esto asegura que el usuario se cree en el sistema de Login y en la tabla de datos
+    // Parámetros: (nombre, apellido, email, username, password, role, dni)
+    
+    const nuevoUsuario = await registerUser(
+        cliente.first_name,
+        cliente.last_name,
+        cliente.email,
+        cliente.dni,          // Username = DNI
+        String(cliente.dni),  // Password = DNI (Para que pueda entrar solo con DNI)
+        'CLIENT',             // Rol forzado a CLIENTE
+        cliente.dni           // DNI real
+    );
 
-    if (error) throw error;
-    return data[0];
+    return nuevoUsuario;
+
   } catch (error) {
     console.error("❌ Error crear cliente:", error.message);
     throw error;
@@ -74,12 +77,11 @@ export const obtenerClientePorDocumento = async (dni) => {
       .from('users')
       .select('*')
       .eq('dni', dni)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') throw error; // Ignoramos error "no encontrado"
+    if (error) throw error;
     return data;
   } catch (error) {
-    console.error("❌ Error buscar DNI:", error.message);
     return null;
   }
 };
