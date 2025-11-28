@@ -14,6 +14,13 @@ import { obtenerPlanes } from "../../assets/services/planesService" // Importamo
 // 🧩 Componentes
 import RutinaNutricion from "./RutinaNutricion"
 
+const SearchIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}>
+    <circle cx="11" cy="11" r="8"></circle>
+    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+);
+
 const Clientes = () => {
   const location = useLocation()
   const [busqueda, setBusqueda] = useState("")
@@ -348,48 +355,54 @@ const Clientes = () => {
     <section className={styles.clientesContainer}>
       {/* 🔍 Buscador */}
       <div className={styles.gestionContainer}>
-        <h2 className={styles.title}>Buscar usuario</h2>
+        <div className={styles.gestionHeader}>
+          <h2 className={styles.title}>Buscar usuario</h2>
+          {mensajeTemporal && (
+            <p className={styles.warningText}>{mensajeTemporal}</p>
+          )}
+        </div>
 
-        {mensajeTemporal && (
-          <p className={styles.warningText}>{mensajeTemporal}</p>
-        )}
+        <div className={styles.controlsRow}>
+          {/* Input con icono integrado */}
+          <div className={`${styles.searchWrapper} ${inputInvalido ? styles.inputErrorWrapper : ""}`}>
+            <span className={styles.searchIcon}>
+              <SearchIcon />
+            </span>
+            <input
+              type="text"
+              placeholder={`Buscar cliente por ${filtroActivo}...`}
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className={styles.modernInput}
+            />
+          </div>
 
-        <div className={styles.filtrosContainer}>
-          <input
-            type="text"
-            placeholder={`Buscar cliente por ${filtroActivo}...`}
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className={`${styles.inputBuscar} ${
-              inputInvalido ? styles.inputError : ""
-            }`}
-          />
+          {/* Filtros estilo Tabs/Pills */}
+          <div className={styles.filtersGroup}>
+            <button
+              className={`${styles.filterPill} ${filtroActivo === "nombre" ? styles.pillActive : ""}`}
+              onClick={() => setFiltroActivo("nombre")}
+            >
+              Nombre / Apellido
+            </button>
+            <button
+              className={`${styles.filterPill} ${filtroActivo === "dni" ? styles.pillActive : ""}`}
+              onClick={() => setFiltroActivo("dni")}
+            >
+              DNI
+            </button>
+          </div>
 
-          <button
-            className={`${styles.btnFiltro} ${
-              filtroActivo === "nombre" ? styles.btnActivo : ""
-            }`}
-            onClick={() => setFiltroActivo("nombre")}
-          >
-            Nombre / Apellido
-          </button>
-
-          <button
-            className={`${styles.btnFiltro} ${
-              filtroActivo === "dni" ? styles.btnActivo : ""
-            }`}
-            onClick={() => setFiltroActivo("dni")}
-          >
-            DNI
-          </button>
-
-          <button onClick={handleBuscar} className={styles.btnBuscar}>
-            Buscar
-          </button>
-          <button onClick={handleLimpiar} className={styles.btnLimpiar}>
-            Limpiar
-          </button>
+          {/* Botones de Acción */}
+          <div className={styles.actionsGroup}>
+            <button onClick={handleBuscar} className={styles.btnActionPrimary}>
+              Buscar
+            </button>
+            <button onClick={handleLimpiar} className={styles.btnActionSecondary}>
+              Limpiar
+            </button>
+          </div>
         </div>
       </div>
 
