@@ -769,3 +769,182 @@
     gap: 15px;
   }
 }
+
+.gestionContainer {
+  background: #fff;
+  padding: 20px 25px;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+}
+
+.gestionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+/* Título ajustado */
+.title {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: #1e293b;
+  letter-spacing: -0.5px;
+}
+
+/* Mensaje de advertencia flotante o inline */
+.warningText {
+  color: #e11d48;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background-color: #ffe4e6;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin: 0;
+}
+
+/* Contenedor Flex para los controles */
+.controlsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: stretch;
+}
+
+/* --- 1. INPUT CON ICONO --- */
+.searchWrapper {
+  position: relative;
+  flex: 1; /* Ocupa el espacio disponible */
+  min-width: 250px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.modernInput {
+  width: 100%;
+  padding: 10px 12px 10px 38px; /* Padding izquierdo para el icono */
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #334155;
+  transition: all 0.2s ease;
+  background-color: #f8fafc;
+  box-sizing: border-box;
+}
+
+.modernInput:focus {
+  outline: none;
+  background-color: #fff;
+  border-color: #28b16d;
+  box-shadow: 0 0 0 3px rgba(40, 177, 109, 0.1);
+}
+
+.inputErrorWrapper .modernInput {
+  border-color: #e34c67;
+  box-shadow: 0 0 0 3px rgba(227, 76, 103, 0.1);
+}
+
+/* --- 2. FILTROS (Estilo Tabs/Pills) --- */
+.filtersGroup {
+  display: flex;
+  background-color: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+  gap: 4px;
+}
+
+.filterPill {
+  background: transparent;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.filterPill:hover {
+  color: #334155;
+}
+
+.pillActive {
+  background-color: #fff;
+  color: #263640;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  font-weight: 700;
+}
+
+/* --- 3. BOTONES DE ACCIÓN --- */
+.actionsGroup {
+  display: flex;
+  gap: 10px;
+}
+
+.btnActionPrimary {
+  background-color: #263640; /* Oscuro elegante */
+  color: #fff;
+  border: none;
+  padding: 0 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btnActionPrimary:hover {
+  background-color: #1b2933;
+}
+
+.btnActionSecondary {
+  background-color: #fff;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnActionSecondary:hover {
+  background-color: #f8fafc;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+/* Ajustes Responsive para este bloque */
+@media (max-width: 768px) {
+  .controlsRow {
+    flex-direction: column;
+  }
+  .searchWrapper, .filtersGroup, .actionsGroup {
+    width: 100%;
+  }
+  .actionsGroup {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .actionsGroup button {
+    justify-content: center;
+    width: 100%;
+    padding: 12px;
+  }
+}
