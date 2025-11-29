@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import styles from './Movimientos.module.css'
 import { useAuth } from '../../context/AuthContext'
-import { obtenerMovimientos } from '../../assets/services/movimientosService' // 👈 Importamos servicio
+import Loader from '../../Components/Loader/Loader' // Importamos el Loader estandarizado
+import { obtenerMovimientos } from '../../assets/services/movimientosService'
 
 const Movimientos = () => {
   const { user } = useAuth()
@@ -15,7 +16,7 @@ const Movimientos = () => {
   // ===========================
   // 🔹 Estado de filtros y Datos
   // ===========================
-  const [movimientos, setMovimientos] = useState([]) // 👈 Ya no es mock
+  const [movimientos, setMovimientos] = useState([])
   const [loading, setLoading] = useState(true)
   
   const [search, setSearch] = useState('')
@@ -36,7 +37,7 @@ const Movimientos = () => {
       try {
         const data = await obtenerMovimientos()
         
-        // Mapeamos la data de Supabase a la estructura que usa tu tabla
+        // Mapeamos la data de Supabase a la estructura de UI
         const movimientosFormateados = data.map(log => ({
           id: log.id,
           datetime: log.created_at,
@@ -61,7 +62,7 @@ const Movimientos = () => {
   }, [isAllowed])
 
   // ===========================
-  // 🔹 Helpers
+  // 🔹 Helpers de Formato
   // ===========================
   const formatDateTime = (isoString) => {
     if (!isoString) return '-'
@@ -99,7 +100,7 @@ const Movimientos = () => {
   }
 
   // ===========================
-  // 🔹 Filtrado de movimientos (Lógica existente)
+  // 🔹 Filtrado de movimientos
   // ===========================
   const movimientosFiltrados = useMemo(() => {
     return movimientos.filter((mov) => {
@@ -160,10 +161,16 @@ const Movimientos = () => {
   if (!isAllowed) {
     return (
       <section className={styles.movimientosContainer}>
-        <h2 className={styles.title}>Movimientos</h2>
+        <div className={styles.header}>
+           <div className={styles.headerText}>
+              <h2>Auditoría</h2>
+              <p>Historial de movimientos del sistema.</p>
+           </div>
+        </div>
         <div className={styles.notAllowedBox}>
-          <p>⛔ No tenés permisos para ver el historial de movimientos.</p>
-          <span>Solo los Super Admin y Admin pueden acceder a esta sección.</span>
+          <div className={styles.iconLock}>🔒</div>
+          <h3>Acceso Restringido</h3>
+          <p>Esta sección es exclusiva para Administradores.</p>
         </div>
       </section>
     )
@@ -174,17 +181,17 @@ const Movimientos = () => {
   // ===========================
   return (
     <section className={styles.movimientosContainer}>
+      
+      {/* Header & KPIs */}
       <div className={styles.headerRow}>
-        <div>
-          <h2 className={styles.title}>Movimientos</h2>
-          <p className={styles.subtitle}>
-            Auditoría de actividad del sistema.
-          </p>
+        <div className={styles.headerText}>
+          <h2>Movimientos</h2>
+          <p>Auditoría y control de actividad del sistema.</p>
         </div>
 
         <div className={styles.summaryCards}>
           <div className={styles.summaryCard}>
-            <span className={styles.summaryLabel}>Total Registros</span>
+            <span className={styles.summaryLabel}>Total Logs</span>
             <strong className={styles.summaryValue}>{movimientos.length}</strong>
           </div>
           <div className={styles.summaryCard}>
@@ -194,9 +201,12 @@ const Movimientos = () => {
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className={styles.filtersContainer}>
-        <div className={styles.filterRow}>
+      {/* Grid de Filtros */}
+      <div className={styles.filtersWrapper}>
+        <h4 className={styles.filterTitle}>🔍 Filtros de búsqueda</h4>
+        
+        <div className={styles.filtersGrid}>
+          {/* Búsqueda Texto */}
           <div className={styles.filterGroup}>
             <label>Buscar</label>
             <input
@@ -204,29 +214,15 @@ const Movimientos = () => {
               placeholder="Nombre, email o detalle..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              className={styles.inputSearch}
             />
           </div>
 
-          <div className={styles.filterGroup}>
-            <label>Rol</label>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-            >
-              <option value="ALL">Todos</option>
-              <option value="SUPER_ADMIN">Super Admin</option>
-              <option value="ADMIN">Admin</option>
-              <option value="SUPERVISOR">Encargado</option>
-            </select>
-          </div>
-
+          {/* Selectores */}
           <div className={styles.filterGroup}>
             <label>Módulo</label>
-            <select
-              value={moduleFilter}
-              onChange={(e) => setModuleFilter(e.target.value)}
-            >
-              <option value="ALL">Todos</option>
+            <select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
+              <option value="ALL">Todos los módulos</option>
               <option value="Clientes">Clientes</option>
               <option value="Pagos">Pagos</option>
               <option value="Planes">Planes</option>
@@ -236,9 +232,30 @@ const Movimientos = () => {
               <option value="Sistema">Sistema</option>
             </select>
           </div>
-        </div>
 
-        <div className={styles.filterRow}>
+          <div className={styles.filterGroup}>
+            <label>Rol</label>
+            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+              <option value="ALL">Todos los roles</option>
+              <option value="SUPER_ADMIN">Super Admin</option>
+              <option value="ADMIN">Admin</option>
+              <option value="SUPERVISOR">Encargado</option>
+            </select>
+          </div>
+
+          <div className={styles.filterGroup}>
+            <label>Acción</label>
+            <select value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}>
+              <option value="ALL">Todas las acciones</option>
+              <option value="LOGIN">Login</option>
+              <option value="CREACIÓN">Creación</option>
+              <option value="ACTUALIZACIÓN">Actualización</option>
+              <option value="ELIMINACIÓN">Eliminación</option>
+              <option value="REGISTRO_PAGO">Registro de pago</option>
+            </select>
+          </div>
+
+          {/* Fechas */}
           <div className={styles.filterGroup}>
             <label>Desde</label>
             <input
@@ -256,29 +273,17 @@ const Movimientos = () => {
               onChange={(e) => setDateTo(e.target.value)}
             />
           </div>
-
-          <div className={styles.filterGroup}>
-            <label>Acción</label>
-            <select
-              value={actionFilter}
-              onChange={(e) => setActionFilter(e.target.value)}
-            >
-              <option value="ALL">Todas</option>
-              <option value="LOGIN">Login</option>
-              <option value="CREACIÓN">Creación</option>
-              <option value="ACTUALIZACIÓN">Actualización</option>
-              <option value="ELIMINACIÓN">Eliminación</option>
-              <option value="REGISTRO_PAGO">Registro de pago</option>
-            </select>
-          </div>
-
-          <div className={styles.actionsGroup}>
+          
+          {/* Botón Limpiar */}
+          <div className={`${styles.filterGroup} ${styles.actionGroup}`}>
+            <label>&nbsp;</label> {/* Espaciador visual */}
             <button
               type="button"
               className={styles.btnClear}
               onClick={handleClearFilters}
+              title="Restablecer filtros"
             >
-              Limpiar
+              🗑️ Limpiar
             </button>
           </div>
         </div>
@@ -287,18 +292,19 @@ const Movimientos = () => {
       {/* Tabla de movimientos */}
       <div className={styles.tableWrapper}>
         {loading ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#666" }}>
-                Cargando historial de movimientos...
-            </div>
+           <div className={styles.loaderArea}>
+             <Loader text="Cargando historial..." />
+           </div>
         ) : movimientosFiltrados.length === 0 ? (
           <div className={styles.emptyState}>
-            <p>No hay movimientos que coincidan con los filtros seleccionados.</p>
+            <div className={styles.emptyIcon}>📭</div>
+            <p>No se encontraron movimientos con los filtros actuales.</p>
           </div>
         ) : (
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Fecha y hora</th>
+                <th>Fecha</th>
                 <th>Usuario</th>
                 <th>Rol</th>
                 <th>Módulo</th>
@@ -309,7 +315,7 @@ const Movimientos = () => {
             <tbody>
               {movimientosFiltrados.map((mov) => (
                 <tr key={mov.id}>
-                  <td>{formatDateTime(mov.datetime)}</td>
+                  <td className={styles.dateCell}>{formatDateTime(mov.datetime)}</td>
                   <td>
                     <div className={styles.userCell}>
                       <span className={styles.userName}>{mov.userName}</span>
@@ -323,9 +329,7 @@ const Movimientos = () => {
                   </td>
                   <td>
                     <span
-                      className={`${styles.moduleBadge} ${getModuleBadgeClass(
-                        mov.module
-                      )}`}
+                      className={`${styles.moduleBadge} ${getModuleBadgeClass(mov.module)}`}
                     >
                       {mov.module}
                     </span>

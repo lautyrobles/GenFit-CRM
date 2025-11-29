@@ -9,27 +9,27 @@ import {
 } from "../../assets/services/planesService";
 
 const Planes = () => {
+  // --- ESTADOS ---
   const [planes, setPlanes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  
+  // UI States
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
+  const [toast, setToast] = useState({ message: "", type: "" });
 
-  // Estado adaptado a la tabla 'plans' de Supabase
+  // Form State
   const [nuevoPlan, setNuevoPlan] = useState({
     name: "",
     price: "",
     days_per_week_limit: "", // Vacío = Ilimitado
-    entries_per_day_limit: 1, // Por defecto 1 entrada al día
+    entries_per_day_limit: 1,
     description: "",
     active: true,
   });
 
-  const [toast, setToast] = useState({ message: "", type: "" });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  /* ================================
-      🔹 Obtener planes
-      ================================ */
+  // --- CARGA INICIAL ---
   const fetchPlanes = async () => {
     try {
       setLoading(true);
@@ -47,20 +47,10 @@ const Planes = () => {
     fetchPlanes();
   }, []);
 
-  /* ================================
-      🔹 Form handlers
-      ================================ */
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    
-    // Manejo especial para booleanos y números
-    let finalValue = value;
-    if (name === "active") finalValue = value === "true";
-
-    setNuevoPlan((prev) => ({
-      ...prev,
-      [name]: finalValue,
-    }));
+  // --- HELPERS ---
+  const mostrarToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: "", type: "" }), 3000);
   };
 
   const limpiarFormulario = () => {
@@ -75,33 +65,39 @@ const Planes = () => {
     setEditIndex(null);
   };
 
-  const toggleFormulario = () => {
-    if (editIndex !== null) return;
-    setMostrarFormulario((prev) => !prev);
+  // --- HANDLERS UI ---
+  const abrirModalCrear = () => {
     limpiarFormulario();
+    setMostrarFormulario(true);
   };
 
-  const cancelarEdicion = () => {
-    limpiarFormulario();
+  const cerrarModal = () => {
     setMostrarFormulario(false);
+    limpiarFormulario();
   };
 
-  const mostrarToast = (message, type = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast({ message: "", type: "" }), 2500);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    let finalValue = value;
+    
+    // Tratamiento para selects booleanos o números
+    if (name === "active") finalValue = value === "true";
+    
+    setNuevoPlan((prev) => ({
+      ...prev,
+      [name]: finalValue,
+    }));
   };
 
+  // --- LOGICA CRUD ---
   const validarCampos = () => {
     if (!nuevoPlan.name || !nuevoPlan.price) {
-      mostrarToast("⚠️ El nombre y el precio son obligatorios.", "error");
+      mostrarToast("⚠️ Nombre y Precio son obligatorios.", "error");
       return false;
     }
     return true;
   };
 
-  /* ================================
-      🔹 Crear / Actualizar
-      ================================ */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validarCampos()) return;
@@ -109,11 +105,9 @@ const Planes = () => {
     try {
       setSaving(true);
 
-      // Preparamos el objeto para Supabase
       const body = {
         name: nuevoPlan.name,
         price: Number(nuevoPlan.price),
-        // Si está vacío, mandamos NULL (significa ilimitado)
         days_per_week_limit: nuevoPlan.days_per_week_limit ? Number(nuevoPlan.days_per_week_limit) : null,
         entries_per_day_limit: Number(nuevoPlan.entries_per_day_limit) || 1,
         description: nuevoPlan.description || "",
@@ -121,228 +115,243 @@ const Planes = () => {
       };
 
       if (editIndex !== null) {
-        // --- ACTUALIZAR ---
+        // UPDATE
         const plan = planes[editIndex];
-        // Usamos el ID real de la base de datos
         await actualizarPlan(plan.id, body);
-        mostrarToast("✔️ Plan actualizado correctamente");
+        mostrarToast("Plan actualizado correctamente ✨");
       } else {
-        // --- CREAR ---
+        // CREATE
         await crearPlan(body);
-        mostrarToast("✔️ Plan creado exitosamente");
+        mostrarToast("Nuevo plan creado con éxito 🚀");
       }
 
       await fetchPlanes();
-      cancelarEdicion();
+      cerrarModal();
+
     } catch (error) {
-      mostrarToast("❌ Error al guardar el plan", "error");
-      console.error("❌ ERROR SUBMIT:", error);
+      mostrarToast("Hubo un error al guardar.", "error");
+      console.error(error);
     } finally {
       setSaving(false);
     }
   };
 
-  /* ================================
-      🔹 Cambiar estado (Activar/Desactivar)
-      ================================ */
-  const toggleEstado = async (id, estadoActual) => {
-    try {
-      // estadoActual es booleano en Supabase
-      const next = !estadoActual;
-      await cambiarEstadoPlan(id, next);
-      mostrarToast(next ? "Plan Activado" : "Plan Desactivado");
-      await fetchPlanes();
-    } catch (error) {
-      mostrarToast("❌ Error al cambiar estado", "error");
-    }
-  };
-
-  /* ================================
-      🔹 Editar plan (Cargar datos)
-      ================================ */
   const editarPlan = (index) => {
     const p = planes[index];
-
     setNuevoPlan({
       name: p.name,
       price: p.price,
-      days_per_week_limit: p.days_per_week_limit || "", // Si es null, mostramos vacío
+      days_per_week_limit: p.days_per_week_limit || "",
       entries_per_day_limit: p.entries_per_day_limit || 1,
       description: p.description || "",
       active: p.active,
     });
-
     setEditIndex(index);
     setMostrarFormulario(true);
   };
 
-  /* ================================
-      🔹 Render
-      ================================ */
+  const toggleEstado = async (id, estadoActual) => {
+    try {
+      const next = !estadoActual;
+      await cambiarEstadoPlan(id, next);
+      mostrarToast(next ? "Plan Activado" : "Plan Desactivado");
+      fetchPlanes(); // Recarga silenciosa
+    } catch (error) {
+      mostrarToast("No se pudo cambiar el estado", "error");
+    }
+  };
+
+  // --- RENDER ---
   return (
     <section className={styles.planesContainer}>
+      
+      {/* TOAST NOTIFICATIONS */}
       {toast.message && (
-        <div
-          className={`${styles.toast} ${
-            toast.type === "error" ? styles.toastError : styles.toastSuccess
-          }`}
-        >
+        <div className={`${styles.toast} ${toast.type === "error" ? styles.toastError : styles.toastSuccess}`}>
           {toast.message}
         </div>
       )}
 
+      {/* HEADER */}
       <div className={styles.header}>
-        <div>
-          <h2>Planes Disponibles</h2>
-          <p>Configura las membresías y reglas de acceso (Básico vs Libre).</p>
+        <div className={styles.headerText}>
+          <h2>Planes y Membresías</h2>
+          <p>Define los productos, precios y límites de acceso para tus clientes.</p>
         </div>
-
-        {editIndex === null ? (
-          <button className={styles.btnCrear} onClick={toggleFormulario}>
-            {mostrarFormulario ? "Cancelar" : "+ Crear plan"}
-          </button>
-        ) : (
-          <button className={styles.btnEliminar} onClick={cancelarEdicion}>
-            Cancelar edición
-          </button>
-        )}
+        
+        <button className={styles.btnPrimary} onClick={abrirModalCrear}>
+          + Crear Nuevo Plan
+        </button>
       </div>
 
+      {/* MODAL POPUP (Overlay + Content) */}
+      {mostrarFormulario && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            
+            {/* Modal Header */}
+            <div className={styles.modalHeader}>
+              <h3>{editIndex !== null ? "📝 Editando Plan" : "✨ Nuevo Plan"}</h3>
+              <button className={styles.btnClose} onClick={cerrarModal}>&times;</button>
+            </div>
+
+            {/* Modal Body (Form) */}
+            <div className={styles.modalBody}>
+              <form onSubmit={handleSubmit} id="planForm">
+                <div className={styles.formGrid}>
+                  
+                  {/* Grupo 1: Info Básica */}
+                  <div className={styles.formGroup}>
+                    <label>Nombre del Plan</label>
+                    <input
+                      type="text"
+                      name="name"
+                      placeholder="Ej: Pase Libre"
+                      value={nuevoPlan.name}
+                      onChange={handleChange}
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Precio ($)</label>
+                    <input
+                      type="number"
+                      name="price"
+                      placeholder="0.00"
+                      value={nuevoPlan.price}
+                      onChange={handleChange}
+                      className={styles.inputPrice}
+                    />
+                  </div>
+
+                  {/* Grupo 2: Límites */}
+                  <div className={styles.formGroup}>
+                    <label>Días por semana <small>(Vacío = Ilimitado)</small></label>
+                    <input
+                      type="number"
+                      name="days_per_week_limit"
+                      placeholder="∞"
+                      value={nuevoPlan.days_per_week_limit}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Entradas por día</label>
+                    <input
+                      type="number"
+                      name="entries_per_day_limit"
+                      value={nuevoPlan.entries_per_day_limit}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  {/* Grupo 3: Extras */}
+                  <div className={styles.formGroup}>
+                    <label>Descripción / Nota</label>
+                    <input
+                      type="text"
+                      name="description"
+                      placeholder="Detalles breves..."
+                      value={nuevoPlan.description}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Estado Inicial</label>
+                    <select name="active" value={nuevoPlan.active} onChange={handleChange}>
+                      <option value={true}>🟢 Activo</option>
+                      <option value={false}>🔴 Inactivo</option>
+                    </select>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            {/* Modal Footer */}
+            <div className={styles.modalFooter}>
+              <button type="button" className={styles.btnSecondary} onClick={cerrarModal}>
+                Cancelar
+              </button>
+              <button type="submit" form="planForm" className={styles.btnPrimary} disabled={saving}>
+                {saving ? "Guardando..." : (editIndex !== null ? "Guardar Cambios" : "Crear Plan")}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* CONTENIDO PRINCIPAL (GRILLA) */}
       {loading ? (
-        <Loader text="Cargando planes..." />
-      ) : saving ? (
-        <Loader text="Guardando cambios..." />
+        <div className={styles.loaderWrapper}><Loader text="Cargando catálogo..." /></div>
       ) : (
         <>
-          {/* FORMULARIO */}
-          {mostrarFormulario && (
-            <form className={styles.formContainer} onSubmit={handleSubmit}>
-              <div className={styles.inputGroup}>
-                <label>Nombre del Plan</label>
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Ej: Pase Libre"
-                  value={nuevoPlan.name}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className={styles.inputGroup}>
-                <label>Precio ($)</label>
-                <input
-                  type="number"
-                  name="price"
-                  placeholder="Ej: 25000"
-                  value={nuevoPlan.price}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className={styles.inputGroup}>
-                <label>Días x Semana (Vacío = Ilimitado)</label>
-                <input
-                  type="number"
-                  name="days_per_week_limit"
-                  placeholder="Ej: 3 (Para Básico)"
-                  value={nuevoPlan.days_per_week_limit}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className={styles.inputGroup}>
-                <label>Accesos x Día</label>
-                <input
-                  type="number"
-                  name="entries_per_day_limit"
-                  placeholder="Ej: 1"
-                  value={nuevoPlan.entries_per_day_limit}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className={styles.inputGroup}>
-                <label>Descripción / Notas</label>
-                <input
-                  type="text"
-                  name="description"
-                  placeholder="Notas internas..."
-                  value={nuevoPlan.description}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className={styles.inputGroup}>
-                <label>Estado Inicial</label>
-                <select name="active" value={nuevoPlan.active} onChange={handleChange}>
-                  <option value={true}>Activo</option>
-                  <option value={false}>Inactivo</option>
-                </select>
-              </div>
-
-              <button type="submit" className={styles.btnConfirmar}>
-                {editIndex !== null ? "Guardar cambios" : "Confirmar"}
-              </button>
-            </form>
-          )}
-
-          {/* TABLA */}
-          {planes.length > 0 ? (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Días/Semana</th>
-                  <th>Accesos/Día</th>
-                  <th>Precio</th>
-                  <th>Descripción</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {planes.map((p, i) => (
-                  <tr key={p.id}>
-                    <td><strong>{p.name}</strong></td>
-                    
-                    <td>
-                      {p.days_per_week_limit 
-                        ? `${p.days_per_week_limit} días` 
-                        : <span style={{color: '#27ae60'}}>Ilimitado</span>}
-                    </td>
-                    
-                    <td>{p.entries_per_day_limit || "∞"}</td>
-                    
-                    <td>${p.price}</td>
-                    
-                    <td>{p.description || "-"}</td>
-
-                    <td>
-                      <span className={p.active ? styles.active : styles.inactive}>
-                        {p.active ? "Activo" : "Inactivo"}
-                      </span>
-                    </td>
-
-                    <td>
-                      <button className={styles.btnEditar} onClick={() => editarPlan(i)}>
-                        Editar
-                      </button>
-
-                      <button
-                        className={styles.btnEstado}
-                        onClick={() => toggleEstado(p.id, p.active)}
-                      >
-                        {p.active ? "Desactivar" : "Activar"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {planes.length === 0 ? (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyIcon}>📋</div>
+              <h3>Aún no hay planes creados</h3>
+              <p>Comenzá creando tu primer plan de suscripción para registrar pagos.</p>
+              <button className={styles.btnPrimary} onClick={abrirModalCrear}>Crear primer plan</button>
+            </div>
           ) : (
-            <div className={styles.placeholderBox}>
-              <p>📋 No hay planes registrados todavía</p>
+            <div className={styles.gridPlanes}>
+              {planes.map((p, i) => (
+                <div key={p.id} className={`${styles.cardPlan} ${!p.active ? styles.cardInactive : ''}`}>
+                  
+                  {/* Card Header */}
+                  <div className={styles.cardHeader}>
+                    <div className={styles.cardTitle}>
+                      <h4>{p.name}</h4>
+                      <span className={`${styles.badge} ${p.active ? styles.badgeActive : styles.badgeInactive}`}>
+                        {p.active ? "ACTIVO" : "INACTIVO"}
+                      </span>
+                    </div>
+                    <div className={styles.cardPrice}>
+                      <span className={styles.currency}>$</span>
+                      {Number(p.price).toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className={styles.cardBody}>
+                    <p className={styles.cardDesc}>{p.description || "Sin descripción"}</p>
+                    
+                    <div className={styles.featuresList}>
+                      <div className={styles.featureItem}>
+                        <span className={styles.icon}>📅</span>
+                        <span>
+                          {p.days_per_week_limit 
+                            ? <strong>{p.days_per_week_limit} días</strong> 
+                            : <strong className={styles.infinity}>Acceso Ilimitado</strong>}
+                           {' '}/ semana
+                        </span>
+                      </div>
+                      <div className={styles.featureItem}>
+                        <span className={styles.icon}>🚪</span>
+                        <span><strong>{p.entries_per_day_limit}</strong> accesos / día</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Footer */}
+                  <div className={styles.cardFooter}>
+                    <button className={styles.btnIcon} onClick={() => editarPlan(i)} title="Editar">
+                      ✏️ Editar
+                    </button>
+                    
+                    <button 
+                      className={`${styles.btnIcon} ${p.active ? styles.btnDestructive : styles.btnConstructive}`} 
+                      onClick={() => toggleEstado(p.id, p.active)}
+                      title={p.active ? "Desactivar" : "Activar"}
+                    >
+                      {p.active ? "🚫 Desactivar" : "✅ Activar"}
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </>
