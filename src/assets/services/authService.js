@@ -60,7 +60,7 @@ export const registerUser = async (name, lastName, email, username, password, ro
       role: role || 'CLIENT',
       dni: dni,
       password: password, // Guardamos copia simple (opcional, útil para verla en admin)
-      enabled: true
+      enabled: true,
     };
 
     const { data, error: dbError } = await supabase

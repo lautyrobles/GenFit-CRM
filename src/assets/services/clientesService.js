@@ -35,7 +35,9 @@ export const crearCliente = async (cliente) => {
         cliente.first_name,
         cliente.last_name,
         cliente.email,
-        cliente.dni,          // Username = DNI
+        cliente.dni,
+        cliente.phone,
+        cliente.plan_id,          // Username = DNI
         String(cliente.dni),  // Password = DNI (Para que pueda entrar solo con DNI)
         'CLIENT',             // Rol forzado a CLIENTE
         cliente.dni           // DNI real
