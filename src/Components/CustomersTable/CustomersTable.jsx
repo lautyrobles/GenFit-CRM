@@ -9,21 +9,27 @@ import {
   crearCliente,
   actualizarCliente,
 } from "../../assets/services/clientesService";
-
 import { obtenerPlanes } from "../../assets/services/planesService";
 
-// Iconos simples
+// Iconos refinados para estilo moderno
 const SearchIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8"></circle>
     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
   </svg>
 );
 
 const EyeIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
     <circle cx="12" cy="12" r="3"></circle>
+  </svg>
+);
+
+const EditIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
   </svg>
 );
 
@@ -31,34 +37,20 @@ const CustomersTable = () => {
   const navigate = useNavigate(); 
   const [usuarios, setUsuarios] = useState([]);
   const [planesDisponibles, setPlanesDisponibles] = useState([]);
-  
-  // 🪟 Estado del Modal
   const [mostrarModal, setMostrarModal] = useState(false);
-  
   const [editIndex, setEditIndex] = useState(null);
   const [toast, setToast] = useState({ message: "", type: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
-  // 🔍 Estado para el buscador
   const [busqueda, setBusqueda] = useState("");
 
-  const itemsPerPage = 5; 
+  const itemsPerPage = 6; // Ajustado para un mejor aspecto visual en pantalla
 
-  // Estado del formulario
   const [nuevoUsuario, setNuevoUsuario] = useState({
-    dni: "",
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    plan_id: "",
+    dni: "", first_name: "", last_name: "", email: "", phone: "", plan_id: "",
   });
 
-  /* ===================================================
-      🔹 Obtener clientes y planes
-     =================================================== */
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -69,86 +61,46 @@ const CustomersTable = () => {
       setUsuarios(clientesData || []);
       setPlanesDisponibles(planesData || []);
     } catch (error) {
-      console.error("❌ Error al cargar datos:", error);
-      mostrarToast("Error de conexión con la base de datos", "error");
+      mostrarToast("Error de conexión", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  /* ===================================================
-      🔹 Lógica de Filtrado
-     =================================================== */
   const usuariosFiltrados = useMemo(() => {
     if (!busqueda) return usuarios;
     const termino = busqueda.toLowerCase();
-    
-    return usuarios.filter((usuario) => {
-      if (usuario.dni && usuario.dni.toString().toLowerCase().includes(termino)) {
-        return true;
-      }
-      const nombreCompleto = `${usuario.first_name} ${usuario.last_name}`.toLowerCase();
-      return nombreCompleto.includes(termino);
+    return usuarios.filter((u) => {
+      const full = `${u.first_name} ${u.last_name}`.toLowerCase();
+      return (u.dni?.toString().includes(termino) || full.includes(termino));
     });
   }, [usuarios, busqueda]);
 
-  /* ===================================================
-      🔹 Manejo de búsqueda
-     =================================================== */
   const handleBusqueda = (e) => {
     setBusqueda(e.target.value);
     setCurrentPage(1);
   };
 
-  /* ===================================================
-      🔹 Resolver nombre del plan
-     =================================================== */
   const resolverNombrePlan = (u) => {
     if (u.plan_name) return u.plan_name;
-    const idBusqueda = u.plan_id || (u.subscription && u.subscription.plan_id);
-    if (idBusqueda) {
-      const plan = planesDisponibles.find((p) => p.id === idBusqueda);
-      if (plan) return plan.name;
-    }
-    return "-";
-  };
-
-  /* ===================================================
-      🔹 Manejo del formulario (Modal)
-     =================================================== */
-  const limpiarFormulario = () => {
-    setNuevoUsuario({
-      dni: "",
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone: "",
-      plan_id: "",
-    });
+    const id = u.plan_id || u.subscription?.plan_id;
+    const plan = planesDisponibles.find((p) => p.id === id);
+    return plan ? plan.name : "-";
   };
 
   const abrirModalCrear = () => {
-    limpiarFormulario();
+    setNuevoUsuario({ dni: "", first_name: "", last_name: "", email: "", phone: "", plan_id: "" });
     setEditIndex(null);
     setMostrarModal(true);
   };
 
-  const cerrarModal = () => {
-    limpiarFormulario();
-    setEditIndex(null);
-    setMostrarModal(false);
-  };
+  const cerrarModal = () => { setMostrarModal(false); setEditIndex(null); };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setNuevoUsuario({
-      ...nuevoUsuario,
-      [name]: value,
-    });
+    setNuevoUsuario({ ...nuevoUsuario, [name]: value });
   };
 
   const mostrarToast = (message, type = "success") => {
@@ -156,101 +108,40 @@ const CustomersTable = () => {
     setTimeout(() => setToast({ message: "", type: "" }), 2500);
   };
 
-  /* ===================================================
-      🔹 Validación y Submit
-     =================================================== */
-  const validarCampos = () => {
-    if (!nuevoUsuario.dni || !nuevoUsuario.first_name || !nuevoUsuario.last_name || !nuevoUsuario.email) {
-      mostrarToast("⚠️ DNI, Nombre, Apellido y Email son obligatorios.", "error");
-      return false;
-    }
-    return true;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validarCampos()) return;
-
+    if (!nuevoUsuario.dni || !nuevoUsuario.first_name || !nuevoUsuario.email) {
+      mostrarToast("Campos obligatorios faltantes", "error");
+      return;
+    }
     try {
       setSaving(true);
-      const clienteBody = {
-        dni: nuevoUsuario.dni,
-        first_name: nuevoUsuario.first_name,
-        last_name: nuevoUsuario.last_name,
-        email: nuevoUsuario.email,
-        phone: nuevoUsuario.phone,
-        enabled: true,
-        role: 'CLIENT'
-      };
-
+      const body = { ...nuevoUsuario, enabled: true, role: 'CLIENT' };
       if (editIndex !== null) {
-        // --- ACTUALIZAR ---
-        // Buscamos el usuario real en la lista filtrada
-        const usuarioEditado = usuariosFiltrados[editIndex];
-        
-        await actualizarCliente(usuarioEditado.id, {
-            ...clienteBody,
-            // Importante: enviar el plan_id si la API lo soporta directamente, 
-            // o manejarlo aparte en subscriptions.
-            plan_id: nuevoUsuario.plan_id 
-        });
-        mostrarToast("✅ Usuario actualizado correctamente");
+        await actualizarCliente(usuariosFiltrados[editIndex].id, body);
+        mostrarToast("✅ Usuario actualizado");
       } else {
-        // --- CREAR ---
-        await crearCliente({
-            ...clienteBody,
-            plan_id: nuevoUsuario.plan_id 
-        });
-        mostrarToast("✅ Usuario creado exitosamente");
+        await crearCliente(body);
+        mostrarToast("✅ Usuario creado");
       }
-
       await fetchData();
-      cerrarModal(); 
+      cerrarModal();
     } catch (error) {
-      console.error("❌ Error en el envío:", error);
-      mostrarToast("❌ Error al guardar usuario.", "error");
+      mostrarToast("❌ Error al guardar", "error");
     } finally {
       setSaving(false);
     }
   };
 
-  /* ===================================================
-      🔹 Acciones de Usuario
-     =================================================== */
   const editarUsuario = (u) => {
-    // Buscamos el index correcto en la lista filtrada
-    const indexEnFiltrados = usuariosFiltrados.findIndex(user => user.id === u.id);
-    
-    setNuevoUsuario({
-      dni: u.dni || "",
-      first_name: u.first_name || "",
-      last_name: u.last_name || "",
-      email: u.email || "",
-      phone: u.phone || "",
-      plan_id: u.plan_id || "", 
-    });
-
-    setEditIndex(indexEnFiltrados);
-    setMostrarModal(true); // Abrimos el modal
+    setNuevoUsuario({ ...u, plan_id: u.plan_id || "" });
+    setEditIndex(usuariosFiltrados.findIndex(user => user.id === u.id));
+    setMostrarModal(true);
   };
 
-  const verDetalleUsuario = (usuario) => {
-    navigate("/clientes", { state: { clienteSeleccionado: usuario } });
-  };
-
-  /* ===================================================
-      🔹 Paginación
-     =================================================== */
   const totalPaginas = Math.ceil(usuariosFiltrados.length / itemsPerPage);
-  const inicio = (currentPage - 1) * itemsPerPage;
-  const usuariosPagina = usuariosFiltrados.slice(inicio, inicio + itemsPerPage);
+  const usuariosPagina = usuariosFiltrados.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const siguientePagina = () => currentPage < totalPaginas && setCurrentPage(currentPage + 1);
-  const anteriorPagina = () => currentPage > 1 && setCurrentPage(currentPage - 1);
-
-  /* ===================================================
-      🔹 Render UI
-     =================================================== */
   return (
     <>
       {toast.message && (
@@ -259,186 +150,104 @@ const CustomersTable = () => {
         </div>
       )}
 
-      {/* ==========================================
-          🪟 MODAL / POPUP (Nuevo Estilo)
-         ========================================== */}
       {mostrarModal && (
-        <div className={styles.modalOverlay} onClick={(e) => {
-            if (e.target === e.currentTarget) cerrarModal();
-        }}>
+        <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && cerrarModal()}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
-              <h3>{editIndex !== null ? "Editar Usuario" : "Crear Usuario"}</h3>
+              <h3>{editIndex !== null ? "Editar Cliente" : "Nuevo Cliente"}</h3>
               <button className={styles.modalCloseBtn} onClick={cerrarModal}>&times;</button>
             </div>
-
             <form className={styles.modalBody} onSubmit={handleSubmit}>
               <div className={styles.inputGroup}>
                 <label>DNI</label>
-                <input type="text" name="dni" placeholder="DNI" value={nuevoUsuario.dni} onChange={handleChange} />
+                <input type="text" name="dni" value={nuevoUsuario.dni} onChange={handleChange} />
               </div>
-              
               <div className={styles.row}>
-                <div className={styles.inputGroup}>
-                  <label>Nombre</label>
-                  <input type="text" name="first_name" placeholder="Nombre" value={nuevoUsuario.first_name} onChange={handleChange} />
-                </div>
-                <div className={styles.inputGroup}>
-                  <label>Apellido</label>
-                  <input type="text" name="last_name" placeholder="Apellido" value={nuevoUsuario.last_name} onChange={handleChange} />
-                </div>
+                <div className={styles.inputGroup}><label>Nombre</label><input type="text" name="first_name" value={nuevoUsuario.first_name} onChange={handleChange} /></div>
+                <div className={styles.inputGroup}><label>Apellido</label><input type="text" name="last_name" value={nuevoUsuario.last_name} onChange={handleChange} /></div>
               </div>
-
-              <div className={styles.inputGroup}>
-                <label>Email</label>
-                <input type="email" name="email" placeholder="correo@ejemplo.com" value={nuevoUsuario.email} onChange={handleChange} />
-              </div>
-
-              <div className={styles.inputGroup}>
-                <label>Teléfono</label>
-                <input type="text" name="phone" placeholder="Teléfono" value={nuevoUsuario.phone} onChange={handleChange} />
-              </div>
-              
+              <div className={styles.inputGroup}><label>Email</label><input type="email" name="email" value={nuevoUsuario.email} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>Teléfono</label><input type="text" name="phone" value={nuevoUsuario.phone} onChange={handleChange} /></div>
               <div className={styles.inputGroup}>
                 <label>Plan</label>
                 <select name="plan_id" value={nuevoUsuario.plan_id} onChange={handleChange}>
                   <option value="">Seleccionar plan...</option>
-                  {planesDisponibles.map((plan) => (
-                    <option key={plan.id} value={plan.id}>{plan.name} — ${plan.price}</option>
-                  ))}
+                  {planesDisponibles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
-
               <div className={styles.modalFooter}>
-                <button type="button" className={styles.btnCancelar} onClick={cerrarModal}>
-                  Cancelar
-                </button>
-                <button type="submit" className={styles.btnGuardar} disabled={saving}>
-                  {saving ? "Guardando..." : editIndex !== null ? "Guardar Cambios" : "Crear Usuario"}
-                </button>
+                <button type="button" className={styles.btnCancelar} onClick={cerrarModal}>Cancelar</button>
+                <button type="submit" className={styles.btnGuardar} disabled={saving}>{saving ? "Guardando..." : "Guardar"}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* ==========================================
-          CONTENEDOR PRINCIPAL
-         ========================================== */}
       <section className={styles.customersContainer}>
         <div className={styles.header}>
           <div className={styles.titleContainer}>
             <h3>Gestión de Usuarios</h3>
-            <span className={styles.badgeCount}>{usuariosFiltrados.length} clientes</span>
           </div>
 
           <div className={styles.actionsHeader}>
             <div className={styles.searchContainer}>
-              <span className={styles.searchIcon}>
-                <SearchIcon />
-              </span>
-              <input 
-                type="text" 
-                placeholder="Buscar por DNI o Nombre..." 
-                value={busqueda}
-                onChange={handleBusqueda}
-                className={styles.searchInput}
-              />
+              <span className={styles.searchIcon}><SearchIcon /></span>
+              <input type="text" placeholder="Buscar cliente..." value={busqueda} onChange={handleBusqueda} className={styles.searchInput} />
             </div>
-
-            <button className={styles.btnCrear} onClick={abrirModalCrear}>
-              + Crear usuario
-            </button>
+            <button className={styles.btnCrear} onClick={abrirModalCrear}>+ Nuevo usuario</button>
           </div>
         </div>
 
-        {/* Loaders */}
-        {loading ? (
-          <Loader text="Cargando clientes..." />
-        ) : (
+        {loading ? <Loader text="Cargando..." /> : (
           <>
-            {/* TABLA */}
-            {usuariosFiltrados.length > 0 ? (
-              <>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>DNI</th>
-                      <th>Nombre</th>
-                      <th>Apellido</th>
-                      <th>Email</th>
-                      <th>Teléfono</th>
-                      <th>Plan</th>
-                      <th>Estado</th>
-                      <th>Acciones</th>
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Nombre y Apellido</th>
+                    <th>DNI</th>
+                    <th>Email</th>
+                    <th>Teléfono</th>
+                    <th>Plan</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usuariosPagina.map((u) => (
+                    <tr key={u.id} className={editIndex === usuarios.findIndex(user => user.id === u.id) ? styles.editingRow : ""}>
+                      <td className={styles.nameCell}>
+                        <div className={styles.avatar}>{u.first_name[0]}{u.last_name[0]}</div>
+                        <div className={styles.nameText}>
+                          <p>{u.first_name} {u.last_name}</p>
+                          <span>Cliente</span>
+                        </div>
+                      </td>
+                      <td className={styles.dniCell}>{u.dni || "-"}</td>
+                      <td className={styles.emailCell}>{u.email}</td>
+                      <td>{u.phone || "-"}</td>
+                      <td><span className={styles.planBadge}>{resolverNombrePlan(u)}</span></td>
+                      <td>
+                        <span className={u.enabled ? styles.active : styles.inactive}>
+                          {u.enabled ? "Activo" : "Inactivo"}
+                        </span>
+                      </td>
+                      <td className={styles.actionsCell}>
+                        <button className={styles.actionBtn} onClick={() => navigate("/clientes", { state: { clienteSeleccionado: u } })} title="Ver"><EyeIcon /></button>
+                        <button className={styles.actionBtn} onClick={() => editarUsuario(u)} title="Editar"><EditIcon /></button>
+                      </td>
                     </tr>
-                  </thead>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-                  <tbody>
-                    {usuariosPagina.map((u) => {
-                      const originalIndex = usuarios.findIndex(user => user.id === u.id);
-                      const isEditing = editIndex === originalIndex;
-                      
-                      const statusTexto = u.enabled ? "Activo" : "Inactivo";
-                      const isActive = u.enabled;
-
-                      return (
-                        <tr key={u.id} className={isEditing ? styles.editingRow : ""}>
-                          <td>{u.dni || "-"}</td>
-                          <td>{u.first_name}</td>
-                          <td>{u.last_name}</td>
-                          <td>{u.email}</td>
-                          <td>{u.phone || "-"}</td>
-                          <td>{resolverNombrePlan(u)}</td>
-                          <td>
-                            <span className={isActive ? styles.active : styles.inactive}>
-                              {statusTexto}
-                            </span>
-                          </td>
-
-                          <td className={styles.actionsCell}>
-                            <button
-                              className={styles.btnVer}
-                              onClick={() => verDetalleUsuario(u)}
-                              title="Ver detalle"
-                            >
-                              <EyeIcon /> 
-                              <span className={styles.btnText}>Ver</span>
-                            </button>
-
-                            <button
-                              className={styles.btnEditar}
-                              onClick={() => editarUsuario(u)}
-                            >
-                              Editar
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-
-                {/* PAGINADOR */}
-                {usuariosFiltrados.length > itemsPerPage && (
-                  <div className={styles.paginador}>
-                    <button onClick={anteriorPagina} disabled={currentPage === 1} className={styles.btnPaginador}>
-                      ◀ Anterior
-                    </button>
-                    <span className={styles.paginaActual}>
-                      Página {currentPage} de {totalPaginas}
-                    </span>
-                    <button onClick={siguientePagina} disabled={currentPage === totalPaginas} className={styles.btnPaginador}>
-                      Siguiente ▶
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className={styles.placeholderBox}>
-                <p>🔍 No se encontraron usuarios.</p>
-              </div>
-            )}
+            <div className={styles.paginador}>
+              <button onClick={() => setCurrentPage(prev => prev - 1)} disabled={currentPage === 1}>Anterior</button>
+              <span className={styles.paginaInfo}>Página {currentPage} de {totalPaginas}</span>
+              <button onClick={() => setCurrentPage(prev => prev + 1)} disabled={currentPage === totalPaginas}>Siguiente</button>
+            </div>
           </>
         )}
       </section>

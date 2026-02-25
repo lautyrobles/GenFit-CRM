@@ -1,6 +1,6 @@
 import React from 'react'
 import styles from './Sidebar.module.css'
-import { Home, Users, CreditCard, Gift, HelpCircle, Activity } from 'lucide-react'
+import { Home, Users, CreditCard, Gift, HelpCircle, Activity, LogOut } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import userIcon from '/src/assets/user-icon.png'
 import { useAuth } from '../../context/AuthContext'
@@ -8,27 +8,9 @@ import { useAuth } from '../../context/AuthContext'
 const Sidebar = () => {
   const { user, logout } = useAuth()
 
-  if (!user) {
-    return (
-      <aside className={styles.sidebar}>
-        <h1 className={styles.logo}>
-          FitSEO <span>CRM</span>
-        </h1>
-        <div className={styles.minimalMessage}>
-          <p>Iniciá sesión para acceder al panel</p>
-        </div>
-      </aside>
-    )
-  }
+  if (!user) return null // O tu mensaje de login
 
-  // =====================================================
-  // 🔹 Rol actual del usuario
-  // =====================================================
   const role = user.roles?.[0] || user.role
-
-  // =====================================================
-  // 🔹 Permisos
-  // =====================================================
   const canViewPagos = ["SUPER_ADMIN", "ADMIN", "ENCARGADO"].includes(role)
   const canViewPlanes = ["SUPER_ADMIN", "ADMIN", "ENCARGADO"].includes(role)
   const canViewPermisos = ["SUPER_ADMIN", "ADMIN"].includes(role)
@@ -45,116 +27,92 @@ const Sidebar = () => {
 
   return (
     <aside className={styles.sidebar}>
-      <h1 className={styles.logo}>
-        FitSEO <span>CRM</span>
-      </h1>
+      <div className={styles.topSection}>
+        <h1 className={styles.logo}>
+          FitSEO <span>CRM</span>
+        </h1>
 
-      <nav className={styles.nav}>
-        <ul>
-          <li>
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) =>
-                `${styles.navItem} ${isActive ? styles.active : ''}`
-              }
-            >
-              <Home size={18} />
-              <span>Inicio</span>
+        <nav className={styles.nav}>
+          {/* GRUPO 1: GENERAL */}
+          <div className={styles.navGroup}>
+            <span className={styles.groupLabel}>General</span>
+            <NavLink to="/" end className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
+              <Home size={18} /> <span>Inicio</span>
             </NavLink>
-          </li>
-
-          <li>
-            <NavLink
-              to="/clientes"
-              className={({ isActive }) =>
-                `${styles.navItem} ${isActive ? styles.active : ''}`
-              }
-            >
-              <Users size={18} />
-              <span>Clientes</span>
+            <NavLink to="/clientes" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
+              <Users size={18} /> <span>Clientes</span>
             </NavLink>
-          </li>
+          </div>
 
-          {canViewPagos && (
-            <li>
-              <NavLink
-                to="/pagos"
-                className={({ isActive }) =>
-                  `${styles.navItem} ${isActive ? styles.active : ''}`
-                }
-              >
-                <CreditCard size={18} />
-                <span>Pagos</span>
-              </NavLink>
-            </li>
+          {/* GRUPO 2: GESTIÓN COMERCIAL */}
+          {(canViewPagos || canViewPlanes) && (
+            <div className={styles.navGroup}>
+              <span className={styles.groupLabel}>Gestión</span>
+              {canViewPagos && (
+                <NavLink to="/pagos" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
+                  <CreditCard size={18} /> <span>Pagos</span>
+                </NavLink>
+              )}
+              {canViewPlanes && (
+                <NavLink to="/planes" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
+                  <Gift size={18} /> <span>Planes</span>
+                </NavLink>
+              )}
+            </div>
           )}
 
-          {canViewPlanes && (
-            <li>
-              <NavLink
-                to="/planes"
-                className={({ isActive }) =>
-                  `${styles.navItem} ${isActive ? styles.active : ''}`
-                }
-              >
-                <Gift size={18} />
-                <span>Planes</span>
-              </NavLink>
-            </li>
+          {/* GRUPO 3: ADMINISTRACIÓN */}
+          {(canViewMovimientos || canViewPermisos) && (
+            <div className={styles.navGroup}>
+              <span className={styles.groupLabel}>Admin</span>
+              {canViewMovimientos && (
+                <NavLink to="/movimientos" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
+                  <Activity size={18} /> <span>Movimientos</span>
+                </NavLink>
+              )}
+              {canViewPermisos && (
+                <NavLink to="/configuracion" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
+                  <HelpCircle size={18} /> <span>Permisos</span>
+                </NavLink>
+              )}
+            </div>
           )}
-
-          {/* 🆕 MOVIMIENTOS - Solo Admins */}
-          {canViewMovimientos && (
-            <li>
-              <NavLink
-                to="/movimientos"
-                className={({ isActive }) =>
-                  `${styles.navItem} ${isActive ? styles.active : ''}`
-                }
-              >
-                <Activity size={18} />
-                <span>Movimientos</span>
-              </NavLink>
-            </li>
-          )}
-
-          {canViewPermisos && (
-            <li>
-              <NavLink
-                to="/configuracion"
-                className={({ isActive }) =>
-                  `${styles.navItem} ${isActive ? styles.active : ''}`
-                }
-              >
-                <HelpCircle size={18} />
-                <span>Permisos</span>
-              </NavLink>
-            </li>
-          )}
-        </ul>
-      </nav>
-
-      <div className={styles.proBox}>
-        <p>¿Tenés algún problema? ¡Contactanos!</p>
-        <NavLink to="/soporte">
-          <button>Soporte Técnico</button>
-        </NavLink>
+        </nav>
       </div>
 
-      <div className={styles.userInfo}>
-        <img src={userIcon} alt="Usuario" />
-        <div className={styles.userTitle}>
-          <h4>
-            {user.name} {user.lastName}
-          </h4>
-          <span>{mostrarRol()}</span>
+{/* SECCIÓN INFERIOR REDISEÑADA */}
+      <div className={styles.bottomSection}>
+        {/* Tarjeta de Soporte Refinada */}
+        <div className={styles.supportCard}>
+          <div className={styles.supportContent}>
+            <HelpCircle size={20} className={styles.supportIcon} />
+            <div className={styles.supportText}>
+              <p className={styles.supportTitle}>¿Necesitás ayuda?</p>
+              <p className={styles.supportSub}>Estamos para asistirte</p>
+            </div>
+          </div>
+          <NavLink to="/soporte" className={styles.supportAction}>
+            Soporte Técnico
+          </NavLink>
+        </div>
+
+        {/* Perfil de Usuario Profesional */}
+        <div className={styles.userProfile}>
+          <div className={styles.userAccount}>
+            <div className={styles.avatarContainer}>
+              <img src={userIcon} alt="Profile" className={styles.avatar} />
+              <div className={styles.activeIndicator}></div>
+            </div>
+            <div className={styles.userDetails}>
+              <h4 className={styles.userName}>{user.name}</h4>
+              <span className={styles.userRole}>{mostrarRol()}</span>
+            </div>
+          </div>
+          <button onClick={logout} className={styles.logoutAction} title="Cerrar sesión">
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
-
-      <button onClick={logout} className={styles.logoutBtn}>
-        Cerrar sesión
-      </button>
     </aside>
   )
 }

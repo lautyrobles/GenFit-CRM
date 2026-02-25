@@ -1,94 +1,144 @@
-.soporteContainer {
-  background: #fff;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+.soporteWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100%;
+  animation: fadeIn 0.5s ease-out;
 }
 
 .soporteContainer {
+  background: #ffffff;
+  padding: 48px;
+  border-radius: 28px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+  max-width: 600px;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0px;
-  width: 100%; /* ← clave */
-  margin-left: 20px;
-}
-
-.formBox {
-  margin-top: 0px;
-  /* borde punteado similar al placeholder anterior */
-  border: 2px dashed #ccc;
-  padding: 40px 40px 10px 40px;
-  border-radius: 12px;
-  color: #888;
-  background: #fafafa;
-}
-
-.formulario {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.fieldGroup {
-  display: flex;
-  flex-direction: column;
-}
-
-.fieldGroup label {
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #333;
-}
-
-.fieldGroup input,
-.fieldGroup select,
-.fieldGroup textarea {
-  padding: 12px 16px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 16px;
-  color: #333;
-  background: #fff;
-  transition: border-color 0.2s ease;
-}
-
-.fieldGroup input:focus,
-.fieldGroup select:focus,
-.fieldGroup textarea:focus {
-  outline: none;
-  border-color: #007bff; /* puedes adaptar al color principal de FitSEO */
-}
-
-.btnSubmit {
-  align-self: flex-start;
-  padding: 14px 28px;
-  background-color: #007bff; /* color principal, lo adaptás según tu tema FitSEO */
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-}
-
-.btnSubmit:hover {
-  background-color: #0056b3;
-  transform: translateY(-1px);
-}
-
-.mensajeExito {
+  gap: 32px;
   text-align: center;
-  color: #2d7a2d;
 }
 
-.mensajeExito h3 {
+.iconHeader {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.mainIcon {
+  color: #3b82f6;
+  background: #eff6ff;
+  padding: 12px;
+  border-radius: 20px;
+}
+
+.infoSection h2 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #1e293b;
   margin-bottom: 12px;
 }
 
+.infoSection p {
+  color: #64748b;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.featuresGrid {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.actionBox {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: #f8fafc;
+  padding: 32px;
+  border-radius: 24px;
+}
+
+.fieldGroup {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldGroup label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #475569;
+  padding-left: 4px;
+}
+
+.selectInput {
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  background: #fff;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.selectInput:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.btnWhatsApp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  color: #fff;
+  border: none;
+  padding: 16px;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 15px -3px rgba(37, 211, 102, 0.3);
+}
+
+.btnWhatsApp:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 20px -3px rgba(37, 211, 102, 0.4);
+}
+
+.linkIcon {
+  opacity: 0.7;
+}
+
+.footerNote {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (max-width: 600px) {
-  .formBox {
-    padding: 24px;
-  }
+  .soporteContainer { padding: 32px 24px; }
+  .featuresGrid { flex-direction: column; gap: 10px; }
 }

@@ -1,21 +1,18 @@
-/* 🔹 Reset general de márgenes y padding */
+/* 🔹 Reset general */
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
   width: 100%;
-  background-color: #E6F0F4; /* mismo fondo de tu diseño */
+  background-color: #E6F0F4;
   font-family: 'Inter', sans-serif;
-  /* overflow-y: hidden; */
   box-sizing: border-box;
 }
 
-/* 🔹 Asegurar que todo el contenido use el mismo modelo de caja */
 *, *::before, *::after {
   box-sizing: inherit;
 }
 
-/* 🔹 Evitar scroll horizontal accidental */
 body {
   overflow-x: hidden;
 }
@@ -24,26 +21,41 @@ body {
   display: flex;
   background-color: #E6F0F4;
   min-height: 100vh;
-  font-family: 'Inter', sans-serif;
 }
 
-/* MAIN: todo lo que no es sidebar */
+/* 🎯 El secreto del centrado profesional */
 .mainContent {
-  margin-left: 250px; /* mismo ancho del sidebar */
-  margin-right: 40px;
+  margin-left: 260px; /* Alineado con el ancho de tu Sidebar */
   flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center; 
+  
+  /* Reducimos el padding lateral de 60px a 40px para ganar espacio */
+  padding: 40px; 
   gap: 24px;
-  padding: 32px;
-  color: #263640;
   background-color: #E6F0F4;
   box-sizing: border-box;
+  min-width: 0;
 }
 
-.statsSection {
+/* Contenedor interno para limitar el ancho máximo y que no se estire infinito en monitores 4K */
+.contentWrapper {
+  width: 100%;
+  /* Subimos de 1200px a 1450px para que ocupe más pantalla */
+  max-width: 1450px; 
   display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-  margin-bottom: 32px;
+  flex-direction: column;
+  gap: 32px;
+  /* Agregamos una transición suave por si redimensionas la ventana */
+  transition: max-width 0.3s ease;
+}
+
+.loginMain {
+  margin-left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }

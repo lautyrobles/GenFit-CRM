@@ -1,19 +1,14 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // 👈 Importante para redirigir
+import { useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { useAuth } from "../../context/AuthContext";
+import { Lock, Mail, Loader2 } from "lucide-react"; // Importamos iconos para los inputs
 
 const Login = () => {
   const { login } = useAuth();
-  const navigate = useNavigate(); // 👈 Hook para navegar
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-
-  // Supabase usa EMAIL, no "usuario" genérico
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
 
   const handleChange = (e) => {
@@ -26,20 +21,17 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // Enviamos 'email' como 'usuario' porque así lo espera tu AuthContext
       const ok = await login({ 
         usuario: formData.email, 
         password: formData.password 
       });
 
       if (ok) {
-        // ✅ Login exitoso -> Vamos al Dashboard
         navigate("/"); 
       } else {
         setError("Credenciales incorrectas o error de conexión.");
       }
     } catch (err) {
-      // Aquí capturamos errores como "Tu cuenta es de alumno..."
       setError(err.message || "Error al iniciar sesión.");
     } finally {
       setLoading(false);
@@ -49,59 +41,66 @@ const Login = () => {
   return (
     <div className={styles.loginWrapper}>
       <div className={styles.loginContainer}>
-        <h2 className={styles.title}>Ingresar</h2>
-        <p className={styles.subtitle}>Accedé al panel de FitSEO CRM</p>
+        <header className={styles.header}>
+          <h1 className={styles.logo}>FitSEO <span>CRM</span></h1>
+          <h2 className={styles.title}>¡Bienvenido de nuevo!</h2>
+          <p className={styles.subtitle}>Ingresá tus credenciales para acceder</p>
+        </header>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.inputGroup}>
             <label htmlFor="email">Correo Electrónico</label>
-            <input
-              type="email" 
-              name="email"
-              id="email"
-              placeholder="admin@fitseo.com"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
+            <div className={styles.inputWrapper}>
+              <Mail className={styles.inputIcon} size={18} />
+              <input
+                type="email" 
+                name="email"
+                id="email"
+                placeholder="nombre@ejemplo.com"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
           </div>
 
           <div className={styles.inputGroup}>
             <label htmlFor="password">Contraseña</label>
-            <input
-              type="password"
-              name="password"
-              id="password"
-              placeholder="Contraseña"
-              value={formData.password}
-              onChange={handleChange}
-              required
-            />
+            <div className={styles.inputWrapper}>
+              <Lock className={styles.inputIcon} size={18} />
+              <input
+                type="password"
+                name="password"
+                id="password"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+            </div>
           </div>
 
-          {error && <p className={styles.error}>{error}</p>}
+          {error && <div className={styles.error}>{error}</div>}
 
           <button
             type="submit"
-            className={`${styles.submitBtn} ${
-              loading ? styles.loadingBtn : ""
-            }`}
+            className={styles.submitBtn}
             disabled={loading}
           >
             {loading ? (
               <>
-                <span className={styles.buttonSpinner}></span>
-                Ingresando...
+                <Loader2 className={styles.spinner} size={18} />
+                <span>Iniciando sesión...</span>
               </>
             ) : (
-              "Ingresar"
+              "Ingresar al panel"
             )}
           </button>
         </form>
 
-        <p className={styles.footerText}>
-          Acceso restringido al personal autorizado
-        </p>
+        <footer className={styles.footer}>
+          <p>Acceso restringido a personal autorizado</p>
+        </footer>
       </div>
     </div>
   );

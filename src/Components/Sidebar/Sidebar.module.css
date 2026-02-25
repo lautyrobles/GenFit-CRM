@@ -1,147 +1,300 @@
 .sidebar {
-  background-color: #263640;
-  color: #fff;
-  width: 250px;
+  background-color: #ffffff; /* Fondo blanco limpio como la referencia */
+  width: 260px;
   height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 24px;
+  padding: 32px 20px;
   position: fixed;
   top: 0;
   left: 0;
-}
-
-.sidebar h3 {
-  font-size: 12px;
-  display: flex;
-  width: 100%;
-  justify-content: flex-start;
-  font-weight: 200;
-  color: lightslategray;
+  border-right: 1px solid #f1f5f9;
+  z-index: 100;
 }
 
 .logo {
   font-size: 22px;
-  font-weight: 700;
-  color: #fff;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 40px;
+  padding-left: 12px;
+  letter-spacing: -1px;
 }
 
 .logo span {
-  color: #6d5dfc;
+  color: #7c3aed; /* Violeta principal */
 }
 
-.nav {
-  margin-top: 40px;
-}
-
-.nav ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+/* Agrupación Lógica */
+.navGroup {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.groupLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  padding-left: 12px;
 }
 
 .navItem {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 15px;
+  font-size: 0.95rem;
   font-weight: 500;
-  color: #e5e5e5;
+  color: #64748b;
   text-decoration: none;
-  transition: 0.3s ease;
-  padding: 8px 10px;
-  border-radius: 8px;
+  transition: all 0.2s ease;
+  padding: 10px 14px;
+  border-radius: 12px;
 }
 
 .navItem:hover {
-  background-color: #34485c;
-  color: #fff;
+  background-color: #f8fafc;
+  color: #7c3aed;
 }
 
-/* Enlace activo (mantiene tu estilo violeta) */
 .active {
-  background-color: #6d5dfc;
-  color: #fff;
-  box-shadow: 0 2px 6px rgba(109, 93, 252, 0.3);
+  background-color: #f5f3ff; /* Lavanda muy suave */
+  color: #7c3aed;
+  font-weight: 600;
 }
 
-/* Caja de soporte */
+/* Caja de Soporte Estilo Moderno */
 .proBox {
-  background-color: #34485c;
-  border-radius: 12px;
-  padding: 16px;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  border-radius: 20px;
+  padding: 20px;
   text-align: center;
-  margin-top: auto;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.2);
 }
 
 .proBox p {
-  font-size: 13px;
+  font-size: 0.85rem;
   margin-bottom: 12px;
-  color: #e6f0f4;
-}
-
-.proBox button {
-  background-color: #6d5dfc;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 14px;
-  cursor: pointer;
+  color: #ede9fe;
   font-weight: 500;
-  transition: 0.3s;
 }
 
-.proBox button:hover {
-  background-color: #5b4de0;
+.soporteBtn {
+  background-color: #fff;
+  color: #7c3aed;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: 0.2s;
 }
 
-/* Usuario */
+.soporteBtn:hover {
+  transform: scale(1.05);
+}
+
+/* Footer de Usuario */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 20px;
+  border-top: 1px solid #f1f5f9;
+}
+
 .userInfo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 24px;
+  gap: 12px;
 }
 
 .userInfo img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background-color: #f1f5f9;
 }
 
 .userTitle h4 {
   margin: 0;
-  font-size: 14px;
-  color: #fff;
+  font-size: 0.9rem;
+  color: #1e293b;
 }
 
 .userTitle span {
-  font-size: 12px;
-  color: #cbd5e1;
-}
-
-.minimalMessage {
-  margin-top: 40px;
-  text-align: center;
-  color: #7c8a97;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
 }
 
 .logoutBtn {
-  margin-top: 30px;
-  background: #e74c3c;
-  color: #fff;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 6px;
+  background: #fff;
+  color: #94a3b8;
+  border: 1px solid #f1f5f9;
+  padding: 8px;
+  border-radius: 10px;
   cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .logoutBtn:hover {
-  background: #c0392b;
+  background-color: #fef2f2;
+  color: #ef4444;
+  border-color: #fee2e2;
+}
+
+/* --- SECCIÓN INFERIOR --- */
+.bottomSection {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Tarjeta de Soporte Estilo Moderno */
+.supportCard {
+  background-color: #f8fafc; /* Slate 50 */
+  border: 1px solid #f1f5f9;
+  border-radius: 20px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.supportContent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.supportIcon {
+  color: #7c3aed;
+  background: #f5f3ff;
+  padding: 8px;
+  box-sizing: content-box;
+  border-radius: 12px;
+}
+
+.supportText {
+  display: flex;
+  flex-direction: column;
+}
+
+.supportTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.supportSub {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.supportAction {
+  background-color: #7c3aed;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 10px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.supportAction:hover {
+  background-color: #6d28d9;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+}
+
+/* Perfil de Usuario Refinado */
+.userProfile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 4px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.userAccount {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatarContainer {
+  position: relative;
+  display: flex;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px; /* Estilo squircle */
+  background-color: #f1f5f9;
+  object-fit: cover;
+}
+
+.activeIndicator {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background-color: #10b981; /* Esmeralda */
+  border: 2.5px solid #ffffff;
+  border-radius: 50%;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+}
+
+.userName {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.userRole {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.logoutAction {
+  background: transparent;
+  border: 1px solid #f1f5f9;
+  color: #94a3b8;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoutAction:hover {
+  background-color: #fef2f2;
+  color: #ef4444;
+  border-color: #fee2e2;
 }
