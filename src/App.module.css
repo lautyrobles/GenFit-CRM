@@ -7,6 +7,10 @@ html, body {
   background-color: #E6F0F4;
   font-family: 'Inter', sans-serif;
   box-sizing: border-box;
+  
+  /* 🚀 LA SOLUCIÓN AL SALTO: */
+  overflow-y: scroll; /* Fuerza a que el "carril" del scroll siempre exista */
+  scrollbar-gutter: stable; /* En navegadores modernos, reserva el espacio del scroll dinámicamente */
 }
 
 *, *::before, *::after {

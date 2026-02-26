@@ -29,7 +29,7 @@ const Sidebar = () => {
     <aside className={styles.sidebar}>
       <div className={styles.topSection}>
         <h1 className={styles.logo}>
-          FitSEO <span>CRM</span>
+          GenFIT <span>CRM</span>
         </h1>
 
         <nav className={styles.nav}>

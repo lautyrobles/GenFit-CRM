@@ -454,22 +454,29 @@ const Clientes = () => {
                     >
                       {cliente?.enabled ? "Activo" : "Inactivo"}
                     </span>
-                    {/* ✏️ BOTÓN EDITAR */}
+                    
+                    <span className={styles.spanPlan}>
+                      Plan Libre
+                    </span>
                     <button className={styles.btnEditarPerfil} onClick={abrirModalEdicion}>
                       Editar datos
                     </button>
                   </div>
                 </header>
 
+                <div className={styles.hrLine}></div>
+
                 <div className={styles.infoBody}>
                   <div className={styles.infoColumn}>
                     <h4>Datos personales</h4>
                     <p>
-                      <span>ID Sistema:</span> {cliente?.id?.slice(0, 8)}...
+                      <span>Objetivo:</span> {cliente?.id?.slice(0, 8)}...
                     </p>
+                    <div className={styles.dataHrLine}></div>
                     <p>
                       <span>Altura:</span> {cliente?.height_cm || "-"} cm
                     </p>
+                    <div className={styles.dataHrLine}></div>
                     <p>
                       <span>Peso:</span> {cliente?.weight_kg || "-"} kg
                     </p>
@@ -480,6 +487,7 @@ const Clientes = () => {
                     <p>
                       <span>Email:</span> {cliente?.email || "-"}
                     </p>
+                    <div className={styles.dataHrLine}></div>
                     <p>
                       <span>Teléfono:</span> {cliente?.phone || "-"}
                     </p>
@@ -511,7 +519,7 @@ const Clientes = () => {
                  ========================= */}
               <div className={`${styles.card} ${styles.asistenciaCard}`}>
                 <div className={styles.sectionHeaderRow}>
-                  <h3>Asistencia (Simulada)</h3>
+                  <h3>Asistencia</h3>
                   <span className={styles.badgeSecondary}>Vista rápida</span>
                 </div>
                 <div className={styles.weekDays}>
@@ -575,7 +583,7 @@ const Clientes = () => {
       {mostrarModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
-            <h3>Se encontraron varios clientes</h3>
+            <h3>Seleccionar cliente</h3>
             <table className={styles.modalTable}>
               <thead>
                 <tr>

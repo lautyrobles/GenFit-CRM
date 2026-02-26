@@ -199,6 +199,7 @@ const CustomersTable = () => {
           </div>
         </div>
 
+            
         {loading ? <Loader text="Cargando..." /> : (
           <>
             <div className={styles.tableWrapper}>
