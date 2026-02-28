@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo } from "react";
 import styles from "./Pagos.module.css";
 import Loader from "../../Components/Loader/Loader";
 import { useAuth } from "../../context/AuthContext";
+import KpiCard from "./KpiCard";
+import { Plus, Search, CheckCircle, AlertCircle, X, DollarSign, Activity, FileText } from 'lucide-react';
 
 // --- SERVICIOS ---
 import { obtenerPagos, registrarPago } from "../../assets/services/paymentsService";
@@ -9,179 +11,102 @@ import { obtenerClientePorDocumento } from "../../assets/services/clientesServic
 import { registrarMovimiento } from "../../assets/services/movimientosService";
 
 const Pagos = () => {
-  const { user } = useAuth(); // Usuario logueado (Admin/Supervisor)
+  const { user } = useAuth(); 
   
-  // Roles permitidos
   const role = user?.role || "USER"; 
   const canRegisterPayments = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR"].includes(role);
 
-  // --- ESTADOS DE DATOS ---
   const [pagos, setPagos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState("");
 
-  // --- ESTADOS DE INTERFAZ ---
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // --- ESTADO DEL FORMULARIO ---
   const [nuevoPago, setNuevoPago] = useState({
-    clienteId: null,      // ID interno de Supabase (UUID)
-    clienteDocumento: "", // DNI para buscar
+    clienteId: null,      
+    clienteDocumento: "", 
     clienteNombre: "",
-    planNombre: "",       // Visual
+    planNombre: "",       
     periodo: "",
     fechaPago: new Date().toISOString().split("T")[0],
     montoFinal: "",
     metodoPago: "EFECTIVO",
-    comprobante: ""       // Notas
+    comprobante: ""       
   });
 
-  // ===============================================================
-  // 🔔 TOAST HELPER
-  // ===============================================================
   const mostrarToast = (msg, tipo = "error") => {
-    if (tipo === "error") {
-      setError(msg);
-      setSuccess("");
-    } else {
-      setSuccess(msg);
-      setError("");
-    }
+    if (tipo === "error") { setError(msg); setSuccess(""); } 
+    else { setSuccess(msg); setError(""); }
     setTimeout(() => { setError(""); setSuccess(""); }, 4000);
   };
 
-  // ===============================================================
-  // 📥 CARGAR DATOS (READ)
-  // ===============================================================
   const cargarHistorial = async () => {
     try {
       setLoading(true);
       const data = await obtenerPagos();
-      
-      // Mapeamos de snake_case (Supabase) a camelCase (UI)
       const pagosFormateados = data.map(p => ({
-        id: p.id,
-        amount: p.amount,
-        date: p.payment_date,
-        method: p.payment_method,
-        status: p.status,
+        id: p.id, amount: p.amount, date: p.payment_date, method: p.payment_method, status: p.status,
         clientName: p.users ? `${p.users.first_name} ${p.users.last_name}` : 'Cliente Eliminado',
-        clientDni: p.users?.dni || '-',
-        planName: 'Plan Activo' // Si tuvieras relación con planes, iría aquí
+        clientDni: p.users?.dni || '-', planName: 'Plan Activo' 
       }));
-
       setPagos(pagosFormateados);
     } catch (e) {
       mostrarToast("Error al cargar el historial de pagos.", "error");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    cargarHistorial();
-  }, []);
+  useEffect(() => { cargarHistorial(); }, []);
 
-  // ===============================================================
-  // 🔍 BUSCAR CLIENTE
-  // ===============================================================
   const buscarCliente = async () => {
     const dni = nuevoPago.clienteDocumento.trim();
     if (!dni) return mostrarToast("Ingresá un DNI para buscar.", "error");
-
-    setLoading(true); // Pequeño loading visual
+    setLoading(true); 
     try {
       const cliente = await obtenerClientePorDocumento(dni);
-
       if (!cliente) {
         setNuevoPago(prev => ({ ...prev, clienteNombre: "", clienteId: null }));
         return mostrarToast("Cliente no encontrado en la base de datos.", "error");
       }
-
       setNuevoPago((prev) => ({
-        ...prev,
-        clienteId: cliente.id, // Guardamos el UUID para la relación
-        clienteNombre: `${cliente.first_name} ${cliente.last_name}`,
-        planNombre: "Plan Vigente", // Aquí podrías hacer fetch del plan si es necesario
+        ...prev, clienteId: cliente.id, clienteNombre: `${cliente.first_name} ${cliente.last_name}`, planNombre: "Plan Vigente", 
       }));
-
       mostrarToast("Cliente encontrado exitosamente.", "success");
-    } catch (e) {
-      mostrarToast("Error de conexión al buscar cliente.", "error");
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { mostrarToast("Error de conexión al buscar cliente.", "error"); } 
+    finally { setLoading(false); }
   };
 
-  // ===============================================================
-  // 💾 CONFIRMAR PAGO (CREATE)
-  // ===============================================================
   const handleAbrirConfirmacion = (e) => {
     e.preventDefault();
     if (!nuevoPago.clienteId) return mostrarToast("Debes buscar y seleccionar un cliente válido.", "error");
     if (!nuevoPago.montoFinal || Number(nuevoPago.montoFinal) <= 0) return mostrarToast("El monto debe ser mayor a 0.", "error");
-    
     setShowConfirmPopup(true);
   };
 
   const confirmarPago = async () => {
     try {
-      // 1. Preparar objeto para DB (snake_case)
       const pagoData = {
-        user_id: nuevoPago.clienteId,
-        amount: Number(nuevoPago.montoFinal),
-        payment_date: nuevoPago.fechaPago,
-        payment_method: nuevoPago.metodoPago,
-        status: 'COMPLETED',
+        user_id: nuevoPago.clienteId, amount: Number(nuevoPago.montoFinal), payment_date: nuevoPago.fechaPago,
+        payment_method: nuevoPago.metodoPago, status: 'COMPLETED',
         notes: nuevoPago.comprobante ? `Ref: ${nuevoPago.comprobante} | Periodo: ${nuevoPago.periodo}` : `Periodo: ${nuevoPago.periodo}`
       };
 
-      // 2. Insertar en Supabase
       await registrarPago(pagoData);
 
-      // 3. Registrar en Auditoría (System Logs)
       if (user?.id) {
-        await registrarMovimiento(
-          user.id,
-          "Pagos",
-          "CREACIÓN",
-          `Cobro registrado de $${pagoData.amount} a ${nuevoPago.clienteNombre} (${nuevoPago.clienteDocumento})`
-        );
+        await registrarMovimiento(user.id, "Pagos", "CREACIÓN", `Cobro registrado de $${pagoData.amount} a ${nuevoPago.clienteNombre} (${nuevoPago.clienteDocumento})`);
       }
 
-      // 4. Actualizar UI
       mostrarToast("¡Pago registrado correctamente!", "success");
-      setShowConfirmPopup(false);
+      setShowConfirmPopup(false); 
       setMostrarFormulario(false);
-      
-      // 5. Resetear formulario
-      setNuevoPago({
-        clienteId: null,
-        clienteDocumento: "",
-        clienteNombre: "",
-        planNombre: "",
-        periodo: "",
-        fechaPago: new Date().toISOString().split("T")[0],
-        montoFinal: "",
-        metodoPago: "EFECTIVO",
-        comprobante: ""
-      });
-
-      // 6. Recargar lista
+      setNuevoPago({ clienteId: null, clienteDocumento: "", clienteNombre: "", planNombre: "", periodo: "", fechaPago: new Date().toISOString().split("T")[0], montoFinal: "", metodoPago: "EFECTIVO", comprobante: "" });
       cargarHistorial();
-
-    } catch (e) {
-      console.error(e);
-      mostrarToast("Hubo un error al guardar el pago.", "error");
-    }
+    } catch (e) { console.error(e); mostrarToast("Hubo un error al guardar el pago.", "error"); }
   };
 
-  // ===============================================================
-  // 📊 CALCULOS EN TIEMPO REAL
-  // ===============================================================
   const kpis = useMemo(() => {
     const total = pagos.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
     const cantidad = pagos.length;
@@ -192,12 +117,7 @@ const Pagos = () => {
   const pagosFiltrados = useMemo(() => {
     if (!busqueda) return pagos;
     const lower = busqueda.toLowerCase();
-    return pagos.filter(
-      (p) =>
-        p.clientName?.toLowerCase().includes(lower) ||
-        String(p.clientDni).includes(lower) ||
-        p.method?.toLowerCase().includes(lower)
-    );
+    return pagos.filter(p => p.clientName?.toLowerCase().includes(lower) || String(p.clientDni).includes(lower) || p.method?.toLowerCase().includes(lower));
   }, [pagos, busqueda]);
 
   const handleChange = (e) => {
@@ -205,201 +125,65 @@ const Pagos = () => {
     setNuevoPago((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ===============================================================
-  // 🎨 RENDER
-  // ===============================================================
   return (
-    <section className={styles.pagosContainer}>
+    <section className={styles.pagosLayout}>
       
-      {/* --- Toasts --- */}
+      {/* --- Toasts Superiores --- */}
       <div className={styles.toastContainer}>
-        {success && <div className={`${styles.toast} ${styles.toastSuccess}`}>✅ {success}</div>}
-        {error && <div className={`${styles.toast} ${styles.toastError}`}>⚠️ {error}</div>}
+        {success && <div className={`${styles.toast} ${styles.toastSuccess}`}><CheckCircle size={18}/> {success}</div>}
+        {error && <div className={`${styles.toast} ${styles.toastError}`}><AlertCircle size={18}/> {error}</div>}
       </div>
 
-      {/* --- Header --- */}
-      <div className={styles.header}>
-        <div className={styles.headerTitle}>
-          <h2>Gestión de pagos</h2>
-          <p className={styles.subtitle}>Administración de caja y cobros.</p>
+      {/* BLOQUE SUPERIOR ESTÁTICO (Header + KPIs) */}
+      <div className={styles.topSection}>
+        <div className={styles.header}>
+          <div className={styles.headerTitle}>
+            <h2>Flujo de Caja</h2>
+            <p className={styles.subtitle}>Control de ingresos y transacciones.</p>
+          </div>
+          
+          {canRegisterPayments && (
+            <button
+              className={styles.btnPrimary}
+              onClick={() => setMostrarFormulario(true)}
+            >
+              <Plus size={16}/> Nuevo Cobro
+            </button>
+          )}
         </div>
-        
-        {canRegisterPayments && (
-          <button
-            className={mostrarFormulario ? `${styles.btnPrimary} ${styles.btnCancel}` : styles.btnPrimary}
-            onClick={() => setMostrarFormulario(!mostrarFormulario)}
-          >
-            {mostrarFormulario ? "Cancelar operación" : "+ Nuevo Pago"}
-          </button>
-        )}
-      </div>
 
-      {/* --- KPIs --- */}
-      {!mostrarFormulario && (
+        {/* KPIs estilo Tarjetas Premium */}
         <div className={styles.kpiGrid}>
-          <div className={styles.kpiCard}>
-            <span className={styles.kpiLabel}>Total Recaudado</span>
-            <span className={styles.kpiValue}>${kpis.total.toLocaleString()}</span>
-          </div>
-          <div className={styles.kpiCard}>
-            <span className={styles.kpiLabel}>Transacciones</span>
-            <span className={styles.kpiValue}>{kpis.cantidad}</span>
-          </div>
-          <div className={styles.kpiCard}>
-            <span className={styles.kpiLabel}>Ticket Promedio</span>
-            <span className={styles.kpiValue}>${Math.round(kpis.promedio).toLocaleString()}</span>
-          </div>
-        </div>
-      )}
-
-      {/* --- Formulario --- */}
-      <div className={`${styles.collapseSection} ${mostrarFormulario ? styles.open : ''}`}>
-        <div className={styles.formContainer}>
-          <form onSubmit={handleAbrirConfirmacion}>
-            <div className={styles.formSplit}>
-              
-              {/* Columna Izquierda */}
-              <div className={styles.formColumn}>
-                <h4 className={styles.columnTitle}>👤 Datos del Cliente</h4>
-                
-                <div className={styles.formGroup}>
-                  <label>DNI / Documento</label>
-                  <div className={styles.inputWithAction}>
-                    <input
-                      type="text"
-                      name="clienteDocumento"
-                      value={nuevoPago.clienteDocumento}
-                      onChange={handleChange}
-                      placeholder="Ej: 30123456"
-                      autoFocus
-                    />
-                    <button type="button" onClick={buscarCliente} disabled={loading} title="Buscar">
-                      {loading ? "..." : "🔍"}
-                    </button>
-                  </div>
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label>Cliente</label>
-                  <input
-                    type="text"
-                    value={nuevoPago.clienteNombre}
-                    readOnly
-                    placeholder="Se completa al buscar..."
-                    className={styles.readOnlyInput}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label>Plan (Referencia)</label>
-                  <input
-                    type="text"
-                    value={nuevoPago.planNombre}
-                    readOnly
-                    className={styles.readOnlyInput}
-                  />
-                </div>
-              </div>
-
-              {/* Columna Derecha */}
-              <div className={styles.formColumn}>
-                <h4 className={styles.columnTitle}>💰 Detalles del Pago</h4>
-                
-                <div className={styles.rowTwo}>
-                  <div className={styles.formGroup}>
-                    <label>Monto ($)</label>
-                    <input
-                      type="number"
-                      name="montoFinal"
-                      value={nuevoPago.montoFinal}
-                      onChange={handleChange}
-                      placeholder="0.00"
-                      className={styles.amountInput}
-                      min="0"
-                    />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label>Fecha</label>
-                    <input
-                      type="date"
-                      name="fechaPago"
-                      value={nuevoPago.fechaPago}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-
-                <div className={styles.rowTwo}>
-                  <div className={styles.formGroup}>
-                    <label>Método de Pago</label>
-                    <select name="metodoPago" value={nuevoPago.metodoPago} onChange={handleChange}>
-                      <option value="EFECTIVO">💵 Efectivo</option>
-                      <option value="TRANSFERENCIA">🏦 Transferencia</option>
-                      <option value="MERCADO_PAGO">📱 Mercado Pago</option>
-                      <option value="TARJETA_DEBITO">💳 Débito</option>
-                      <option value="TARJETA_CREDITO">💳 Crédito</option>
-                    </select>
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label>Período (Opcional)</label>
-                    <input
-                      type="month"
-                      name="periodo"
-                      value={nuevoPago.periodo}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label>Ref. Comprobante / Nota</label>
-                  <input
-                    type="text"
-                    name="comprobante"
-                    value={nuevoPago.comprobante}
-                    onChange={handleChange}
-                    placeholder="# Operación, nota interna..."
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.formFooter}>
-              <button type="submit" className={styles.btnSubmit}>Continuar al Resumen</button>
-            </div>
-          </form>
+          <KpiCard label="Total Recaudado" value={`$${kpis.total.toLocaleString()}`} icon={<DollarSign size={20}/>} trend="+Mes actual" />
+          <KpiCard label="Transacciones" value={kpis.cantidad} icon={<Activity size={20}/>} />
+          <KpiCard label="Ticket Promedio" value={`$${Math.round(kpis.promedio).toLocaleString()}`} icon={<FileText size={20}/>} />
         </div>
       </div>
 
-      {/* --- Tabla --- */}
-      <div className={styles.tableSection}>
+      {/* BLOQUE INFERIOR (Tabla con scroll interno) */}
+      <div className={styles.tableCard}>
         <div className={styles.tableToolbar}>
-          <h3>Historial de Transacciones</h3>
+          <h3>Historial Reciente</h3>
           <div className={styles.searchBox}>
-            <span className={styles.searchIcon}>🔍</span>
-            <input 
-              type="text" 
-              placeholder="Buscar por cliente, DNI..." 
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
+            <Search className={styles.searchIcon} size={16} />
+            <input type="text" placeholder="Filtrar recibos..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
           </div>
         </div>
 
-        <div className={styles.tableContainer}>
+        <div className={styles.tableScrollArea}>
           {loading && pagos.length === 0 ? (
-            <div style={{ padding: 20 }}><Loader text="Cargando pagos..." /></div>
+            <div className={styles.loaderWrapper}><Loader text="Sincronizando caja..." /></div>
           ) : pagosFiltrados.length > 0 ? (
             <table className={styles.modernTable}>
               <thead>
                 <tr>
-                  <th>Cliente</th>
+                  <th>Socio</th>
                   <th>DNI</th>
-                  <th>Concepto</th>
-                  <th>Método</th>
+                  <th>Membresía</th>
+                  <th>Canal</th>
                   <th>Fecha</th>
-                  <th className={styles.textRight}>Monto</th>
-                  <th className={styles.textCenter}>Estado</th>
+                  <th className={styles.textRight}>Importe</th>
+                  <th className={styles.textCenter}>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -408,14 +192,12 @@ const Pagos = () => {
                     <td className={styles.fwBold}>{p.clientName}</td>
                     <td className={styles.textMuted}>{p.clientDni}</td>
                     <td><span className={styles.planBadge}>{p.planName}</span></td>
-                    <td>{p.method?.replace('_', ' ')}</td>
-                    <td>{new Date(p.date).toLocaleDateString()}</td>
-                    <td className={`${styles.textRight} ${styles.amountText}`}>
-                      ${Number(p.amount).toLocaleString()}
-                    </td>
+                    <td><span className={styles.methodPill}>{p.method?.replace('_', ' ')}</span></td>
+                    <td className={styles.dateText}>{new Date(p.date).toLocaleDateString()}</td>
+                    <td className={`${styles.textRight} ${styles.amountText}`}>${Number(p.amount).toLocaleString()}</td>
                     <td className={styles.textCenter}>
                       <span className={`${styles.statusPill} ${styles.confirmed}`}>
-                        {p.status === 'COMPLETED' ? 'CONFIRMADO' : p.status}
+                        <CheckCircle size={12}/> {p.status === 'COMPLETED' ? 'Aprobado' : p.status}
                       </span>
                     </td>
                   </tr>
@@ -423,47 +205,138 @@ const Pagos = () => {
               </tbody>
             </table>
           ) : (
-            <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>
-              <p>No se encontraron transacciones recientes.</p>
+            <div className={styles.emptyState}>
+              <Activity size={32} />
+              <p>No se encontraron movimientos financieros.</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* --- Modal Confirmación --- */}
-      {showConfirmPopup && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalCard}>
-            <div className={styles.modalHeader}>
-              <h3>Confirmar Registro</h3>
-            </div>
-            <div className={styles.modalBody}>
-              <div className={styles.summaryItem}>
-                <span>Cliente:</span>
-                <strong>{nuevoPago.clienteNombre}</strong>
+      {/* =========================================
+          🪟 MODAL: FORMULARIO DE NUEVO COBRO 
+          ========================================= */}
+      {mostrarFormulario && (
+        <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && setMostrarFormulario(false)}>
+          <div className={styles.largeModalCard}>
+            
+            <div className={styles.modalHeaderFlex}>
+              <div>
+                <h3 className={styles.modalTitle}>Registrar Cobro</h3>
+                <p className={styles.modalSubtitle}>Ingresa los datos del pago y asocialo a un cliente.</p>
               </div>
-              <div className={styles.summaryItem}>
-                <span>Monto a cobrar:</span>
-                <strong className={styles.bigTotal}>${nuevoPago.montoFinal}</strong>
-              </div>
-              <div className={styles.summaryGrid}>
-                <div><small>Método</small><p>{nuevoPago.metodoPago}</p></div>
-                <div><small>Fecha</small><p>{nuevoPago.fechaPago}</p></div>
-                <div><small>DNI</small><p>{nuevoPago.clienteDocumento}</p></div>
-              </div>
-            </div>
-            <div className={styles.modalActions}>
-              <button className={styles.btnOutline} onClick={() => setShowConfirmPopup(false)}>
-                Corregir
-              </button>
-              <button className={styles.btnPrimary} onClick={confirmarPago}>
-                ✅ Registrar Cobro
+              <button className={styles.closeIconButton} onClick={() => setMostrarFormulario(false)}>
+                <X size={20} />
               </button>
             </div>
+
+            <form onSubmit={handleAbrirConfirmacion}>
+              <div className={styles.formSplit}>
+                
+                {/* Columna Izquierda */}
+                <div className={styles.formColumn}>
+                  <h4 className={styles.columnTitle}>Identificación del Socio</h4>
+                  <div className={styles.formGroup}>
+                    <label>Documento de Identidad</label>
+                    <div className={styles.inputWithAction}>
+                      <input type="text" name="clienteDocumento" value={nuevoPago.clienteDocumento} onChange={handleChange} placeholder="Ej: 30123456" autoFocus />
+                      <button type="button" onClick={buscarCliente} disabled={loading} title="Buscar">
+                        {loading ? "..." : <Search size={16}/>}
+                      </button>
+                    </div>
+                  </div>
+                  <div className={styles.rowTwo}>
+                    <div className={styles.formGroup}>
+                      <label>Cliente Verificado</label>
+                      <input type="text" value={nuevoPago.clienteNombre} readOnly placeholder="Automático" className={styles.readOnlyInput} />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>Plan Asignado</label>
+                      <input type="text" value={nuevoPago.planNombre} readOnly placeholder="Automático" className={styles.readOnlyInput} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Columna Derecha */}
+                <div className={styles.formColumn}>
+                  <h4 className={styles.columnTitle}>Condiciones de Cobro</h4>
+                  <div className={styles.rowTwo}>
+                    <div className={styles.formGroup}>
+                      <label>Monto a percibir ($)</label>
+                      <input type="number" name="montoFinal" value={nuevoPago.montoFinal} onChange={handleChange} placeholder="0.00" className={styles.amountInput} min="0" />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>Fecha Efectiva</label>
+                      <input type="date" name="fechaPago" value={nuevoPago.fechaPago} onChange={handleChange} />
+                    </div>
+                  </div>
+                  <div className={styles.rowTwo}>
+                    <div className={styles.formGroup}>
+                      <label>Medio de Pago</label>
+                      <select name="metodoPago" value={nuevoPago.metodoPago} onChange={handleChange}>
+                        <option value="EFECTIVO">Efectivo</option>
+                        <option value="TRANSFERENCIA">Transferencia</option>
+                        <option value="MERCADO_PAGO">Mercado Pago</option>
+                        <option value="TARJETA_DEBITO">Tarjeta Débito</option>
+                        <option value="TARJETA_CREDITO">Tarjeta Crédito</option>
+                      </select>
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>Período Cubierto</label>
+                      <input type="month" name="periodo" value={nuevoPago.periodo} onChange={handleChange} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.formFooter}>
+                <button type="button" onClick={() => setMostrarFormulario(false)} className={styles.btnCancelText}>Cancelar</button>
+                <button type="submit" className={styles.btnSubmit}>Continuar a Confirmación</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
+      {/* =========================================
+          🪟 MODAL: CONFIRMACIÓN FINAL (Doble capa)
+          ========================================= */}
+      {showConfirmPopup && (
+        <div className={`${styles.modalOverlay} ${styles.confirmOverlay}`}>
+          <div className={styles.modalCard}>
+            <div className={styles.modalHeader}>
+              <h3>Verificar Emisión</h3>
+            </div>
+            <div className={styles.modalBody}>
+              <div className={styles.receiptLine}>
+                <span className={styles.receiptLabel}>Beneficiario:</span>
+                <span className={styles.receiptValue}>{nuevoPago.clienteNombre}</span>
+              </div>
+              <div className={styles.receiptLine}>
+                <span className={styles.receiptLabel}>Monto total:</span>
+                <span className={styles.receiptTotal}>${nuevoPago.montoFinal}</span>
+              </div>
+              
+              <div className={styles.hrLine}></div>
+
+              <div className={styles.receiptGrid}>
+                <div className={styles.gridItem}>
+                  <small>Canal</small><p>{nuevoPago.metodoPago}</p>
+                </div>
+                <div className={styles.gridItem}>
+                  <small>Fecha</small><p>{nuevoPago.fechaPago}</p>
+                </div>
+                <div className={styles.gridItem}>
+                  <small>Identificación</small><p>{nuevoPago.clienteDocumento}</p>
+                </div>
+              </div>
+            </div>
+            <div className={styles.modalActions}>
+              <button className={styles.btnOutline} onClick={() => setShowConfirmPopup(false)}>Revisar datos</button>
+              <button className={styles.btnConfirm} onClick={confirmarPago}>Emitir Comprobante</button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
