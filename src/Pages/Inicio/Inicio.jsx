@@ -1,7 +1,6 @@
 import React from 'react';
 import styles from './Inicio.module.css';
 import StatsCard from '../../Components/StatsCard/StatsCard';
-import CustomersTable from '../../Components/CustomersTable/CustomersTable';
 import { useAuth } from '../../context/AuthContext';
 
 const Inicio = () => {
@@ -18,11 +17,6 @@ const Inicio = () => {
         <StatsCard title="Activos ahora" value="189" change="+5% Este mes" positive />
       </section>
 
-      <div className={styles.contentGrid}>
-        <div className={styles.tableWrapper}>
-          <CustomersTable />
-        </div>
-      </div>
     </div>
   );
 };
