@@ -8,7 +8,7 @@
    sobreescriba cualquier estilo heredado y se vea igual a la imagen */
 .rutinaNutricionCard {
   background: #ffffff !important;
-  border-radius: 12px !important; /* Bordes un poco menos agresivos que 16px */
+  border-radius: 24px !important; /* Bordes un poco menos agresivos que 16px */
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 
               0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
   border: 1px solid #eef0f3; /* Borde sutil */

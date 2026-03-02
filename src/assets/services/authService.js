@@ -40,26 +40,24 @@ export const login = async (email, password) => {
    =================================================== */
 export const registerUser = async (name, lastName, email, username, password, role, dni) => {
   try {
-    // 1. Crear en Auth
+    // 1. Crear en Supabase Auth (Usa el DNI como password internamente)
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
-      password,
+      password, // Aquí llegará el DNI como string
     });
 
     if (authError) throw authError;
 
     // 2. Crear en tabla pública 'users'
-    // OJO: Aquí asignamos el DNI también como password para referencia si quieres,
-    // pero la seguridad real la maneja Supabase Auth.
     const nuevoPerfil = {
       id: authData.user.id,
       email,
-      username,
+      username: username || dni,
       first_name: name,
       last_name: lastName,
       role: role || 'CLIENT',
       dni: dni,
-      password: password, // Guardamos copia simple (opcional, útil para verla en admin)
+      password: password, // 👈 Se guarda el DNI aquí para satisfacer el NOT NULL de tu DB
       enabled: true,
     };
 
@@ -70,11 +68,11 @@ export const registerUser = async (name, lastName, email, username, password, ro
       .single();
 
     if (dbError) throw dbError;
-
     return data;
+
   } catch (e) {
     console.error("❌ Error register:", e.message);
-    throw new Error(e.message || "No se pudo crear el usuario");
+    throw e;
   }
 };
 

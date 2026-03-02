@@ -45,7 +45,7 @@ const CustomersTable = () => {
   const [saving, setSaving] = useState(false);
   const [busqueda, setBusqueda] = useState("");
 
-  const itemsPerPage = 6; // Ajustado para un mejor aspecto visual en pantalla
+  const itemsPerPage = 6; 
 
   const [nuevoUsuario, setNuevoUsuario] = useState({
     dni: "", first_name: "", last_name: "", email: "", phone: "", plan_id: "",
@@ -69,6 +69,16 @@ const CustomersTable = () => {
 
   useEffect(() => { fetchData(); }, []);
 
+  // 🎨 Lógica de colores por nombre de plan
+  const getPlanClass = (planName) => {
+    if (!planName) return styles.planDefault;
+    const name = planName.toLowerCase();
+    if (name.includes('estudiantil')) return styles.planEstudiantil;
+    if (name.includes('basico') || name.includes('básico')) return styles.planBasico;
+    if (name.includes('libre')) return styles.planLibre;
+    return styles.planDefault;
+  };
+
   const usuariosFiltrados = useMemo(() => {
     if (!busqueda) return usuarios;
     const termino = busqueda.toLowerCase();
@@ -85,9 +95,9 @@ const CustomersTable = () => {
 
   const resolverNombrePlan = (u) => {
     if (u.plan_name) return u.plan_name;
-    const id = u.plan_id || u.subscription?.plan_id;
-    const plan = planesDisponibles.find((p) => p.id === id);
-    return plan ? plan.name : "-";
+    const idPlan = u.plan_id; 
+    const planEncontrado = planesDisponibles.find((p) => String(p.id) === String(idPlan));
+    return planEncontrado ? planEncontrado.name : "Sin Plan";
   };
 
   const abrirModalCrear = () => {
@@ -122,12 +132,17 @@ const CustomersTable = () => {
         mostrarToast("✅ Usuario actualizado");
       } else {
         await crearCliente(body);
-        mostrarToast("✅ Usuario creado");
+        mostrarToast("✅ Usuario creado con éxito");
       }
       await fetchData();
       cerrarModal();
     } catch (error) {
-      mostrarToast("❌ Error al guardar", "error");
+      console.error(error);
+      if (error.message?.includes("unique")) {
+        mostrarToast("❌ El DNI o Email ya existe", "error");
+      } else {
+        mostrarToast("❌ Error al guardar", "error");
+      }
     } finally {
       setSaving(false);
     }
@@ -199,7 +214,6 @@ const CustomersTable = () => {
           </div>
         </div>
 
-            
         {loading ? <Loader text="Cargando..." /> : (
           <>
             <div className={styles.tableWrapper}>
@@ -216,30 +230,38 @@ const CustomersTable = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {usuariosPagina.map((u) => (
-                    <tr key={u.id} className={editIndex === usuarios.findIndex(user => user.id === u.id) ? styles.editingRow : ""}>
-                      <td className={styles.nameCell}>
-                        <div className={styles.avatar}>{u.first_name[0]}{u.last_name[0]}</div>
-                        <div className={styles.nameText}>
-                          <p>{u.first_name} {u.last_name}</p>
-                          <span>Cliente</span>
-                        </div>
-                      </td>
-                      <td className={styles.dniCell}>{u.dni || "-"}</td>
-                      <td className={styles.emailCell}>{u.email}</td>
-                      <td>{u.phone || "-"}</td>
-                      <td><span className={styles.planBadge}>{resolverNombrePlan(u)}</span></td>
-                      <td>
-                        <span className={u.enabled ? styles.active : styles.inactive}>
-                          {u.enabled ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      <td className={styles.actionsCell}>
-                        <button className={styles.actionBtn} onClick={() => navigate("/clientes", { state: { clienteSeleccionado: u } })} title="Ver"><EyeIcon /></button>
-                        <button className={styles.actionBtn} onClick={() => editarUsuario(u)} title="Editar"><EditIcon /></button>
-                      </td>
-                    </tr>
-                  ))}
+                  {usuariosPagina.map((u) => {
+                    const nombrePlan = resolverNombrePlan(u);
+                    return (
+                      <tr key={u.id} className={editIndex === usuarios.findIndex(user => user.id === u.id) ? styles.editingRow : ""}>
+                        <td className={styles.nameCell}>
+                          <div className={styles.avatar}>{(u.first_name?.[0] || '')}{(u.last_name?.[0] || '')}</div>
+                          <div className={styles.nameText}>
+                            <p>{u.first_name} {u.last_name}</p>
+                            <span>Cliente</span>
+                          </div>
+                        </td>
+                        <td className={styles.dniCell}>{u.dni || "-"}</td>
+                        <td className={styles.emailCell}>{u.email}</td>
+                        <td>{u.phone || "-"}</td>
+                        <td>
+                          {/* AQUI SE APLICA LA CLASE DINÁMICA */}
+                          <span className={`${styles.planBadge} ${getPlanClass(nombrePlan)}`}>
+                            {nombrePlan}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={u.enabled ? styles.active : styles.inactive}>
+                            {u.enabled ? "Activo" : "Inactivo"}
+                          </span>
+                        </td>
+                        <td className={styles.actionsCell}>
+                          <button className={styles.actionBtn} onClick={() => navigate("/clientes", { state: { clienteSeleccionado: u } })} title="Ver"><EyeIcon /></button>
+                          <button className={styles.actionBtn} onClick={() => editarUsuario(u)} title="Editar"><EditIcon /></button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

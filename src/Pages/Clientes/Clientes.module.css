@@ -1,65 +1,47 @@
-/* ================================
-   CONTENEDOR PRINCIPAL
-   ================================ */
-.clientesContainer {
-  border-radius: 24px;
+/* ====================================================
+   ESTRUCTURA PRINCIPAL (Sparkling Blue)
+   ==================================================== */
+.clientesLayout {
   width: 100%;
-  margin: 0 auto;
   animation: fadeIn 0.4s ease-out;
-  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+  color: #1e293b;
 }
 
-/* Título de sección */
-.title {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #727d8d;
-  margin: 0;
-  letter-spacing: -0.5px;
-}
-
-/* ================================
-   🔍 SECCIÓN BUSCADOR (Sparkle Style)
-   ================================ */
-.gestionContainer {
+/* ====================================================
+   🔍 SECCIÓN BUSCADOR
+   ==================================================== */
+.searchSection {
   background: #ffffff;
   padding: 24px 32px;
-  margin-bottom: 24px;
   border-radius: 24px;
-  width: 100%;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
-  box-sizing: border-box;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  margin-bottom: 24px;
+  border: 1px solid #f1f5f9;
 }
 
-.gestionHeader {
+.searchHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
 
-.warningText {
-  color: #ef4444;
-  font-size: 0.85rem;
-  font-weight: 600;
-  background-color: #fef2f2;
-  padding: 6px 14px;
-  border-radius: 100px;
+.sectionTitle {
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: #727d8d;
   margin: 0;
-  border: 1px solid #fee2e2;
 }
 
-/* Controles de Búsqueda */
-.controlsRow {
+.searchControls {
   display: flex;
-  flex-wrap: wrap;
   gap: 16px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
-/* 1. Input de Búsqueda */
-.searchWrapper {
+.inputWrapper {
   position: relative;
   flex: 1;
   min-width: 280px;
@@ -71,834 +53,284 @@
   top: 50%;
   transform: translateY(-50%);
   color: #94a3b8;
-  display: flex;
-  align-items: center;
-  pointer-events: none;
 }
 
-.modernInput {
+.mainInput {
   width: 100%;
   padding: 12px 16px 12px 42px;
-  border: 1px solid #f1f5f9;
+  border: 2px solid #f1f5f9;
   border-radius: 14px;
   font-size: 0.95rem;
-  color: #1e293b;
-  background-color: #f8fafc;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-sizing: border-box;
+  background: #f8fafc;
+  transition: all 0.3s;
 }
 
-.modernInput:focus {
+.mainInput:focus {
   outline: none;
-  background-color: #ffffff;
-  border-color: #7c3aed; 
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+  border-color: #7c3aed;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.08);
 }
 
-.inputErrorWrapper .modernInput {
-  border-color: #ef4444;
-  background-color: #fffafb;
-  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
-}
-
-/* 2. Filtros (Pills Estilo iOS) */
-.filtersGroup {
+.filterPills {
   display: flex;
-  background-color: #f1f5f9;
+  background: #f1f5f9;
   padding: 4px;
   border-radius: 12px;
-  gap: 4px;
 }
 
-.filterPill {
-  background: transparent;
+.pill {
   border: none;
+  background: transparent;
   padding: 8px 16px;
   border-radius: 10px;
   font-size: 0.85rem;
   font-weight: 600;
   color: #64748b;
   cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.filterPill:hover {
-  color: #1e293b;
+  transition: 0.2s;
 }
 
 .pillActive {
-  background-color: #ffffff;
+  background: #ffffff;
   color: #7c3aed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-/* 3. Botones de Acción Principales */
-.actionsGroup {
-  display: flex;
-  gap: 12px;
-}
-
-.btnActionPrimary {
+.btnPrimary {
   background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-  color: #ffffff;
+  color: white;
   border: none;
-  padding: 10px 24px;
+  padding: 12px 24px;
   border-radius: 14px;
   font-weight: 700;
-  font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+  transition: 0.3s;
 }
 
-.btnActionPrimary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(124, 58, 237, 0.3);
-}
-
-.btnActionSecondary {
-  background-color: #ffffff;
+.btnSecondary {
+  background: white;
   color: #64748b;
   border: 1px solid #e2e8f0;
-  padding: 10px 18px;
+  padding: 12px 18px;
   border-radius: 14px;
   font-weight: 600;
-  font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.btnActionSecondary:hover {
-  background-color: #f8fafc;
-  color: #1e293b;
-  border-color: #cbd5e1;
-}
-
-/* ================================
-   🌀 LOADER Y MENSAJES
-   ================================ */
-.loaderContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 0;
-  gap: 16px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.loader {
-  border: 3px solid #f1f5f9;
-  border-top: 3px solid #7c3aed;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  animation: spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-}
-
-.centerMessage,
-.centerMessageError {
-  text-align: center;
-  padding: 40px;
-  background: #ffffff;
-  border-radius: 24px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02);
-}
-
-.centerMessage { color: #64748b; }
-.centerMessageError { color: #ef4444; background: #fef2f2; border: 1px solid #fee2e2; }
-
-/* ================================
-   🧩 LAYOUT DETALLE CLIENTE
-   ================================ */
-.detailGrid {
+/* ====================================================
+   🧩 DASHBOARD GRID
+   ==================================================== */
+.dashboardGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-  grid-template-areas:
+  grid-template-columns: 1.5fr 1.3fr;
+  grid-template-areas: 
     "info asistencia"
-    "rutinaNutricion pagos"
-    "rutinaNutricion pagos";
+    "info pagos"
+    "rutina rutina";
   gap: 24px;
-  margin-top: 8px;
 }
 
 .card {
   background: #ffffff;
-  border-radius: 24px;
-  padding: 28px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-}
-
-.infoCard { grid-area: info; }
-.asistenciaCard { grid-area: asistencia; }
-.pagosCard { grid-area: pagos; }
-.rutinaNutricionCard { grid-area: rutinaNutricion; }
-
-/* ================================
-   🧍 INFO CLIENTE CARD
-   ================================ */
-.infoHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.infoMain {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px; 
-  background: #f5f3ff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1.2rem;
-  color: #7c3aed;
-}
-
-.infoMain h3 {
-  margin: 0;
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: #1e293b;
-  letter-spacing: -0.5px;
-}
-
-.infoSubtitle {
-  font-size: 0.85rem;
-  color: #64748b;
-  margin: 4px 0 0 0 !important;
-  font-weight: 700;
-}
-
-.infoTags {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 10px;
-}
-
-.badgeEstadoActivo {
-  background: #ecfdf5;
-  color: #059669;
-  padding: 6px 14px;
-  border-radius: 100px;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.badgeEstadoInactivo {
-  background: #fef2f2;
-  color: #dc2626;
-  padding: 6px 14px;
-  border-radius: 100px;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.btnEditarPerfil {
-  background-color: transparent;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 6px 12px;
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-
-.btnEditarPerfil:hover {
-  background-color: #6fe98cb7;
-  color: #0e6d33;
-  border-color: #cbd5e1;
-}
-
-.hrLine{
-  border-top: 0.5px solid lightgray;
-}
-
-.dataHrLine {
-  border-top: 0.5px solid rgb(228, 228, 228);
-  width: 50%;
-  padding: 4px;
-}
-
-.spanPlan {
-  background: #edf85d;
-  color: #91a726;
-  padding: 6px 14px;
-  border-radius: 100px;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.infoBody {
-  margin-top: 16px;
-  display: grid;
-  width: 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.infoColumn h4 {
-  font-size: 1rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #94a3b8;
-  margin-bottom: 12px;
-}
-
-.infoColumn p {
-  font-size: 0.9rem;
-  color: #334155;
-  margin: 0 0 8px 0;
-  display: flex;
-  flex-direction: row;
-  gap: 2px;
-}
-
-.infoColumn p span {
-  font-weight: 600;
-  color: #1e293b;
-  font-size: 0.8rem;
-}
-
-/* 🔔 FOOTER INFO (MINI-CARDS) */
-.infoFooter {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid #f1f5f9;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.footerBadge {
-  font-size: 0.75rem;
-  padding: 6px 12px;
-  border-radius: 10px;
-  font-weight: 600;
-  border: 1px solid transparent;
-}
-
-.footerBadgeSuccess { background: #ecfdf5; color: #059669; border-color: #d1fae5; }
-.footerBadgeWarning { background: #fffbeb; color: #d97706; border-color: #fef3c7; }
-.footerBadgeDanger { background: #fef2f2; color: #dc2626; border-color: #fee2e2; }
-.footerBadgeInfo { background: #f5f3ff; color: #7c3aed; border-color: #ede9fe; }
-.footerBadgeNeutral { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
-
-/* ================================
-   📆 ASISTENCIA CARD
-   ================================ */
-.sectionHeaderRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.sectionHeaderRow h3 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #111827; /* Negro suave de la imagen */
-  letter-spacing: -0.02em;
-  margin: 0;
-}
-
-.badgeSecondary {
-  font-size: 0.7rem;
-  padding: 4px 10px;
-  border-radius: 100px;
-  background: #f8fafc;
-  color: #94a3b8;
-  font-weight: 600;
-}
-
-.weekDays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.weekDay {
-  font-size: 0.75rem;
-  text-align: center;
-  color: #94a3b8;
-  font-weight: 600;
-}
-
-.calendar {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-}
-
-.calendarDay {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-align: center;
-  padding: 8px 0;
-  border-radius: 10px;
-  background: #f8fafc;
-  color: #cbd5e1;
-  transition: all 0.2s;
-}
-
-.calendarDayActive {
-  background: #10b981; 
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-}
-
-.calendarSunday {
-  color: #ef4444;
-  opacity: 0.7;
-}
-
-/* ================================
-   💳 PAGOS CARD
-   ================================ */
-.placeholderText {
-  font-size: 0.9rem;
-  color: #94a3b8;
-  text-align: center;
-  padding: 20px 0;
-}
-
-.listaPagos {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.listaPagos li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-radius: 14px;
-  background: #f8fafc;
-  border: 1px solid #f1f5f9;
-  transition: all 0.2s;
-}
-
-.listaPagos li:hover {
-  background: #ffffff;
-  border-color: #e2e8f0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-}
-
-.fechaPago {
-  font-weight: 700;
-  color: #1e293b;
-  font-size: 0.9rem;
-}
-
-.medioPago {
-  display: block;
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin-top: 2px;
-  font-weight: 500;
-}
-
-.montoPago {
-  font-weight: 800;
-  color: #10b981;
-  font-size: 1rem;
-}
-
-/* ================================
-   🚀 MODAL SELECCIÓN MÚLTIPLE (REDISEÑADO - SOLUCIÓN ESCALABLE)
-   ================================ */
-.modalOverlay, .editModalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  animation: fadeIn 0.3s ease-out;
-}
-
-.modalContent {
-  background: #ffffff;
-  border-radius: 24px;
-  padding: 32px;
-  width: 90%;
-  max-width: 500px; /* Ancho controlado para que las cards no se estiren en exceso */
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.modalContent h3 {
-  margin: 0 0 20px 0;
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #727d8d;
-}
-
-/* --- SOLUCIÓN: Flexbox Puro para la tabla --- */
-.modalTable {
-  display: block; /* Quitamos comportamiento de tabla al contenedor principal */
-  width: 100%;
-  overflow-y: auto;
-  padding-right: 8px; 
-}
-
-/* Ocultamos thead completamente */
-.modalTable thead {
-  display: none; 
-}
-
-.modalTable tbody {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-}
-
-/* Cada TR es ahora una tarjeta (Card) Flex */
-.modalTable tr {
-  display: flex;
-  align-items: center; /* Centra verticalmente el contenido y el botón */
-  justify-content: space-between; /* Texto a la izquierda, botón a la derecha */
-  padding: 10px;
-  background: #f8fafc;
-  border: 1px solid #f1f5f9;
-  border-radius: 16px;
-  transition: all 0.2s ease;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.modalTable tr:hover {
-  background: #ffffff;
-  border-color: #7c3aed;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
-}
-
-/* Reseteamos los TD para que se comporten como cajas flexibles normales */
-.modalTable td {
-  padding: 0;
-  border: none;
-  display: block; /* Importante para salir del flujo de tabla */
-}
-
-/* Agrupamos la información del cliente a la izquierda.
-  Dado que no podemos crear un <div> contenedor en tu JSX,
-  usamos pseudo-elementos o nos basamos en el orden natural.
-*/
-
-/* Escondemos DNI (celda 1) temporalmente o le damos un estilo sutil debajo */
-.modalTable td:nth-child(1) { /* DNI */
-  order: 2; /* Lo mandamos abajo en la jerarquía visual */
-  font-size: 0.8rem;
-  color: #64748b;
-  width: 100%; /* Fuerza el salto de línea si es necesario */
-}
-
-.modalTable td:nth-child(4) { /* Email */
-  order: 3;
-  font-size: 0.8rem;
-  color: #64748b;
-  width: 100%; /* Fuerza el salto de línea */
-}
-
-/* Nombre y Apellido (Celdas 2 y 3) */
-.modalTable td:nth-child(2),
-.modalTable td:nth-child(3) {
-  order: 1;
-  font-weight: 700;
-  color: #1e293b;
-  font-size: 1.05rem;
-  display: inline-block; /* Permite que se coloquen uno al lado del otro */
-  margin-right: 4px;
-}
-
-/* Contenedor invisible para agrupar info a la izquierda usando CSS Grid sobre el TR */
-.modalTable tr {
-  display: grid;
-  grid-template-columns: 1fr auto; /* 1 columna para info, 1 para botón */
-  grid-template-rows: auto auto auto;
-  row-gap: 2px;
-  align-items: center;
-}
-
-/* Re-mapeando posiciones en el Grid interno del TR */
-.modalTable td:nth-child(2) { grid-column: 1; grid-row: 1; margin-right: 5px; } /* Nombre */
-.modalTable td:nth-child(3) { grid-column: 1; grid-row: 1; margin-left: 60px; /* Espacio manual si es necesario, o dejar inline */ } /* Apellido - El inline-block resuelve esto sin grid-column estricto si se mezclan, pero Grid es más seguro. Vamos a usar Grid Area para ser precisos. */
-
-/* Mejor Solución con Grid Areas sin tocar HTML: */
-.modalTable tr {
-  display: grid;
-  grid-template-areas: 
-    "nombre apellido boton"
-    "dni dni boton"
-    "email email boton";
-  grid-template-columns: auto 1fr auto; /* Nombre | Espacio | Botón */
-  column-gap: 6px;
-  row-gap: 2px;
-  align-items: center;
-}
-
-.modalTable td:nth-child(2) { grid-area: nombre; font-weight: 700; color: #1e293b; font-size: 1.05rem; }
-.modalTable td:nth-child(3) { grid-area: apellido; font-weight: 700; color: #1e293b; font-size: 1.05rem; }
-.modalTable td:nth-child(1) { grid-area: dni; font-size: 0.8rem; color: #94a3b8; }
-.modalTable td:nth-child(4) { grid-area: email; font-size: 0.8rem; color: #64748b; }
-.modalTable td:nth-child(5) { grid-area: boton; justify-self: end; }
-
-
-/* Botón Seleccionar */
-.btnSeleccionar {
-  background: #f5f3ff;
-  color: #7c3aed;
-  border: none;
-  border-radius: 12px;
-  padding: 10px 18px;
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 0.85rem;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.btnSeleccionar:hover {
-  background: #7c3aed;
-  color: #ffffff;
-  transform: scale(1.05);
-}
-
-.modalFooter {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #f1f5f9;
-}
-
-.btnCerrarModal {
-  background: #f1f5f9;
-  color: #64748b;
-  border: none;
-  border-radius: 12px;
-  padding: 10px 24px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: 0.2s;
-}
-
-.btnCerrarModal:hover {
-  background: #e2e8f0;
-  color: #1e293b;
-}
-
-/* ================================
-   ✏️ MODAL EDICIÓN (CORRECCIÓN FLEX Y BORDES)
-   ================================ */
-.editModalContent {
-  background: #ffffff;
-  padding: 32px;
   border-radius: 28px;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  box-sizing: border-box; /* Asegura que el padding no rompa el width */
+  padding: 32px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
 }
 
-.editModalHeader {
+.cardHeader {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 24px;
 }
 
-.editModalHeader h3 {
-  margin: 0;
-  color: #1e293b;
+.userHead {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.avatarLarge {
+  width: 64px;
+  height: 64px;
+  background: #f5f3ff;
+  color: #7c3aed;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1.5rem;
   font-weight: 800;
 }
 
-.editModalCloseBtn {
+.userNameBox h3 {
+  margin: 0;
+  font-size: 1.4rem;
+    font-weight: 600;
+    color: #7c3aed;
+    margin: 0;
+}
+
+.statusActive { color: #059669; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; }
+.statusInactive { color: #dc2626; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; }
+
+.btnEdit {
   background: #f8fafc;
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  transition: 0.2s;
-}
-
-.editModalCloseBtn:hover {
-  background: #f1f5f9;
-  color: #1e293b;
-}
-
-.editModalBody {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 100%;
-}
-
-/* 🛠️ SOLUCIÓN ESCALABLE PARA LOS INPUTS */
-.inputGroup {
-  display: flex;
-  flex-direction: column;
   gap: 6px;
-  width: 100%; /* Asegura que no crezca más allá de su contenedor */
-  min-width: 0; /* Evita desbordamiento en flexbox si el contenido es largo */
 }
 
-.inputGroup label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #475569;
-  padding-left: 4px;
+.divider { height: 1px; background: #f1f5f9; margin-bottom: 24px; }
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
 }
 
-.editModalBody input,
-.editModalBody select {
-  width: 100%; /* El input ocupa el 100% de .inputGroup */
-  box-sizing: border-box; /* 👈 CLAVE: El padding se incluye en el ancho total, evitando desbordes */
-  padding: 12px 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  color: #1e293b;
-  background: #f8fafc;
-  transition: all 0.3s;
-}
-
-.editModalBody input:focus,
-.editModalBody select:focus {
-  border-color: #7c3aed;
-  background: #ffffff;
-  outline: none;
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
-}
-
-/* 🛠️ SOLUCIÓN PARA LA FILA NOMBRE/APELLIDO */
-.row {
+.infoItem {
   display: flex;
-  gap: 16px;
-  width: 100%; /* Ocupa el 100% del modalBody */
-  box-sizing: border-box;
-}
-
-.editModalFooter {
-  display: flex;
-  justify-content: flex-end;
   gap: 12px;
-  margin-top: 32px;
 }
 
-.btnCancelarEdicion {
-  background-color: #f1f5f9;
-  color: #475569;
-  border: none;
+.itemIcon { color: #94a3b8; margin-top: 4px; }
+
+.infoItem label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #050505;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.infoItem p {     
+  font-weight: 500;
+  color: #727d8d;
+  margin: 0; 
+}
+
+/* 🎨 PLAN BADGES */
+.planBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.planEstudiantil { background: #e0f2fe; color: #0369a1; }
+.planBasico { background: #f1f5f9; color: #475569; }
+.planLibre { background: #dcfce7; color: #15803d; }
+.planDefault { background: #fef9c3; color: #854d0e; }
+
+/* ====================================================
+   💳 PAGOS Y ASISTENCIA
+   ==================================================== */
+.paymentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.paymentItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8fafc;
   border-radius: 14px;
-  padding: 12px 24px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s;
+  border: 1px solid #f1f5f9;
 }
 
-.btnCancelarEdicion:hover { background-color: #e2e8f0; }
+.payAmount { font-weight: 800; color: #059669; }
 
-.btnGuardarEdicion {
-  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-  color: #ffffff;
-  border: none;
-  border-radius: 14px;
-  padding: 12px 28px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
-  transition: 0.2s;
+.placeholderAsistencia {
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  border: 2px dashed #f1f5f9;
+  border-radius: 20px;
 }
 
-.btnGuardarEdicion:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(124, 58, 237, 0.3);
+.fullWidthCard { grid-column: span 2; }
+
+/* ====================================================
+   🪟 MODALES
+   ==================================================== */
+.modalOverlay {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 2000; padding: 20px;
 }
 
-/* ================================
-   📱 RESPONSIVE Y ANIMACIONES
-   ================================ */
-@keyframes spin { 100% { transform: rotate(360deg); } }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modalContent {
+  background: #ffffff;
+  width: 100%; max-width: 550px;
+  border-radius: 32px;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+  padding: 32px;
+}
+
+.modalHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.modalHeader h3 { margin: 0; font-weight: 800; }
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.field label { font-size: 0.85rem; font-weight: 700; color: #475569; }
+.field input, .field select {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 2px solid #f1f5f9;
+  font-size: 0.95rem;
+}
+
+.formRow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.modalActions {
+  display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;
+}
+
+.btnSave {
+  background: #1e293b; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer;
+}
+
+.toastMini { background: #ecfdf5; color: #059669; padding: 6px 12px; border-radius: 100px; font-weight: 700; font-size: 0.8rem; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 1024px) {
-  .detailGrid {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "info"
-      "asistencia"
-      "pagos"
-      "rutinaNutricion";
-  }
+  .dashboardGrid { grid-template-columns: 1fr; }
+  .fullWidthCard { grid-column: span 1; }
 }
 
-@media (max-width: 600px) {
-  .controlsRow { flex-direction: column; align-items: stretch; }
-  .searchWrapper { width: 100%; }
-  .filtersGroup { justify-content: center; }
-  .actionsGroup { display: grid; grid-template-columns: 1fr 1fr; }
-  .actionsGroup button { width: 100%; justify-content: center; }
-  
-  .card { padding: 20px; }
-  .infoBody { grid-template-columns: 1fr; }
-  
-  /* Ajuste responsivo para la fila de edición */
-  .row { flex-direction: column; gap: 16px; }
-  
-  /* Ajuste responsivo para el modal de múltiples clientes */
-  .modalTable tr {
-    grid-template-areas: 
-      "nombre apellido"
-      "dni dni"
-      "email email"
-      "boton boton";
-    grid-template-columns: auto 1fr;
-    row-gap: 6px;
-  }
-  .modalTable td:nth-child(5) { 
-    grid-area: boton; 
-    justify-self: stretch; 
-    margin-top: 10px;
-  }
-  .btnSeleccionar { width: 100%; text-align: center; }
+.closeBtn {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
 }
+
+.btnCancel {
+  background: transparent; color: black; border: 1px solid lightgray; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer;
+}
+
+.infoCard { grid-area: info; }
+.asistenciaCard { grid-area: asistencia; }
+.rutinaNutricionArea { grid-area: rutina; }
+.pagosCard { grid-area: pagos; }

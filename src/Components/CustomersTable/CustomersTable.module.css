@@ -18,7 +18,7 @@
 
 .titleContainer h3 {
   font-size: 1.4rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #727d8d;
   margin: 0;
 }
@@ -123,11 +123,13 @@
   border-radius: 12px; display: flex; align-items: center; justify-content: center;
   color: #3b82f6; font-weight: 700; font-size: 0.85rem; text-transform: uppercase;
 }
-.nameText p { margin: 0; font-weight: 600; color: #1e293b; }
+.nameText p { margin: 0; font-weight: 600; color: #7c3aed; }
 .nameText span { font-size: 0.8rem; color: #94a3b8; }
 
 .planBadge {
   background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+  display: inline-block;
+  text-align: center;
 }
 
 /* 🟢 Estados */
@@ -175,3 +177,59 @@
 .btnGuardar { background: #3b82f6; color: #fff; border: none; padding: 12px 32px; border-radius: 12px; cursor: pointer; font-weight: 600; }
 
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ====================================================
+   🎨 COLORES ESPECÍFICOS POR PLAN
+   ==================================================== */
+
+/* Plan Estudiantil: Azul / Celeste */
+.planEstudiantil {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+/* Plan Básico: Gris */
+.planBasico {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* Plan Libre: Verde */
+.planLibre {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+/* Plan por defecto (Amarillo original) */
+.planDefault {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+/* ====================================================
+   🛠️ TOAST
+   ==================================================== */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: white;
+  z-index: 3000;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+}
+
+.toastSuccess { background: #10b981; }
+.toastError { background: #ef4444; }
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import styles from "./Planes.module.css";
 import Loader from "../../Components/Loader/Loader";
-import { Plus, X, Edit3, Power, PowerOff, CheckCircle, AlertCircle, Calendar, LayoutDashboard } from 'lucide-react';
+import { Plus, X, Edit3, Power, PowerOff, CheckCircle, AlertCircle, LayoutDashboard } from 'lucide-react';
 
 import {
   obtenerPlanes,
@@ -62,6 +62,16 @@ const Planes = () => {
     setEditIndex(null);
   };
 
+  // 🎨 Helper de Clases de Color por Nombre de Plan
+  const getPlanClass = (planName) => {
+    if (!planName) return styles.planDefault;
+    const name = planName.toLowerCase();
+    if (name.includes('estudiantil')) return styles.planEstudiantil;
+    if (name.includes('basico') || name.includes('básico')) return styles.planBasico;
+    if (name.includes('libre')) return styles.planLibre;
+    return styles.planDefault;
+  };
+
   // --- HANDLERS UI ---
   const abrirModalCrear = () => {
     limpiarFormulario();
@@ -77,7 +87,6 @@ const Planes = () => {
     const { name, value } = e.target;
     let finalValue = value;
     if (name === "active") finalValue = value === "true";
-    
     setNuevoPlan((prev) => ({ ...prev, [name]: finalValue }));
   };
 
@@ -142,11 +151,9 @@ const Planes = () => {
     }
   };
 
-  // --- RENDER ---
   return (
     <section className={styles.planesContainer}>
       
-      {/* TOAST NOTIFICATIONS */}
       {toast.message && (
         <div className={`${styles.toast} ${toast.type === "error" ? styles.toastError : styles.toastSuccess}`}>
           {toast.type === 'error' ? <AlertCircle size={18}/> : <CheckCircle size={18}/>}
@@ -154,7 +161,6 @@ const Planes = () => {
         </div>
       )}
 
-      {/* HEADER */}
       <div className={styles.header}>
         <div className={styles.headerText}>
           <h2>Suscripciones y Planes</h2>
@@ -166,11 +172,9 @@ const Planes = () => {
         </button>
       </div>
 
-      {/* MODAL POPUP (Estilo Glassmorphism Premium) */}
       {mostrarFormulario && (
         <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && cerrarModal()}>
           <div className={styles.modalContent}>
-            
             <div className={styles.modalHeader}>
               <h3>{editIndex !== null ? "Editar Configuración de Plan" : "Nuevo Plan de Suscripción"}</h3>
               <button className={styles.btnClose} onClick={cerrarModal}><X size={20}/></button>
@@ -179,35 +183,26 @@ const Planes = () => {
             <div className={styles.modalBody}>
               <form onSubmit={handleSubmit} id="planForm">
                 <div className={styles.formGrid}>
-                  
-                  {/* Grupo 1: Info Básica */}
                   <div className={styles.formGroup}>
                     <label>Nombre del Plan</label>
                     <input type="text" name="name" placeholder="Ej: Pase Libre Premium" value={nuevoPlan.name} onChange={handleChange} autoFocus />
                   </div>
-
                   <div className={styles.formGroup}>
                     <label>Precio Final ($)</label>
                     <input type="number" name="price" placeholder="0.00" value={nuevoPlan.price} onChange={handleChange} className={styles.inputPrice} />
                   </div>
-
-                  {/* Grupo 2: Límites */}
                   <div className={styles.formGroup}>
                     <label>Días por semana <small>(Vacío = Ilimitado)</small></label>
                     <input type="number" name="days_per_week_limit" placeholder="∞" value={nuevoPlan.days_per_week_limit} onChange={handleChange} />
                   </div>
-
                   <div className={styles.formGroup}>
                     <label>Entradas por día</label>
                     <input type="number" name="entries_per_day_limit" value={nuevoPlan.entries_per_day_limit} onChange={handleChange} />
                   </div>
-
-                  {/* Grupo 3: Extras */}
                   <div className={styles.formGroupFull}>
                     <label>Descripción / Notas comerciales</label>
                     <input type="text" name="description" placeholder="Ej: Incluye acceso a todas las sedes..." value={nuevoPlan.description} onChange={handleChange} />
                   </div>
-
                   <div className={styles.formGroup}>
                     <label>Estado del Plan</label>
                     <select name="active" value={nuevoPlan.active} onChange={handleChange}>
@@ -229,7 +224,6 @@ const Planes = () => {
         </div>
       )}
 
-      {/* CONTENIDO PRINCIPAL (GRILLA) */}
       {loading ? (
         <div className={styles.loaderWrapper}><Loader text="Sincronizando planes..." /></div>
       ) : (
@@ -245,15 +239,9 @@ const Planes = () => {
             <div className={styles.gridPlanes}>
               {planes.map((p, i) => (
                 <div key={p.id} className={`${styles.cardPlan} ${!p.active ? styles.cardInactive : ''}`}>
-                  
-                  {/* Card Header */}
                   <div className={styles.cardHeader}>
-                    <div className={styles.cardTitleRow}>
-                      <span className={`${styles.badge} ${p.active ? styles.badgeActive : styles.badgeInactive}`}>
-                        {p.active ? "Suscripción Activa" : "Descontinuado"}
-                      </span>
-                    </div>
-                    <h4 className={styles.cardName}>{p.name}</h4>
+                    {/* Aplicamos el color dinámico al nombre del plan */}
+                    <h4 className={`${styles.cardName} ${getPlanClass(p.name)}`}>{p.name}</h4>
                     <div className={styles.cardPriceBox}>
                       <span className={styles.currency}>$</span>
                       <span className={styles.priceNumber}>{Number(p.price).toLocaleString()}</span>
@@ -261,13 +249,10 @@ const Planes = () => {
                     </div>
                   </div>
 
-                  {/* Separador Sparkle */}
                   <div className={styles.hrGradient}></div>
 
-                  {/* Card Body */}
                   <div className={styles.cardBody}>
                     <p className={styles.cardDesc}>{p.description || "Plan estándar de entrenamiento."}</p>
-                    
                     <ul className={styles.featuresList}>
                       <li className={styles.featureItem}>
                         <CheckCircle size={16} className={styles.iconCheck}/>
@@ -284,12 +269,10 @@ const Planes = () => {
                     </ul>
                   </div>
 
-                  {/* Card Footer */}
                   <div className={styles.cardFooter}>
                     <button className={styles.btnEdit} onClick={() => editarPlan(i)} title="Editar Configuración">
                       <Edit3 size={16} /> Modificar
                     </button>
-                    
                     <button 
                       className={`${styles.btnToggle} ${p.active ? styles.btnOff : styles.btnOn}`} 
                       onClick={() => toggleEstado(p.id, p.active)}
