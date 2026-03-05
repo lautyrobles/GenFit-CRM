@@ -1,11 +1,11 @@
 import { supabase } from "./supabaseClient";
 
 /* =========================================
-   💰 OBTENER TODOS LOS PAGOS (Historial)
+    💰 OBTENER TODOS LOS PAGOS (Historial)
    ========================================= */
 export const obtenerPagos = async () => {
   try {
-    // Hacemos JOIN con la tabla 'users' para saber quién pagó
+    // 💡 CAMBIO CLAVE: Entramos a users y luego a plans(name)
     const { data, error } = await supabase
       .from('payments')
       .select(`
@@ -21,7 +21,10 @@ export const obtenerPagos = async () => {
           first_name,
           last_name,
           dni,
-          email
+          email,
+          plans (
+            name
+          )
         )
       `)
       .order('payment_date', { ascending: false });
@@ -35,7 +38,7 @@ export const obtenerPagos = async () => {
 };
 
 /* =========================================
-   ➕ REGISTRAR UN NUEVO PAGO
+    ➕ REGISTRAR UN NUEVO PAGO
    ========================================= */
 export const registrarPago = async (pagoData) => {
   try {
@@ -45,14 +48,13 @@ export const registrarPago = async (pagoData) => {
         {
           user_id: pagoData.user_id,
           amount: pagoData.amount,
-          payment_date: pagoData.payment_date,
-          payment_method: pagoData.payment_method, // EFECTIVO, TRANSFERENCIA, ETC
+          // Forzamos la fecha de pago a la enviada o a la actual si no viene
+          payment_date: pagoData.payment_date || new Date().toISOString(), 
+          payment_method: pagoData.payment_method,
           status: pagoData.status || 'COMPLETED',
           notes: pagoData.notes
         }
-      ])
-      .select()
-      .single();
+      ]);
 
     if (error) throw error;
     return data;
@@ -61,9 +63,3 @@ export const registrarPago = async (pagoData) => {
     throw error;
   }
 };
-
-/* =========================================
-   📊 OBTENER MÉTRICAS (Opcional - Backend)
-   ========================================= */
-// Podríamos hacer una RPC function en Supabase, 
-// pero por ahora las calcularemos en el frontend para no complicar la DB.

@@ -225,8 +225,8 @@
 
 .fwBold { font-weight: 700; color: #1e293b; }
 .textMuted { color: #64748b; font-size: 0.8rem; }
-.textRight { text-align: right; }
-.textCenter { text-align: center; }
+.textRight { text-align: start; }
+.textCenter { text-align: start; }
 
 .planBadge {
   background: #f1f5f9;
@@ -561,4 +561,216 @@
   .kpiGrid { grid-template-columns: 1fr; }
   .formSplit { grid-template-columns: 1fr; gap: 16px; }
   .largeModalCard { padding: 24px; }
+}
+
+.processingState {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.successState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 10px 0;
+  animation: slideUp 0.4s ease-out;
+}
+
+.successIconBox {
+  width: 80px;
+  height: 80px;
+  background: #ecfdf5;
+  color: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  border: 4px solid #f0fff4;
+}
+
+.successState h3 {
+  font-size: 1.5rem;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.successState p {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.successActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.successActions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.processingState {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.successState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 10px 0;
+  animation: slideUp 0.4s ease-out;
+}
+
+.successIconBox {
+  width: 80px;
+  height: 80px;
+  background: #ecfdf5;
+  color: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  border: 4px solid #f0fff4;
+}
+
+.successState h3 {
+  font-size: 1.5rem;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.successState p {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.successActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.successActions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btnActionTable {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btnActionTable:hover {
+  background: #ede9fe;
+  color: #7c3aed;
+  border-color: #ddd6fe;
+  transform: scale(1.05);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 0;
+  border-top: 1px solid #f1f5f9;
+  margin-top: auto;
+}
+
+.pageInfo {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.pageButtons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pageBtn {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #7c3aed;
+  border-color: #7c3aed;
+}
+
+.currentPage {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* 1. La tarjeta principal debe tener un alto mínimo para 6 filas + cabecera */
+.tableCard {
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  min-height: 580px; /* Ajusta este valor según el tamaño de tus filas */
+  position: relative;
+}
+
+/* 2. Contenedor de la tabla para evitar que el paginador suba */
+.tableMinHeight {
+  min-height: 420px; /* Espacio suficiente para 6 filas */
+  display: flex;
+  flex-direction: column;
+}
+
+/* 3. El paginador con margin-top: auto se pega al fondo del tableCard */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  border-top: 1px solid #f1f5f9;
+  margin-top: auto; /* 👈 Esto es el truco clave */
+}
+
+/* Aseguramos que las celdas tengan un alto consistente */
+.modernTable td {
+  padding: 12px;
+  height: 60px; /* Alto fijo por fila */
+  box-sizing: border-box;
 }

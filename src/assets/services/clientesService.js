@@ -1,14 +1,15 @@
 import { supabase } from "./supabaseClient";
-import { registerUser } from "./authService"; // 👈 IMPORTANTE: Usamos la lógica segura de creación
+import { registerUser } from "./authService"; 
 
 /* ===================================================
     🔹 OBTENER TODOS LOS CLIENTES
    =================================================== */
 export const obtenerClientes = async () => {
   try {
+    // Volvemos a un select simple para asegurar que traiga a TODOS los CLIENT
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select('*') 
       .eq('role', 'CLIENT')
       .order('created_at', { ascending: false });
 
@@ -21,23 +22,50 @@ export const obtenerClientes = async () => {
 };
 
 /* ===================================================
-    🔹 CREAR UN NUEVO CLIENTE (Conectado a Auth)
+    🔹 BUSCAR POR DNI (Blindado para Pagos)
    =================================================== */
+export const obtenerClientePorDocumento = async (dni) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select(`
+        *,
+        plans (
+          name,
+          price
+        )
+      `) 
+      .eq('dni', dni)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    // Si el cliente existe pero no tiene plan, devolvemos un objeto limpio 
+    // para que el frontend no de error de "undefined"
+    if (data && !data.plans) {
+      return { ...data, plans: { name: "Sin Plan", price: 0 } };
+    }
+
+    return data;
+  } catch (error) {
+    console.error("❌ Error al buscar por documento:", error.message);
+    return null;
+  }
+};
+
+/* --- EL RESTO DE FUNCIONES (crearCliente, actualizarCliente) SE MANTIENEN IGUAL --- */
 export const crearCliente = async (cliente) => {
   try {
-    // 1. Creamos el usuario en Auth y la base (con los campos básicos)
     const nuevoUsuario = await registerUser(
         cliente.first_name,
         cliente.last_name,
         cliente.email,
-        String(cliente.dni), // username
-        String(cliente.dni), // password
-        'CLIENT',            // role
-        cliente.dni          // dni
+        String(cliente.dni), 
+        String(cliente.dni), 
+        'CLIENT',            
+        cliente.dni          
     );
 
-    // 2. 🚨 SOLUCIÓN: Actualizamos el registro recién creado con el teléfono y el plan
-    // Esto asegura que los campos que 'registerUser' no maneja, se guarden igual.
     if (nuevoUsuario && nuevoUsuario.id) {
       const { data, error } = await supabase
         .from('users')
@@ -50,9 +78,8 @@ export const crearCliente = async (cliente) => {
         .single();
 
       if (error) throw error;
-      return data; // Retornamos el usuario con teléfono y plan
+      return data; 
     }
-
     return nuevoUsuario;
   } catch (error) {
     console.error("❌ Error crear cliente:", error.message);
@@ -60,9 +87,6 @@ export const crearCliente = async (cliente) => {
   }
 };
 
-/* ===================================================
-    🔹 ACTUALIZAR CLIENTE
-   =================================================== */
 export const actualizarCliente = async (id, datos) => {
   try {
     const { data, error } = await supabase
@@ -76,23 +100,5 @@ export const actualizarCliente = async (id, datos) => {
   } catch (error) {
     console.error("❌ Error actualizar cliente:", error.message);
     throw error;
-  }
-};
-
-/* ===================================================
-    🔹 BUSCAR POR DNI (Auxiliar)
-   =================================================== */
-export const obtenerClientePorDocumento = async (dni) => {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('dni', dni)
-      .maybeSingle();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    return null;
   }
 };
