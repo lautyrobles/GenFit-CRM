@@ -11,9 +11,10 @@ import Loader from '../../Components/Loader/Loader';
 
 // 📦 Servicios
 import { getSummaryStats, getIncomeHistory, getPlansDistribution } from '../../assets/services/dashboardService';
+import { obtenerUsuariosActivosAhora } from '../../assets/services/asistenciaService'; // Importamos el nuevo servicio
 
-// 🎨 Iconos
-import { Users, DollarSign, Calendar, AlertCircle } from 'lucide-react';
+// 🎨 Iconos (Cambiamos Calendar por Activity para reflejar "tiempo real")
+import { Users, DollarSign, Activity, AlertCircle } from 'lucide-react';
 
 const Inicio = () => {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ const Inicio = () => {
   const [stats, setStats] = useState({
     activeUsers: 0,
     monthlyIncome: 0,
-    dueSoon: 0,
+    usersPresent: 0, // Nuevo estado para la métrica de 3 horas
     medicalAlerts: 0
   });
   const [incomeData, setIncomeData] = useState([]);
@@ -33,13 +34,21 @@ const Inicio = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        const [resStats, resIncome, resPlans] = await Promise.all([
+        // Ejecutamos todos los servicios en paralelo para máxima velocidad
+        const [resStats, resIncome, resPlans, resPresent] = await Promise.all([
           getSummaryStats(),
           getIncomeHistory(),
-          getPlansDistribution()
+          getPlansDistribution(),
+          obtenerUsuariosActivosAhora() // Llamada a la lógica de las 3 horas
         ]);
 
-        if (resStats) setStats(resStats);
+        if (resStats) {
+          setStats({
+            ...resStats,
+            usersPresent: resPresent || 0 // Sobrescribimos o añadimos la métrica en vivo
+          });
+        }
+        
         if (resIncome) setIncomeData(resIncome);
         if (resPlans) setPlansData(resPlans);
         
@@ -51,6 +60,9 @@ const Inicio = () => {
     };
 
     fetchDashboardData();
+
+    // Opcional: Podrías poner un setInterval aquí para que se actualice cada 5 min
+    // sin necesidad de recargar la página.
   }, []);
 
   if (loading) {
@@ -79,12 +91,16 @@ const Inicio = () => {
           trend="up" 
           color="green" 
         />
+        
+        {/* Modificamos Vencimientos por Gimnasio Ahora */}
         <StatCard 
-          title="Vencimientos (7d)" 
-          value={stats.dueSoon} 
-          icon={<Calendar size={20} />} 
+          title="Gimnasio Ahora" 
+          value={stats.usersPresent} 
+          icon={<Activity size={20} />} 
           color="orange" 
+          trend="Últimas 3hs" 
         />
+
         <StatCard 
           title="Alertas Médicas" 
           value={stats.medicalAlerts} 

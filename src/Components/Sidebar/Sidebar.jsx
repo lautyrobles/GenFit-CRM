@@ -1,6 +1,9 @@
 import React from 'react'
 import styles from './Sidebar.module.css'
-import { Home, Users, CreditCard, Gift, HelpCircle, Activity, LogOut } from 'lucide-react'
+import { 
+  Home, Users, CreditCard, Gift, HelpCircle, 
+  Activity, LogOut, CheckCircle, ClipboardList, Apple 
+} from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import userIcon from '/src/assets/user-icon.png'
 import { useAuth } from '../../context/AuthContext'
@@ -8,7 +11,7 @@ import { useAuth } from '../../context/AuthContext'
 const Sidebar = () => {
   const { user, logout } = useAuth()
 
-  if (!user) return null // O tu mensaje de login
+  if (!user) return null
 
   const role = user.roles?.[0] || user.role
   const canViewPagos = ["SUPER_ADMIN", "ADMIN", "ENCARGADO"].includes(role)
@@ -61,7 +64,21 @@ const Sidebar = () => {
             </div>
           )}
 
-          {/* GRUPO 3: ADMINISTRACIÓN */}
+          {/* GRUPO 3: SERVICIOS AL CLIENTE (NUEVO) */}
+          <div className={styles.navGroup}>
+            <span className={styles.groupLabel}>Servicios</span>
+            <NavLink to="/asistencia" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
+              <CheckCircle size={18} /> <span>Asistencia</span>
+            </NavLink>
+            <NavLink to="/rutinas" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
+              <ClipboardList size={18} /> <span>Rutinas</span>
+            </NavLink>
+            <NavLink to="/nutricion" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
+              <Apple size={18} /> <span>Nutrición</span>
+            </NavLink>
+          </div>
+
+          {/* GRUPO 4: ADMINISTRACIÓN */}
           {(canViewMovimientos || canViewPermisos) && (
             <div className={styles.navGroup}>
               <span className={styles.groupLabel}>Admin</span>
@@ -80,9 +97,7 @@ const Sidebar = () => {
         </nav>
       </div>
 
-{/* SECCIÓN INFERIOR REDISEÑADA */}
       <div className={styles.bottomSection}>
-        {/* Tarjeta de Soporte Refinada */}
         <div className={styles.supportCard}>
           <div className={styles.supportContent}>
             <HelpCircle size={20} className={styles.supportIcon} />
@@ -96,7 +111,6 @@ const Sidebar = () => {
           </NavLink>
         </div>
 
-        {/* Perfil de Usuario Profesional */}
         <div className={styles.userProfile}>
           <div className={styles.userAccount}>
             <div className={styles.avatarContainer}>

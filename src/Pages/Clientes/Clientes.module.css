@@ -125,9 +125,9 @@
   display: grid;
   grid-template-columns: 1.5fr 1.3fr;
   grid-template-areas: 
-    "info asistencia"
-    "pagos pagos"
-    "rutina rutina";
+    "info rutina"
+    "pagos asistencia"
+    "pagos asistencia";
   gap: 24px;
 }
 

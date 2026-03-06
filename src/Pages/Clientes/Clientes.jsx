@@ -9,10 +9,11 @@ import {
   actualizarCliente,
 } from "../../assets/services/clientesService"
 import { obtenerPlanes } from "../../assets/services/planesService"
-
+import { obtenerPagos } from "../../assets/services/paymentsService" // Corregido: Importación del servicio de pagos
 
 // 🧩 Componentes
 import RutinaNutricion from "./RutinaNutricion"
+import ClienteAsistencia from "./ClienteAsistencia" // Importación del nuevo componente
 import Loader from "../../Components/Loader/Loader"
 import CustomersTable from '../../Components/CustomersTable/CustomersTable';
 import { Search, User, Mail, Phone, CreditCard, Calendar, Edit3, X, CheckCircle, ArrowLeft } from 'lucide-react'
@@ -97,13 +98,16 @@ const Clientes = () => {
     finally { setLoading(false) }
   }
 
+  // Corregido: Lógica para traer pagos filtrados por el cliente actual
   useEffect(() => {
-    if (!cliente?.dni) return;
+    if (!cliente?.id) return;
     const fetchPagos = async () => {
       setPagosLoading(true)
       try {
-        const data = await obtenerPagosPorCliente(cliente.dni)
-        setPagos(data || [])
+        const data = await obtenerPagos()
+        // Filtramos los pagos que pertenezcan al user_id del cliente seleccionado
+        const pagosCliente = data.filter(p => p.user_id === cliente.id)
+        setPagos(pagosCliente || [])
       } catch (err) { setPagos([]) } 
       finally { setPagosLoading(false) }
     }
@@ -207,15 +211,10 @@ const Clientes = () => {
                     </div>
                   </div>
                   <div className={styles.btnGroup}>
-
-                  <button className={styles.btnBack} onClick={handleVolver}>
-                  <ArrowLeft size={16} /> Volver al listado
-                  </button>
-                  <button className={styles.btnEdit} onClick={abrirModalEdicion}>
-                    <Edit3 size={16} /> Editar
-                  </button>
+                    <button className={styles.btnEdit} onClick={abrirModalEdicion}>
+                      <Edit3 size={16} /> Editar
+                    </button>
                   </div>
-
                 </div>
                 <div className={styles.divider}></div>
                 <div className={styles.infoGrid}>
@@ -226,9 +225,14 @@ const Clientes = () => {
                 </div>
               </div>
 
+              {/* INTEGRACIÓN: CALENDARIO DE ASISTENCIA REAL */}
               <div className={`${styles.card} ${styles.asistenciaCard}`}>
-                <div className={styles.cardHeader}><h3>Control Asistencia</h3><Calendar size={18} className={styles.titleIcon}/></div>
-                <div className={styles.placeholderAsistencia}>Módulo en desarrollo.</div>
+                <div className={styles.cardHeader}>
+                  <h3>Control Asistencia</h3>
+                  <Calendar size={18} className={styles.titleIcon}/>
+                </div>
+                {/* Reemplazado placeholder por el componente funcional */}
+                <ClienteAsistencia socio={cliente} />
               </div>
 
               <div className={`${styles.card} ${styles.pagosCard}`}>
@@ -238,10 +242,10 @@ const Clientes = () => {
                     pagos.slice(0, 4).map((p, i) => (
                       <div key={i} className={styles.paymentItem}>
                         <div><strong>{new Date(p.payment_date).toLocaleDateString()}</strong><small>{p.payment_method}</small></div>
-                        <span className={styles.payAmount}>${p.amount}</span>
+                        <span className={styles.payAmount}>${Number(p.amount).toLocaleString()}</span>
                       </div>
                     ))
-                  ) : <div className={styles.noData}>Sin registros.</div>}
+                  ) : <div className={styles.noData}>Sin registros de pago.</div>}
                 </div>
               </div>
 
@@ -253,7 +257,7 @@ const Clientes = () => {
         </>
       )}
 
-      {/* ✏️ MODAL EDICIÓN */}
+      {/* MODALES SE MANTIENEN IGUAL... */}
       {mostrarModalEdicion && (
         <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && setMostrarModalEdicion(false)}>
           <div className={styles.modalContent}>
@@ -282,7 +286,6 @@ const Clientes = () => {
         </div>
       )}
 
-      {/* 🪟 MODAL SELECCIÓN MÚLTIPLE */}
       {mostrarModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContentSmall}>
@@ -302,4 +305,4 @@ const Clientes = () => {
   )
 }
 
-export default Clientes
+export default Clientes;

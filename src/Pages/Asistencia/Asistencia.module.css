@@ -1,0 +1,362 @@
+/* ====================================================
+   ESTRUCTURA PRINCIPAL (Sparkling Blue)
+   ==================================================== */
+.asistenciaLayout {
+  width: 100%;
+  animation: fadeIn 0.4s ease-out;
+  font-family: 'Inter', sans-serif;
+  color: #1e293b;
+}
+
+.headerTitle {
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 4px 0;
+}
+
+.headerTitle p {
+  color: #64748b;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ====================================================
+   🔍 PANEL IZQUIERDO (BUSCADOR)
+   ==================================================== */
+.checkinPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.searchSection {
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f1f5f9;
+}
+
+.searchHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.searchHeader h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.searchControls {
+  display: flex;
+  gap: 12px;
+}
+
+.inputWrapper {
+  position: relative;
+  flex: 1;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.mainInput {
+  width: 100%;
+  padding: 14px 16px 14px 42px;
+  border: 2px solid #f1f5f9;
+  border-radius: 14px;
+  font-size: 1rem;
+  background: #f8fafc;
+  transition: all 0.3s;
+  box-sizing: border-box;
+}
+
+.mainInput:focus {
+  outline: none;
+  border-color: #7c3aed;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.08);
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: white;
+  border: none;
+  padding: 0 24px;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btnPrimary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+}
+
+/* ====================================================
+   💳 TARJETA DE SOCIO ENCONTRADO
+   ==================================================== */
+.socioCard {
+  background: #ffffff;
+  border-radius: 24px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+  overflow: hidden;
+}
+
+.statusBanner {
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: white;
+}
+
+/* Estados del Banner superior de la tarjeta de socio */
+.verde { background: #10b981; }   /* Esmeralda */
+.amarillo { background: #f59e0b; } /* Ámbar */
+.rojo { background: #ef4444; }     /* Rojo */
+
+/* Estilos dinámicos para el botón de confirmación */
+.btnCheckInVerde {
+  background: #1e293b;
+  color: white;
+}
+
+.btnCheckInAmarillo {
+  background: #fffbeb;
+  color: #92400e;
+  border: 2px solid #fde68a;
+}
+
+.btnCheckInRojo {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 2px solid #fecaca;
+  cursor: not-allowed;
+}
+
+.socioInfo {
+  padding: 24px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.avatarLarge {
+  width: 70px;
+  height: 70px;
+  background: #f5f3ff;
+  color: #7c3aed;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.socioDetails h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.socioDetails p {
+  margin: 0 0 8px 0;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.planBadge {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.btnCheckIn {
+  width: calc(100% - 48px);
+  margin: 0 24px 24px 24px;
+  padding: 16px;
+  border: none;
+  border-radius: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.btnCheckInVerde {
+  background: #1e293b;
+}
+.btnCheckInVerde:hover {
+  background: #0f172a;
+  transform: translateY(-2px);
+}
+
+.btnCheckInRojo {
+  background: #fff1f2;
+  color: #be123c;
+  border: 2px solid #fecdd3;
+}
+.btnCheckInRojo:hover {
+  background: #ffe4e6;
+}
+
+/* ====================================================
+   📋 PANEL DERECHO (HISTORIAL)
+   ==================================================== */
+.historyPanel {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+  height: calc(100vh - 180px); /* Ajusta según tu header */
+  display: flex;
+  flex-direction: column;
+}
+
+.historyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.historyHeader h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.titleIcon { color: #94a3b8; }
+
+.historyList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 8px; /* Espacio para scrollbar */
+}
+
+.historyList::-webkit-scrollbar { width: 6px; }
+.historyList::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+.historyItem {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+  transition: all 0.2s;
+}
+
+.historyItem:hover { background: #f1f5f9; }
+
+.itemDenied {
+  background: #fef2f2;
+  border: 1px solid #fee2e2;
+}
+
+.historyTime {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  background: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.historyData {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.historyData strong {
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.historyData small {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.iconGranted { color: #10b981; }
+.iconDenied { color: #ef4444; }
+
+.emptyState {
+  text-align: center;
+  color: #94a3b8;
+  padding: 40px 0;
+  font-size: 0.95rem;
+}
+
+.loaderCenter {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+
+.toastMini {
+  background: #ecfdf5;
+  color: #059669;
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+/* ANIMACIONES */
+.fadeIn { animation: fadeIn 0.4s ease-out; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1024px) {
+  .mainGrid { grid-template-columns: 1fr; }
+  .historyPanel { height: 400px; }
+}

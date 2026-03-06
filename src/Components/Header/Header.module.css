@@ -72,42 +72,43 @@
 .drawerOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.2);
+  background: rgba(15, 23, 42, 0.4);
   backdrop-filter: blur(4px);
-  z-index: 2000;
   opacity: 0;
-  visibility: hidden;
-  /* Transición suave para el fondo desenfocado */
-  transition: opacity 0.4s ease, visibility 0.4s;
+  pointer-events: none; /* Evita que bloquee clicks cuando está oculto */
+  transition: opacity 0.3s ease;
+  z-index: 2000;
 }
 
 .overlayVisible {
   opacity: 1;
-  visibility: visible;
+  pointer-events: auto;
 }
 
 .drawer {
   position: fixed;
   top: 0;
-  right: 0; /* Lo posicionamos en 0 */
+  right: 0;
   width: 380px;
   height: 100vh;
-  background: #fff;
-  box-shadow: -15px 0 50px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  box-shadow: -10px 0 50px rgba(0, 0, 0, 0.1);
   z-index: 2001;
-  
-  /* 🚀 LA CLAVE DE LA FLUIDEZ: */
-  /* En lugar de cambiar 'right', usamos transform que es mucho más rápido */
-  transform: translateX(100%); 
-  will-change: transform; /* Prepara al navegador para la animación */
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  
   display: flex;
   flex-direction: column;
+
+  /* Forzamos el renderizado en una capa de la GPU */
+  transform: translate3d(100%, 0, 0); 
+  will-change: transform;
+  
+  /* Curva de aceleración ultra fluida */
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
 }
 
 .drawerOpen {
-  transform: translateX(0); /* Desliza hacia adentro */
+  transform: translate3d(0, 0, 0);
+  pointer-events: auto;
 }
 
 .drawerHeader {
@@ -123,17 +124,24 @@
 
 .closeBtn { background: none; border: none; color: #94a3b8; cursor: pointer; transition: 0.2s; }
 .closeBtn:hover { color: #1e293b; transform: rotate(90deg); }
-
 .drawerContent {
-  padding: 24px;
-  overflow-y: auto;
   flex: 1;
-  /* Evita que el scroll del drawer sea tosco */
-  overscroll-behavior: contain;
+  overflow-y: auto;
+  padding: 24px;
+  /* Suavizar el scroll interno */
+  -webkit-overflow-scrolling: touch;
 }
 .groupLabel { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; display: block; margin-bottom: 16px; }
 
-.notifItem { display: flex; gap: 14px; padding: 14px; border-radius: 16px; transition: 0.2s; cursor: pointer; margin-bottom: 8px; }
+.notifItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+  contain: content; /* Mejora el rendimiento de pintado */
+}
 .notifItem:hover { background: #f8fafc; }
 
 .iconBox { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
