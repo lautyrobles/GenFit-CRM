@@ -3,7 +3,7 @@ import styles from './Inicio.module.css';
 import { useAuth } from '../../context/AuthContext';
 
 // 🧩 Componentes Independientes
-import StatCard from './Components/StatCard';
+import StatCard from './Components/Statcard';
 import IncomeChart from './Components/IncomeChart';
 import PlansChart from './Components/PlansChart';
 import QuickActions from './Components/QuickActions';
