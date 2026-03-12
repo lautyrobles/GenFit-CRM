@@ -26,14 +26,7 @@
 }
 
 .chartWrapper {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.chartWrapper {
-  position: relative; /* Permite posicionar el overlay encima */
+  position: relative;
   width: 100%;
   flex: 1;
   display: flex;
@@ -48,14 +41,44 @@
   transform: translate(-50%, -50%);
   text-align: center;
   width: 100%;
-  pointer-events: none; /* Permite que el mouse pase a través del texto */
+  pointer-events: none;
 }
 
 .emptyOverlay p {
   color: #94a3b8;
   font-size: 0.9rem;
   font-weight: 500;
-  background: rgba(255, 255, 255, 0.8); /* Fondo semi-transparente para legibilidad */
+  background: rgba(255, 255, 255, 0.8);
   padding: 8px 16px;
   border-radius: 100px;
+}
+
+/* --- ESTILOS DE LEYENDA --- */
+.legendGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 15px;
+  border-top: 1px solid #f8fafc;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Un poco más de espacio entre punto y texto */
+}
+
+.colorDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legendName {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
 }

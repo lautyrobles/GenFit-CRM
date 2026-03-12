@@ -2,7 +2,7 @@
 .pagosLayout {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 40px);
+  height: calc(100vh - 5px);
   width: 100%;
   max-width: 100%;
   font-family: 'Inter', sans-serif;
@@ -189,8 +189,7 @@
 
 .tableScrollArea {
   flex: 1;
-  overflow-y: auto;
-  padding: 0 24px 24px 24px;
+  padding: 24px 24px 24px 24px;
 }
 
 .modernTable {
@@ -755,7 +754,7 @@
 .tableMinHeight {
   min-height: 420px; /* Espacio suficiente para 6 filas */
   display: flex;
-  flex-direction: column;
+  flex-direction: column; 
 }
 
 /* 3. El paginador con margin-top: auto se pega al fondo del tableCard */
@@ -773,4 +772,46 @@
   padding: 12px;
   height: 60px; /* Alto fijo por fila */
   box-sizing: border-box;
+}
+
+/* Busca .tableCard y asegúrate que tenga overflow: hidden */
+.tableCard {
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden; /* 👈 Esto hace que se respeten los bordes redondeados abajo */
+}
+
+/* Busca .tableScrollArea y cambia el padding inferior */
+.tableScrollArea {
+  flex: 1;
+  /* Eliminamos el padding general para que el scroll no flote */
+  padding: 0 24px; 
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* 👈 Evita el scroll doble que mencionaste */
+}
+
+/* Asegúrate que .tableMinHeight controle el espacio de las 6 filas */
+.tableMinHeight {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; /* 👈 El scroll debe estar AQUÍ y solo aquí */
+}
+
+/* El paginador se queda como lo tenías, se pegará al borde inferior del tableCard */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px; /* Añadimos padding lateral para alinear con la tabla */
+  border-top: 1px solid #f1f5f9;
+  margin-top: auto;
+  background: white; /* Para que al scrollear no se transparente */
 }

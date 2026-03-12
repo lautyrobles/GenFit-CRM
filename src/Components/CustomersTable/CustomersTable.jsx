@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom"; 
 import styles from "./CustomersTable.module.css";
 import Loader from "../../Components/Loader/Loader";
 
@@ -11,7 +10,7 @@ import {
 } from "../../assets/services/clientesService";
 import { obtenerPlanes } from "../../assets/services/planesService";
 
-// Iconos refinados para estilo moderno
+// Iconos refinados
 const SearchIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8"></circle>
@@ -33,8 +32,7 @@ const EditIcon = () => (
   </svg>
 );
 
-const CustomersTable = () => {
-  const navigate = useNavigate(); 
+const CustomersTable = ({ onSelectCliente }) => {
   const [usuarios, setUsuarios] = useState([]);
   const [planesDisponibles, setPlanesDisponibles] = useState([]);
   const [mostrarModal, setMostrarModal] = useState(false);
@@ -69,7 +67,6 @@ const CustomersTable = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  // 🎨 Lógica de colores por nombre de plan
   const getPlanClass = (planName) => {
     if (!planName) return styles.planDefault;
     const name = planName.toLowerCase();
@@ -88,13 +85,8 @@ const CustomersTable = () => {
     });
   }, [usuarios, busqueda]);
 
-  const handleBusqueda = (e) => {
-    setBusqueda(e.target.value);
-    setCurrentPage(1);
-  };
-
   const resolverNombrePlan = (u) => {
-    if (u.plan_name) return u.plan_name;
+    if (u.plans?.name) return u.plans.name;
     const idPlan = u.plan_id; 
     const planEncontrado = planesDisponibles.find((p) => String(p.id) === String(idPlan));
     return planEncontrado ? planEncontrado.name : "Sin Plan";
@@ -120,29 +112,20 @@ const CustomersTable = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!nuevoUsuario.dni || !nuevoUsuario.first_name || !nuevoUsuario.email) {
-      mostrarToast("Campos obligatorios faltantes", "error");
-      return;
-    }
     try {
       setSaving(true);
-      const body = { ...nuevoUsuario, enabled: true, role: 'CLIENT' };
       if (editIndex !== null) {
-        await actualizarCliente(usuariosFiltrados[editIndex].id, body);
+        const userId = usuariosPagina[editIndex].id;
+        await actualizarCliente(userId, nuevoUsuario);
         mostrarToast("✅ Usuario actualizado");
       } else {
-        await crearCliente(body);
-        mostrarToast("✅ Usuario creado con éxito");
+        await crearCliente(nuevoUsuario);
+        mostrarToast("✅ Usuario creado");
       }
       await fetchData();
       cerrarModal();
     } catch (error) {
-      console.error(error);
-      if (error.message?.includes("unique")) {
-        mostrarToast("❌ El DNI o Email ya existe", "error");
-      } else {
-        mostrarToast("❌ Error al guardar", "error");
-      }
+      mostrarToast("❌ Error al guardar", "error");
     } finally {
       setSaving(false);
     }
@@ -150,7 +133,8 @@ const CustomersTable = () => {
 
   const editarUsuario = (u) => {
     setNuevoUsuario({ ...u, plan_id: u.plan_id || "" });
-    setEditIndex(usuariosFiltrados.findIndex(user => user.id === u.id));
+    const relativeIndex = usuariosPagina.findIndex(user => user.id === u.id);
+    setEditIndex(relativeIndex);
     setMostrarModal(true);
   };
 
@@ -173,10 +157,7 @@ const CustomersTable = () => {
               <button className={styles.modalCloseBtn} onClick={cerrarModal}>&times;</button>
             </div>
             <form className={styles.modalBody} onSubmit={handleSubmit}>
-              <div className={styles.inputGroup}>
-                <label>DNI</label>
-                <input type="text" name="dni" value={nuevoUsuario.dni} onChange={handleChange} />
-              </div>
+              <div className={styles.inputGroup}><label>DNI</label><input type="text" name="dni" value={nuevoUsuario.dni} onChange={handleChange} /></div>
               <div className={styles.row}>
                 <div className={styles.inputGroup}><label>Nombre</label><input type="text" name="first_name" value={nuevoUsuario.first_name} onChange={handleChange} /></div>
                 <div className={styles.inputGroup}><label>Apellido</label><input type="text" name="last_name" value={nuevoUsuario.last_name} onChange={handleChange} /></div>
@@ -201,20 +182,17 @@ const CustomersTable = () => {
 
       <section className={styles.customersContainer}>
         <div className={styles.header}>
-          <div className={styles.titleContainer}>
-            <h3>Gestión de Usuarios</h3>
-          </div>
-
+          <h3 className={styles.sectionTitle}>Gestión de Usuarios</h3>
           <div className={styles.actionsHeader}>
             <div className={styles.searchContainer}>
               <span className={styles.searchIcon}><SearchIcon /></span>
-              <input type="text" placeholder="Buscar cliente..." value={busqueda} onChange={handleBusqueda} className={styles.searchInput} />
+              <input type="text" placeholder="Buscar cliente..." value={busqueda} onChange={(e) => {setBusqueda(e.target.value); setCurrentPage(1);}} className={styles.searchInput} />
             </div>
             <button className={styles.btnCrear} onClick={abrirModalCrear}>+ Nuevo usuario</button>
           </div>
         </div>
 
-        {loading ? <Loader text="Cargando..." /> : (
+        {loading ? <div className={styles.loaderCenter}><Loader text="Sincronizando socios..." /></div> : (
           <>
             <div className={styles.tableWrapper}>
               <table className={styles.table}>
@@ -223,7 +201,6 @@ const CustomersTable = () => {
                     <th>Nombre y Apellido</th>
                     <th>DNI</th>
                     <th>Email</th>
-                    <th>Teléfono</th>
                     <th>Plan</th>
                     <th>Estado</th>
                     <th>Acciones</th>
@@ -233,30 +210,24 @@ const CustomersTable = () => {
                   {usuariosPagina.map((u) => {
                     const nombrePlan = resolverNombrePlan(u);
                     return (
-                      <tr key={u.id} className={editIndex === usuarios.findIndex(user => user.id === u.id) ? styles.editingRow : ""}>
+                      <tr key={u.id}>
                         <td className={styles.nameCell}>
-                          <div className={styles.avatar}>{(u.first_name?.[0] || '')}{(u.last_name?.[0] || '')}</div>
+                          <div className={styles.avatar}>{u.first_name[0]}{u.last_name[0]}</div>
                           <div className={styles.nameText}>
                             <p>{u.first_name} {u.last_name}</p>
                             <span>Cliente</span>
                           </div>
                         </td>
-                        <td className={styles.dniCell}>{u.dni || "-"}</td>
-                        <td className={styles.emailCell}>{u.email}</td>
-                        <td>{u.phone || "-"}</td>
+                        <td>{u.dni || "-"}</td>
+                        <td>{u.email}</td>
                         <td>
-                          {/* AQUI SE APLICA LA CLASE DINÁMICA */}
-                          <span className={`${styles.planBadge} ${getPlanClass(nombrePlan)}`}>
-                            {nombrePlan}
-                          </span>
+                          <span className={`${styles.planBadge} ${getPlanClass(nombrePlan)}`}>{nombrePlan}</span>
                         </td>
                         <td>
-                          <span className={u.enabled ? styles.active : styles.inactive}>
-                            {u.enabled ? "Activo" : "Inactivo"}
-                          </span>
+                          <span className={u.enabled ? styles.active : styles.inactive}>{u.enabled ? "Activo" : "Inactivo"}</span>
                         </td>
                         <td className={styles.actionsCell}>
-                          <button className={styles.actionBtn} onClick={() => navigate("/clientes", { state: { clienteSeleccionado: u } })} title="Ver"><EyeIcon /></button>
+                          <button className={styles.actionBtn} onClick={() => onSelectCliente(u)} title="Ver Perfil"><EyeIcon /></button>
                           <button className={styles.actionBtn} onClick={() => editarUsuario(u)} title="Editar"><EditIcon /></button>
                         </td>
                       </tr>
@@ -265,7 +236,6 @@ const CustomersTable = () => {
                 </tbody>
               </table>
             </div>
-
             <div className={styles.paginador}>
               <button onClick={() => setCurrentPage(prev => prev - 1)} disabled={currentPage === 1}>Anterior</button>
               <span className={styles.paginaInfo}>Página {currentPage} de {totalPaginas}</span>

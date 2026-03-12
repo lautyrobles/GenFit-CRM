@@ -1,0 +1,249 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* --- Status Card --- */
+.statusCard {
+  padding: 20px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+}
+
+.statusInfo {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.statusInfo h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.statusInfo span {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+/* Variantes de Estado */
+.statusOk { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.statusWarning { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.statusOverdue { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+.statusNone { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
+
+/* --- Tabla de Historial --- */
+.historySection {
+  background: #ffffff;
+}
+
+.historyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.historyHeader h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.tableWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: self-end;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #94a3b8;
+  padding: 12px 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.table td {
+  padding: 14px 8px;
+  font-size: 0.9rem;
+  color: #475569;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.methodBadge {
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.textRight { text-align: right; }
+.amount { font-weight: 700; color: #1e293b; }
+
+.noData {
+  text-align: center;
+  padding: 40px;
+  color: #94a3b8;
+}
+
+.noData p { margin-top: 10px; font-size: 0.9rem; }
+
+.statusCard {
+  padding: 16px 20px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+/* Colores Sparkling con lógica de semáforo */
+.statusOk { 
+  background: #ecfdf5; 
+  color: #059669; 
+  border: 1px solid #10b981; 
+}
+.statusWarning { 
+  background: #fffbeb; 
+  color: #d97706; 
+  border: 1px solid #fbbf24; 
+}
+.statusOverdue { 
+  background: #fef2f2; 
+  color: #dc2626; 
+  border: 1px solid #f87171; 
+}
+.statusNone { 
+  background: #f8fafc; 
+  color: #64748b; 
+  border: 1px solid #e2e8f0; 
+}
+
+.statusInfo h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.statusInfo span {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.pageBtn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: #7c3aed;
+  color: white;
+  border-color: #7c3aed;
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.15);
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #475569;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* Toque para la tabla */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ... (estilos anteriores iguales) ... */
+
+.historySection {
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.mainContentWrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 250px; /* Ajusta este valor según el alto de tus 3 filas */
+}
+
+.tableFixedHeight {
+  flex-grow: 1;
+  /* Esto evita que el contenedor colapse si hay 1 solo registro */
+  min-height: 180px; 
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Forzamos alto de fila para que sea predecible */
+.table td {
+  padding: 14px 8px;
+  height: 50px; 
+  font-size: 0.9rem;
+  color: #475569;
+  border-bottom: 1px solid #f8fafc;
+  box-sizing: border-box;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: auto; /* Empuja el paginador al fondo del wrapper */
+  padding: 15px 0;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* ... (resto de estilos iguales) ... */

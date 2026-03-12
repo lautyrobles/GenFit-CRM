@@ -6,10 +6,9 @@ import { registerUser } from "./authService";
    =================================================== */
 export const obtenerClientes = async () => {
   try {
-    // Volvemos a un select simple para asegurar que traiga a TODOS los CLIENT
     const { data, error } = await supabase
       .from('users')
-      .select('*') 
+      .select('*, plans(*), subscriptions(*)') 
       .eq('role', 'CLIENT')
       .order('created_at', { ascending: false });
 
@@ -22,7 +21,7 @@ export const obtenerClientes = async () => {
 };
 
 /* ===================================================
-    🔹 BUSCAR POR DNI (Blindado para Pagos)
+    🔹 BUSCAR POR DNI
    =================================================== */
 export const obtenerClientePorDocumento = async (dni) => {
   try {
@@ -30,20 +29,17 @@ export const obtenerClientePorDocumento = async (dni) => {
       .from('users')
       .select(`
         *,
-        plans (
-          name,
-          price
-        )
+        plans (*),
+        subscriptions (*) 
       `) 
       .eq('dni', dni)
       .maybeSingle();
 
     if (error) throw error;
 
-    // Si el cliente existe pero no tiene plan, devolvemos un objeto limpio 
-    // para que el frontend no de error de "undefined"
-    if (data && !data.plans) {
-      return { ...data, plans: { name: "Sin Plan", price: 0 } };
+    // Si no tiene suscripción activa en la tabla, evitamos el undefined
+    if (data && !data.subscriptions) {
+      data.subscriptions = [];
     }
 
     return data;
@@ -53,7 +49,9 @@ export const obtenerClientePorDocumento = async (dni) => {
   }
 };
 
-/* --- EL RESTO DE FUNCIONES (crearCliente, actualizarCliente) SE MANTIENEN IGUAL --- */
+/* ===================================================
+    🔹 CREAR CLIENTE (El que faltaba el export)
+   =================================================== */
 export const crearCliente = async (cliente) => {
   try {
     const nuevoUsuario = await registerUser(
@@ -87,16 +85,19 @@ export const crearCliente = async (cliente) => {
   }
 };
 
+/* ===================================================
+    🔹 ACTUALIZAR CLIENTE
+   =================================================== */
 export const actualizarCliente = async (id, datos) => {
   try {
     const { data, error } = await supabase
       .from('users')
       .update(datos)
       .eq('id', id)
-      .select();
+      .select('*, plans(*), subscriptions(*)');
 
     if (error) throw error;
-    return data;
+    return data[0];
   } catch (error) {
     console.error("❌ Error actualizar cliente:", error.message);
     throw error;
