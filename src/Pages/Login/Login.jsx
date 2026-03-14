@@ -1,8 +1,9 @@
+// src/Pages/Login/Login.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { useAuth } from "../../context/AuthContext";
-import { Lock, Mail, Loader2 } from "lucide-react"; // Importamos iconos para los inputs
+import { Lock, Mail, Loader2 } from "lucide-react";
 
 const Login = () => {
   const { login } = useAuth();
@@ -21,18 +22,19 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const ok = await login({ 
+      // Intentamos el login a través del contexto
+      const loggedUser = await login({ 
         usuario: formData.email, 
         password: formData.password 
       });
 
-      if (ok) {
+      if (loggedUser) {
+        // Si el login es exitoso y pasó los filtros de rol del contexto
         navigate("/"); 
-      } else {
-        setError("Credenciales incorrectas o error de conexión.");
       }
     } catch (err) {
-      setError(err.message || "Error al iniciar sesión.");
+      // Capturamos el error de "Cliente" o de credenciales
+      setError(err.message || "Credenciales incorrectas o error de conexión.");
     } finally {
       setLoading(false);
     }
