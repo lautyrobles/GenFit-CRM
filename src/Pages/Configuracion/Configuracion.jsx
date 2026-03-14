@@ -197,7 +197,6 @@ const Configuracion = () => {
   return (
     <section className={styles.configLayout}>
       
-      {/* Toast Notification */}
       {toast.msg && (
         <div className={`${styles.toast} ${toast.type === "error" ? styles.toastError : styles.toastSuccess}`}>
           {toast.type === 'error' ? <AlertCircle size={18}/> : <CheckCircle size={18}/>}
@@ -205,7 +204,6 @@ const Configuracion = () => {
         </div>
       )}
 
-      {/* BLOQUE SUPERIOR ESTÁTICO (Header) */}
       <div className={styles.topSection}>
         <div className={styles.header}>
           <div className={styles.headerText}>
@@ -221,7 +219,6 @@ const Configuracion = () => {
         </div>
       </div>
 
-      {/* BLOQUE INFERIOR: Tabla (Scroll Interno) */}
       <div className={styles.tableCard}>
         <div className={styles.tableToolbar}>
           <h3><Shield size={18} className={styles.titleIcon}/> Personal Autorizado</h3>
@@ -336,7 +333,6 @@ const Configuracion = () => {
         </div>
       </div>
 
-      {/* MODAL POPUP (GLASSMORPHISM) */}
       {mostrarFormulario && (
         <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && cerrarModal()}>
           <div className={styles.largeModalCard}>

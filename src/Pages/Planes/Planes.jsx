@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import styles from "./Planes.module.css";
 import Loader from "../../Components/Loader/Loader";
-import { Plus, X, Edit3, Power, PowerOff, CheckCircle, AlertCircle, LayoutDashboard } from 'lucide-react';
+import { Plus, X, Edit3, Power, PowerOff, CheckCircle, AlertCircle, LayoutDashboard, Eye } from 'lucide-react';
 
 import {
   obtenerPlanes,
@@ -9,26 +9,27 @@ import {
   actualizarPlan,
   cambiarEstadoPlan,
 } from "../../assets/services/planesService";
+import { useAuth } from "../../context/AuthContext"; // 👈 Importamos el hook de autenticación
 
 const Planes = () => {
+  const { user } = useAuth(); // 👈 Obtenemos el usuario actual
+
+  // --- LÓGICA DE PERMISOS ---
+  // Normalizamos el rol para asegurarnos que la comparación sea exacta
+  const role = (user?.role || "").toUpperCase();
+  const isReadOnly = role === "SUPERVISOR"; // 👈 Definimos si es solo lectura
+
   // --- ESTADOS ---
   const [planes, setPlanes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  // UI States
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
   const [toast, setToast] = useState({ message: "", type: "" });
 
-  // Form State
   const [nuevoPlan, setNuevoPlan] = useState({
-    name: "",
-    price: "",
-    days_per_week_limit: "", 
-    entries_per_day_limit: 1,
-    description: "",
-    active: true,
+    name: "", price: "", days_per_week_limit: "", entries_per_day_limit: 1, description: "", active: true,
   });
 
   // --- CARGA INICIAL ---
@@ -38,7 +39,6 @@ const Planes = () => {
       const data = await obtenerPlanes();
       setPlanes(data || []);
     } catch (error) {
-      console.error(error);
       mostrarToast("Error al cargar los planes", "error");
     } finally {
       setLoading(false);
@@ -62,7 +62,6 @@ const Planes = () => {
     setEditIndex(null);
   };
 
-  // 🎨 Helper de Clases de Color por Nombre de Plan
   const getPlanClass = (planName) => {
     if (!planName) return styles.planDefault;
     const name = planName.toLowerCase();
@@ -74,6 +73,7 @@ const Planes = () => {
 
   // --- HANDLERS UI ---
   const abrirModalCrear = () => {
+    if (isReadOnly) return; // 🛡️ Seguridad extra
     limpiarFormulario();
     setMostrarFormulario(true);
   };
@@ -91,17 +91,14 @@ const Planes = () => {
   };
 
   // --- LOGICA CRUD ---
-  const validarCampos = () => {
-    if (!nuevoPlan.name || !nuevoPlan.price) {
-      mostrarToast("Nombre y Precio son obligatorios.", "error");
-      return false;
-    }
-    return true;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validarCampos()) return;
+    if (isReadOnly) return; // 🛡️ Bloqueo de guardado
+
+    if (!nuevoPlan.name || !nuevoPlan.price) {
+      mostrarToast("Nombre y Precio son obligatorios.", "error");
+      return;
+    }
 
     try {
       setSaving(true);
@@ -132,6 +129,7 @@ const Planes = () => {
   };
 
   const editarPlan = (index) => {
+    if (isReadOnly) return; // 🛡️ Bloqueo de edición
     const p = planes[index];
     setNuevoPlan({
       name: p.name, price: p.price, days_per_week_limit: p.days_per_week_limit || "", entries_per_day_limit: p.entries_per_day_limit || 1, description: p.description || "", active: p.active,
@@ -141,6 +139,7 @@ const Planes = () => {
   };
 
   const toggleEstado = async (id, estadoActual) => {
+    if (isReadOnly) return; // 🛡️ Bloqueo de cambio de estado
     try {
       const next = !estadoActual;
       await cambiarEstadoPlan(id, next);
@@ -167,59 +166,61 @@ const Planes = () => {
           <p>Define los productos, precios y límites de acceso para tus clientes.</p>
         </div>
         
-        <button className={styles.btnPrimary} onClick={abrirModalCrear}>
-          <Plus size={16}/> Crear Plan
-        </button>
+        {/* 🛡️ El botón de crear solo se muestra si NO es Supervisor */}
+        {!isReadOnly && (
+          <button className={styles.btnPrimary} onClick={abrirModalCrear}>
+            <Plus size={16}/> Crear Plan
+          </button>
+        )}
       </div>
 
-      {mostrarFormulario && (
+      {mostrarFormulario && !isReadOnly && (
         <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && cerrarModal()}>
+          {/* ... (Contenido del modal igual al original) ... */}
           <div className={styles.modalContent}>
-            <div className={styles.modalHeader}>
-              <h3>{editIndex !== null ? "Editar Configuración de Plan" : "Nuevo Plan de Suscripción"}</h3>
-              <button className={styles.btnClose} onClick={cerrarModal}><X size={20}/></button>
-            </div>
-
-            <div className={styles.modalBody}>
-              <form onSubmit={handleSubmit} id="planForm">
-                <div className={styles.formGrid}>
-                  <div className={styles.formGroup}>
-                    <label>Nombre del Plan</label>
-                    <input type="text" name="name" placeholder="Ej: Pase Libre Premium" value={nuevoPlan.name} onChange={handleChange} autoFocus />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label>Precio Final ($)</label>
-                    <input type="number" name="price" placeholder="0.00" value={nuevoPlan.price} onChange={handleChange} className={styles.inputPrice} />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label>Días por semana <small>(Vacío = Ilimitado)</small></label>
-                    <input type="number" name="days_per_week_limit" placeholder="∞" value={nuevoPlan.days_per_week_limit} onChange={handleChange} />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label>Entradas por día</label>
-                    <input type="number" name="entries_per_day_limit" value={nuevoPlan.entries_per_day_limit} onChange={handleChange} />
-                  </div>
-                  <div className={styles.formGroupFull}>
-                    <label>Descripción / Notas comerciales</label>
-                    <input type="text" name="description" placeholder="Ej: Incluye acceso a todas las sedes..." value={nuevoPlan.description} onChange={handleChange} />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label>Estado del Plan</label>
-                    <select name="active" value={nuevoPlan.active} onChange={handleChange}>
-                      <option value={true}>🟢 Visible y Activo</option>
-                      <option value={false}>🔴 Oculto / Inactivo</option>
-                    </select>
-                  </div>
-                </div>
-              </form>
-            </div>
-
-            <div className={styles.modalFooter}>
-              <button type="button" className={styles.btnSecondary} onClick={cerrarModal}>Cancelar</button>
-              <button type="submit" form="planForm" className={styles.btnPrimarySave} disabled={saving}>
-                {saving ? "Guardando..." : (editIndex !== null ? "Actualizar Plan" : "Publicar Plan")}
-              </button>
-            </div>
+             <div className={styles.modalHeader}>
+               <h3>{editIndex !== null ? "Editar Configuración de Plan" : "Nuevo Plan de Suscripción"}</h3>
+               <button className={styles.btnClose} onClick={cerrarModal}><X size={20}/></button>
+             </div>
+             <div className={styles.modalBody}>
+               <form onSubmit={handleSubmit} id="planForm">
+                 <div className={styles.formGrid}>
+                   <div className={styles.formGroup}>
+                     <label>Nombre del Plan</label>
+                     <input type="text" name="name" placeholder="Ej: Pase Libre Premium" value={nuevoPlan.name} onChange={handleChange} autoFocus />
+                   </div>
+                   <div className={styles.formGroup}>
+                     <label>Precio Final ($)</label>
+                     <input type="number" name="price" placeholder="0.00" value={nuevoPlan.price} onChange={handleChange} className={styles.inputPrice} />
+                   </div>
+                   <div className={styles.formGroup}>
+                     <label>Días por semana <small>(Vacío = Ilimitado)</small></label>
+                     <input type="number" name="days_per_week_limit" placeholder="∞" value={nuevoPlan.days_per_week_limit} onChange={handleChange} />
+                   </div>
+                   <div className={styles.formGroup}>
+                     <label>Entradas por día</label>
+                     <input type="number" name="entries_per_day_limit" value={nuevoPlan.entries_per_day_limit} onChange={handleChange} />
+                   </div>
+                   <div className={styles.formGroupFull}>
+                     <label>Descripción / Notas comerciales</label>
+                     <input type="text" name="description" placeholder="Ej: Incluye acceso a todas las sedes..." value={nuevoPlan.description} onChange={handleChange} />
+                   </div>
+                   <div className={styles.formGroup}>
+                     <label>Estado del Plan</label>
+                     <select name="active" value={nuevoPlan.active} onChange={handleChange}>
+                       <option value={true}>🟢 Visible y Activo</option>
+                       <option value={false}>🔴 Oculto / Inactivo</option>
+                     </select>
+                   </div>
+                 </div>
+               </form>
+             </div>
+             <div className={styles.modalFooter}>
+               <button type="button" className={styles.btnSecondary} onClick={cerrarModal}>Cancelar</button>
+               <button type="submit" form="planForm" className={styles.btnPrimarySave} disabled={saving}>
+                 {saving ? "Guardando..." : (editIndex !== null ? "Actualizar Plan" : "Publicar Plan")}
+               </button>
+             </div>
           </div>
         </div>
       )}
@@ -233,14 +234,13 @@ const Planes = () => {
               <div className={styles.emptyIcon}><LayoutDashboard size={48} strokeWidth={1}/></div>
               <h3>Aún no hay planes configurados</h3>
               <p>Comenzá creando tu primer producto para poder registrar ingresos.</p>
-              <button className={styles.btnPrimary} onClick={abrirModalCrear}>Configurar Primer Plan</button>
+              {!isReadOnly && <button className={styles.btnPrimary} onClick={abrirModalCrear}>Configurar Primer Plan</button>}
             </div>
           ) : (
             <div className={styles.gridPlanes}>
               {planes.map((p, i) => (
                 <div key={p.id} className={`${styles.cardPlan} ${!p.active ? styles.cardInactive : ''}`}>
                   <div className={styles.cardHeader}>
-                    {/* Aplicamos el color dinámico al nombre del plan */}
                     <h4 className={`${styles.cardName} ${getPlanClass(p.name)}`}>{p.name}</h4>
                     <div className={styles.cardPriceBox}>
                       <span className={styles.currency}>$</span>
@@ -269,17 +269,24 @@ const Planes = () => {
                     </ul>
                   </div>
 
-                  <div className={styles.cardFooter}>
-                    <button className={styles.btnEdit} onClick={() => editarPlan(i)} title="Editar Configuración">
-                      <Edit3 size={16} /> Modificar
-                    </button>
-                    <button 
-                      className={`${styles.btnToggle} ${p.active ? styles.btnOff : styles.btnOn}`} 
-                      onClick={() => toggleEstado(p.id, p.active)}
-                    >
-                      {p.active ? <><PowerOff size={16}/> Pausar</> : <><Power size={16}/> Reactivar</>}
-                    </button>
-                  </div>
+                  {/* 🛡️ El footer con acciones solo se muestra si NO es Supervisor */}
+                  {!isReadOnly ? (
+                    <div className={styles.cardFooter}>
+                      <button className={styles.btnEdit} onClick={() => editarPlan(i)} title="Editar Configuración">
+                        <Edit3 size={16} /> Modificar
+                      </button>
+                      <button 
+                        className={`${styles.btnToggle} ${p.active ? styles.btnOff : styles.btnOn}`} 
+                        onClick={() => toggleEstado(p.id, p.active)}
+                      >
+                        {p.active ? <><PowerOff size={16}/> Pausar</> : <><Power size={16}/> Reactivar</>}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className={styles.cardFooterReadOnly}>
+                     
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
