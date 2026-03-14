@@ -1,5 +1,5 @@
 /* ====================================================
-   ESTRUCTURA PRINCIPAL (Sparkling Blue)
+   ESTRUCTURA PRINCIPAL Y DASHBOARD (2x2 GRID)
    ==================================================== */
 .clientesLayout {
   width: 100%;
@@ -8,8 +8,38 @@
   color: #1e293b;
 }
 
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Dos columnas iguales */
+  grid-template-areas: 
+    "info asistencia"
+    "pagos rutina";
+  gap: 24px;
+  animation: fadeInSlideUp 0.5s forwards;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 32px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+  min-height: 420px; /* Altura equilibrada para las 4 cards */
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 10px;
+}
+
+.infoCard { grid-area: info; }
+.asistenciaCard { grid-area: asistencia; }
+.pagosCard { grid-area: pagos; }
+.rutinaCard { grid-area: rutina; }
+
 /* ====================================================
-   🔍 SECCIÓN BUSCADOR
+   🔍 SECCIÓN BUSCADOR (Fiel a la imagen)
    ==================================================== */
 .searchSection {
   background: #ffffff;
@@ -101,402 +131,177 @@
   background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
   color: white;
   border: none;
-  padding: 12px 24px;
+  padding: 12px 28px;
   border-radius: 14px;
   font-weight: 700;
   cursor: pointer;
   transition: 0.3s;
 }
 
-.btnSecondary {
-  background: white;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-  padding: 12px 18px;
-  border-radius: 14px;
-  font-weight: 600;
-  cursor: pointer;
+.btnPrimary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
 }
 
 /* ====================================================
-   🧩 DASHBOARD GRID
+   👤 INFO CARD Y BOTONES
    ==================================================== */
-.dashboardGrid {
-  display: grid;
-  grid-template-columns: 1.5fr 1.3fr;
-  grid-template-areas: 
-    "info rutina"
-    "pagos asistencia"
-    "pagos asistencia";
-  gap: 24px;
+.btnEdit, .btnAddAlert, .btnBack {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: 0.2s;
 }
 
-.card {
+.btnEdit {
+  height: 40px;
+}
+
+.btnEdit:hover, .btnAddAlert:hover, .btnBack:hover {
   background: #ffffff;
-  border-radius: 28px;
-  padding: 32px;
-  border: 1px solid #f1f5f9;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
-}
-
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-
-.userHead {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.avatarLarge {
-  width: 64px;
-  height: 64px;
-  background: #f5f3ff;
   color: #7c3aed;
+  border-color: #7c3aed;
+}
+
+.userHead { display: flex; gap: 16px; align-items: center; }
+.avatarLarge {
+  width: 64px; height: 64px;
+  background: #f5f3ff; color: #7c3aed;
   border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; font-weight: 800;
 }
 
-.userNameBox h3 {
-  margin: 0;
-  font-size: 1.4rem;
-    font-weight: 600;
-    color: #7c3aed;
-    margin: 0;
-}
-
+.userNameBox h3 { margin: 0; font-size: 1.4rem; font-weight: 600; color: #7c3aed; }
 .statusActive { color: #059669; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; }
 .statusInactive { color: #dc2626; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; }
 
-.btnEdit {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  padding: 8px 14px;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #475569;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
+.infoGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.infoItem { display: flex; gap: 12px; }
+.infoItem label { display: block; font-size: 0.75rem; font-weight: 700; color: #1e293b; text-transform: uppercase; margin-bottom: 4px; }
+.infoItem p { font-weight: 500; color: #64748b; margin: 0; }
+.txtL { display: flex; flex-direction: column; }
 .divider { height: 1px; background: #f1f5f9; margin-bottom: 24px; }
 
-.infoGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
-
-.infoItem {
-  display: flex;
-  gap: 12px;
-}
-
-.itemIcon { color: #94a3b8; margin-top: 4px; }
-
-.infoItem label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #050505;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-
-.infoItem p {     
-  font-weight: 500;
-  color: #727d8d;
-  margin: 0; 
-}
-
-/* 🎨 PLAN BADGES */
 .planBadge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-transform: uppercase;
+  display: inline-block; padding: 4px 12px; border-radius: 8px;
+  font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+  background: #f5f3ff; color: #7c3aed;
 }
 
-.planEstudiantil { background: #e0f2fe; color: #0369a1; }
-.planBasico { background: #f1f5f9; color: #475569; }
-.planLibre { background: #dcfce7; color: #15803d; }
-.planDefault { background: #fef9c3; color: #854d0e; }
-
 /* ====================================================
-   💳 PAGOS Y ASISTENCIA
+   ⚠️ ALERTAS MÉDICAS Y DROPDOWN
    ==================================================== */
-.paymentsList {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.medicalAlertsHeader { margin-top: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+.alertTitle { display: flex; align-items: center; gap: 8px; color: #ef4444; }
+.alertTitle h4 { margin: 0; font-size: 0.85rem; font-weight: 700; color: #1e293b; text-transform: uppercase; }
+
+.alertsContainer { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.miniCardAlert {
+  position: relative; display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border-radius: 10px; font-size: 0.75rem; font-weight: 700;
+  overflow: visible !important; border: 1px solid transparent; transition: 0.2s;
 }
 
-.paymentItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: #f8fafc;
-  border-radius: 14px;
-  border: 1px solid #f1f5f9;
+.alertActionsWrapper { position: relative; display: flex; align-items: center; }
+.btnOptAlert {
+  background: rgba(0, 0, 0, 0.05); border: none; border-radius: 4px;
+  width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: inherit;
 }
 
-.payAmount { font-weight: 800; color: #059669; }
-
-.placeholderAsistencia {
-  height: 150px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: #94a3b8;
-  font-size: 0.9rem;
-  border: 2px dashed #f1f5f9;
-  border-radius: 20px;
+.alertDropdown {
+  position: absolute; top: 100%; right: 0; background: white;
+  border: 1px solid #e2e8f0; border-radius: 10px; z-index: 9999;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  display: flex; flex-direction: column; min-width: 130px; overflow: hidden;
+  margin-top: 6px; animation: fadeIn 0.2s ease-out;
 }
 
-.fullWidthCard { grid-column: span 2; }
+.dropItem, .dropItemDelete {
+  padding: 10px 14px; font-size: 0.75rem; font-weight: 600;
+  display: flex; align-items: center; gap: 10px; border: none;
+  background: white; width: 100%; cursor: pointer; text-align: left;
+}
+.dropItem:hover { background: #f8fafc; color: #7c3aed; }
+.dropItemDelete:hover { background: #fef2f2; color: #ef4444; }
+
+.severityAlta { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.severityMedia { background: #fff7ed; color: #ea580c; border-color: #ffedd5; }
+.severityBaja { background: #fefce8; color: #a16207; border-color: #fef08a; }
 
 /* ====================================================
-   🪟 MODALES
+   🪟 MODALES Y NOTIFICACIONES
    ==================================================== */
 .modalOverlay {
-  position: fixed; inset: 0;
-  background: rgba(15, 23, 42, 0.4);
-  backdrop-filter: blur(8px);
-  display: flex; justify-content: center; align-items: center;
-  z-index: 2000; padding: 20px;
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center;
+  z-index: 99999; padding: 20px;
 }
 
 .modalContent {
-  background: #ffffff;
-  width: 100%; max-width: 550px;
-  border-radius: 32px;
-  box-shadow: 0 25px 50px rgba(0,0,0,0.15);
-  padding: 32px;
-  animation: fadeIn 0.4s ease-out;
+  background: #ffffff; width: 100%; max-width: 550px; border-radius: 32px;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.15); padding: 32px;
+  animation: fadeIn 0.3s ease-out;
 }
 
 .modalHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-.modalHeader h3 { margin: 0; font-weight: 800; }
+.modalHeader h3 { margin: 0; font-weight: 800; color: #1e293b; }
+.modalCloseBtn { background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8; }
 
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
 .field label { font-size: 0.85rem; font-weight: 700; color: #475569; }
-.field input, .field select {
-  padding: 12px 16px;
-  border-radius: 12px;
-  border: 2px solid #f1f5f9;
-  font-size: 0.95rem;
+
+.textareaMedical {
+  width: 100%; padding: 12px 16px; border-radius: 14px; border: 2px solid #f1f5f9;
+  font-size: 0.95rem; font-family: inherit; resize: none; background: #f8fafc; transition: 0.3s;
 }
+.textareaMedical:focus { outline: none; border-color: #7c3aed; background: #ffffff; }
 
-.formRow { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.modalActions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.btnSave { background: #1e293b; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+.btnCancel { background: transparent; color: #64748b; border: 1px solid #e2e8f0; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; }
 
-.modalActions {
-  display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;
+.btnDeleteConfirm {
+  background: #ef4444; color: white; border: none; padding: 12px 24px; border-radius: 12px;
+  font-weight: 700; cursor: pointer; transition: 0.2s;
 }
+.btnDeleteConfirm:hover { background: #dc2626; }
 
-.btnSave {
-  background: #1e293b; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer;
-}
-
-.toastMini { background: #ecfdf5; color: #059669; padding: 6px 12px; border-radius: 100px; font-weight: 700; font-size: 0.8rem; }
-
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-@media (max-width: 1024px) {
-  .dashboardGrid { grid-template-columns: 1fr; }
-  .fullWidthCard { grid-column: span 1; }
-}
-
-.closeBtn {
-  background-color: transparent;
-  border: none;
-  cursor: pointer;
-}
-
-.btnCancel {
-  background: transparent; color: black; border: 1px solid lightgray; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer;
-}
-
-.infoCard { grid-area: info; }
-.asistenciaCard { grid-area: asistencia; }
-.pagosCard { grid-area: pagos; }
-.rutinaNutricionArea { grid-area: rutina; }
-
-/* ... (estilos anteriores) ... */
-
-.loaderCenter {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 80px 0;
-  width: 100%;
-}
-
-.tableFadeIn {
-  animation: fadeIn 0.5s ease-out;
-}
-
-.btnBack {
-  background: #f8fafc;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-  padding: 8px 16px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
-}
-
-.btnBack:hover {
-  background: #ffffff;
-  color: #7c3aed;
-  border-color: #7c3aed;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
-}
-
-.toastMini {
+/* NOTIFICACIÓN FLOTANTE (Fixed para no mover el layout) */
+.floatingToast {
+  position: fixed;
+  top: 40px;
+  right: 40px;
   background: #ecfdf5;
   color: #059669;
-  padding: 6px 14px;
-  border-radius: 100px;
+  padding: 12px 24px;
+  border-radius: 16px;
   font-weight: 700;
-  font-size: 0.8rem;
-  margin-right: auto;
-  margin-left: 20px;
-}
-
-/* Animación de entrada para la tabla */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.btnGroup {
-  display: flex;
-  gap: 10px;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.2);
+  z-index: 100000;
+  border: 1px solid #10b981;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* --- ANIMACIONES --- */
-@keyframes fadeInSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(15px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideInRight { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* --- CONTENEDOR DEL DASHBOARD --- */
-.dashboardGrid {
-  .dashboardGrid {
-  display: grid;
-  grid-template-columns: 1.5fr 1.3fr;
-  grid-template-areas: 
-    "info asistencia"
-    "pagos pagos"  /* Esto hará que Pagos ocupe todo el ancho */
-    "rutina rutina"; /* Esto hará que Rutina ocupe todo el ancho */
-  gap: 24px;
-}
-  
-  /* Animación principal */
-  animation: fadeInSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
+.loaderCenter { display: flex; justify-content: center; align-items: center; padding: 80px 0; width: 100%; }
+.tableFadeIn { animation: fadeIn 0.5s ease-out; }
 
-/* --- EFECTO CASCADA PARA LAS CARDS --- */
-/* Esto hace que las tarjetas no aparezcan todas al mismo tiempo, dando un look más premium */
-
-.infoCard { 
-  grid-area: info; 
-  animation: fadeInSlideUp 0.5s ease-out 0.1s both;
-}
-
-.asistenciaCard { 
-  grid-area: asistencia; 
-  animation: fadeInSlideUp 0.5s ease-out 0.2s both;
-}
-
-.pagosCard { 
-  grid-area: pagos; 
-  animation: fadeInSlideUp 0.5s ease-out 0.3s both;
-}
-
-.rutinaNutricionArea { 
-  grid-area: rutina; 
-  animation: fadeInSlideUp 0.5s ease-out 0.4s both;
-}
-
-/* --- BOTÓN VOLVER (Para que también anime) --- */
-.btnBack {
-  /* ... tus estilos anteriores ... */
-  animation: fadeIn 0.4s ease-out;
-}
-
-/* Mantener la animación simple para el buscador y otros elementos si es necesario */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* Busca estas secciones en tu CSS y reemplázalas/asegúrate que estén así: */
-
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center; /* Cambiado de flex-start para alinear con el avatar */
-  margin-bottom: 24px;
-}
-
-.btnGroup {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.btnEdit {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  padding: 8px 16px;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #64748b;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-}
-
-.btnEdit:hover {
-  background: #ffffff;
-  color: #7c3aed;
-  border-color: #7c3aed;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
-  transform: translateY(-1px);
-}
-
-/* Para los textos de la info grid que se veían movidos */
-.txtL {
-  display: flex;
-  flex-direction: column;
+.noAlertsText {
+  color: gray;
+  font-style: italic;
 }

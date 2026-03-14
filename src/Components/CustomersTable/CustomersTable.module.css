@@ -233,3 +233,49 @@
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
+
+.medicalSection {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px dashed #e2e8f0;
+}
+
+.medicalToggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.medicalToggle label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.medicalFields {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.medicalFields .row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+}
+
+.medicalFields textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-family: inherit;
+  font-size: 0.85rem;
+  resize: none;
+}
+

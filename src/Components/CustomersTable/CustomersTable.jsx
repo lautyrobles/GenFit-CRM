@@ -9,6 +9,7 @@ import {
   actualizarCliente,
 } from "../../assets/services/clientesService";
 import { obtenerPlanes } from "../../assets/services/planesService";
+import { crearAlertaMedica } from "../../assets/services/medicalService"; // Importado nuevo servicio
 
 // Iconos refinados
 const SearchIcon = () => (
@@ -47,6 +48,12 @@ const CustomersTable = ({ onSelectCliente }) => {
 
   const [nuevoUsuario, setNuevoUsuario] = useState({
     dni: "", first_name: "", last_name: "", email: "", phone: "", plan_id: "",
+  });
+
+  // --- NUEVOS ESTADOS PARA ALERTAS MÉDICAS ---
+  const [tieneAlerta, setTieneAlerta] = useState(false);
+  const [alertaMedica, setAlertaMedica] = useState({
+    name: "", severity: "Baja", observation: ""
   });
 
   const fetchData = async () => {
@@ -94,6 +101,8 @@ const CustomersTable = ({ onSelectCliente }) => {
 
   const abrirModalCrear = () => {
     setNuevoUsuario({ dni: "", first_name: "", last_name: "", email: "", phone: "", plan_id: "" });
+    setTieneAlerta(false);
+    setAlertaMedica({ name: "", severity: "Baja", observation: "" });
     setEditIndex(null);
     setMostrarModal(true);
   };
@@ -119,7 +128,18 @@ const CustomersTable = ({ onSelectCliente }) => {
         await actualizarCliente(userId, nuevoUsuario);
         mostrarToast("✅ Usuario actualizado");
       } else {
-        await crearCliente(nuevoUsuario);
+        // 1. Crear el usuario
+        const clienteCreado = await crearCliente(nuevoUsuario);
+        
+        // 2. Si se marcó la alerta médica, crearla en la nueva tabla
+        if (clienteCreado && tieneAlerta && alertaMedica.name) {
+          await crearAlertaMedica({
+            user_id: clienteCreado.id,
+            name: alertaMedica.name,
+            severity: alertaMedica.severity,
+            observation: alertaMedica.observation
+          });
+        }
         mostrarToast("✅ Usuario creado");
       }
       await fetchData();
@@ -157,20 +177,73 @@ const CustomersTable = ({ onSelectCliente }) => {
               <button className={styles.modalCloseBtn} onClick={cerrarModal}>&times;</button>
             </div>
             <form className={styles.modalBody} onSubmit={handleSubmit}>
-              <div className={styles.inputGroup}><label>DNI</label><input type="text" name="dni" value={nuevoUsuario.dni} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>DNI</label><input type="text" name="dni" value={nuevoUsuario.dni} onChange={handleChange} required /></div>
               <div className={styles.row}>
-                <div className={styles.inputGroup}><label>Nombre</label><input type="text" name="first_name" value={nuevoUsuario.first_name} onChange={handleChange} /></div>
-                <div className={styles.inputGroup}><label>Apellido</label><input type="text" name="last_name" value={nuevoUsuario.last_name} onChange={handleChange} /></div>
+                <div className={styles.inputGroup}><label>Nombre</label><input type="text" name="first_name" value={nuevoUsuario.first_name} onChange={handleChange} required /></div>
+                <div className={styles.inputGroup}><label>Apellido</label><input type="text" name="last_name" value={nuevoUsuario.last_name} onChange={handleChange} required /></div>
               </div>
-              <div className={styles.inputGroup}><label>Email</label><input type="email" name="email" value={nuevoUsuario.email} onChange={handleChange} /></div>
+              <div className={styles.inputGroup}><label>Email</label><input type="email" name="email" value={nuevoUsuario.email} onChange={handleChange} required /></div>
               <div className={styles.inputGroup}><label>Teléfono</label><input type="text" name="phone" value={nuevoUsuario.phone} onChange={handleChange} /></div>
               <div className={styles.inputGroup}>
                 <label>Plan</label>
-                <select name="plan_id" value={nuevoUsuario.plan_id} onChange={handleChange}>
+                <select name="plan_id" value={nuevoUsuario.plan_id} onChange={handleChange} required>
                   <option value="">Seleccionar plan...</option>
                   {planesDisponibles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
+
+              {/* --- NUEVA SECCIÓN: ALERTA MÉDICA (SOLO CREACIÓN) --- */}
+              {editIndex === null && (
+                <div className={styles.medicalSection}>
+                  <div className={styles.medicalToggle}>
+                    <input 
+                      type="checkbox" 
+                      id="medicalCheck" 
+                      checked={tieneAlerta} 
+                      onChange={(e) => setTieneAlerta(e.target.checked)} 
+                    />
+                    <label htmlFor="medicalCheck">¿Posee alertas médicas u observaciones?</label>
+                  </div>
+
+                  {tieneAlerta && (
+                    <div className={styles.medicalFields}>
+                      <div className={styles.row}>
+                        <div className={styles.inputGroup}>
+                          <label>Condición / Alerta</label>
+                          <input 
+                            type="text" 
+                            placeholder="Ej: Asma, Diabetes..." 
+                            value={alertaMedica.name} 
+                            onChange={(e) => setAlertaMedica({...alertaMedica, name: e.target.value})} 
+                            required={tieneAlerta}
+                          />
+                        </div>
+                        <div className={styles.inputGroup}>
+                          <label>Gravedad</label>
+                          <select 
+                            value={alertaMedica.severity} 
+                            onChange={(e) => setAlertaMedica({...alertaMedica, severity: e.target.value})}
+                          >
+                            <option value="Baja">Baja (Amarillo)</option>
+                            <option value="Media">Media (Naranja)</option>
+                            <option value="Alta">Alta (Rojo)</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className={styles.inputGroup}>
+                        <label>Observación</label>
+                        <textarea 
+                          rows="2" 
+                          placeholder="Detalles sobre la condición..."
+                          value={alertaMedica.observation} 
+                          onChange={(e) => setAlertaMedica({...alertaMedica, observation: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className={styles.modalFooter}>
                 <button type="button" className={styles.btnCancelar} onClick={cerrarModal}>Cancelar</button>
                 <button type="submit" className={styles.btnGuardar} disabled={saving}>{saving ? "Guardando..." : "Guardar"}</button>

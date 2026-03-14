@@ -130,3 +130,18 @@ export const getPlansDistribution = async () => {
     return [];
   }
 };
+
+export const obtenerConteoAlertasMedicas = async () => {
+  try {
+    
+    const { count, error } = await supabase
+    .from('medical_alerts')
+    .select('user_id', { count: 'exact', head: true})
+
+    if (error) throw error;
+    return count || 0
+  } catch (error) {
+    console.error('Error al obtener conteo de las alertas:', error.message)
+    return 0
+  }
+}
