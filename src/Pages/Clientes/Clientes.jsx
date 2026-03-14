@@ -259,22 +259,42 @@ const Clientes = () => {
                 </div>
 
                 <div className={styles.alertsContainer}>
-                  {alertasLoading ? <p>...</p> : alertas.map(alerta => (
-                    <div key={alerta.id} className={`${styles.miniCardAlert} ${styles['severity' + alerta.severity]}`} title={alerta.observation || "Sin detalles"}>
-                      <span className={styles.alertName}>{alerta.name}</span>
-                      <div className={styles.alertActionsWrapper}>
-                        <button className={styles.btnOptAlert} onClick={(e) => { e.stopPropagation(); setAlertaMenuAbierta(alerta.id); }}>
-                          <MoreVertical size={14} />
-                        </button>
-                        {alertaMenuAbierta === alerta.id && (
-                          <div className={styles.alertDropdown} onClick={e => e.stopPropagation()}>
-                            <button onClick={() => abrirEdicionAlerta(alerta)} className={styles.dropItem}><Edit2 size={12} /> Editar</button>
-                            <button onClick={() => confirmarEliminarAlerta(alerta.id)} className={styles.dropItemDelete}><Trash2 size={12} /> Eliminar</button>
-                          </div>
-                        )}
+                  {alertasLoading ? (
+                    <p className={styles.noAlertsText}>Cargando alertas...</p>
+                  ) : alertas.length > 0 ? (
+                    alertas.map((alerta) => (
+                      <div
+                        key={alerta.id}
+                        className={`${styles.miniCardAlert} ${styles["severity" + alerta.severity]}`}
+                        title={alerta.observation || "Sin detalles"}
+                      >
+                        <span className={styles.alertName}>{alerta.name}</span>
+                        <div className={styles.alertActionsWrapper}>
+                          <button
+                            className={styles.btnOptAlert}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAlertaMenuAbierta(alertaMenuAbierta === alerta.id ? null : alerta.id);
+                            }}
+                          >
+                            <MoreVertical size={14} />
+                          </button>
+                          {alertaMenuAbierta === alerta.id && (
+                            <div className={styles.alertDropdown} onClick={(e) => e.stopPropagation()}>
+                              <button onClick={() => abrirEdicionAlerta(alerta)} className={styles.dropItem}>
+                                <Edit2 size={12} /> Editar
+                              </button>
+                              <button onClick={() => confirmarEliminarAlerta(alerta.id)} className={styles.dropItemDelete}>
+                                <Trash2 size={12} /> Eliminar
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className={styles.noAlertsText}>No hay alertas médicas registradas...</p>
+                  )}
                 </div>
               </div>
 

@@ -12,6 +12,8 @@ import Loader from '../../Components/Loader/Loader';
 // 📦 Servicios
 import { getSummaryStats, getIncomeHistory, getPlansDistribution } from '../../assets/services/dashboardService';
 import { obtenerUsuariosActivosAhora } from '../../assets/services/asistenciaService'; // Importamos el nuevo servicio
+import { obtenerConteoAlertasMedicas } from '../../assets/services/dashboardService';
+import { AlertTriangle } from 'lucide-react';
 
 // 🎨 Iconos (Cambiamos Calendar por Activity para reflejar "tiempo real")
 import { Users, DollarSign, Activity, AlertCircle } from 'lucide-react';
@@ -23,29 +25,31 @@ const Inicio = () => {
   const [stats, setStats] = useState({
     activeUsers: 0,
     monthlyIncome: 0,
-    usersPresent: 0, // Nuevo estado para la métrica de 3 horas
-    medicalAlerts: 0
+    usersPresent: 0, 
+    medicalAlerts: 0,
   });
   const [incomeData, setIncomeData] = useState([]);
   const [plansData, setPlansData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
         // Ejecutamos todos los servicios en paralelo para máxima velocidad
-        const [resStats, resIncome, resPlans, resPresent] = await Promise.all([
+        const [resStats, resIncome, resPlans, resPresent, resAlertas] = await Promise.all([
           getSummaryStats(),
           getIncomeHistory(),
           getPlansDistribution(),
-          obtenerUsuariosActivosAhora() // Llamada a la lógica de las 3 horas
+          obtenerUsuariosActivosAhora(), // Llamada a la lógica de las 3 horas
+          obtenerConteoAlertasMedicas()  // 🆕 Nueva llamada para alertas médicas
         ]);
 
         if (resStats) {
           setStats({
             ...resStats,
-            usersPresent: resPresent || 0 // Sobrescribimos o añadimos la métrica en vivo
+            usersPresent: resPresent || 0, // Sobrescribimos o añadimos la métrica en vivo
+            alertasMedicas: resAlertas || 0 // 🆕 Añadimos el conteo de alertas médicas
           });
         }
         
@@ -102,10 +106,11 @@ const Inicio = () => {
         />
 
         <StatCard 
-          title="Alertas Médicas" 
-          value={stats.medicalAlerts} 
-          icon={<AlertCircle size={20} />} 
-          color="red" 
+          title="Alertas Médicas"
+          value={stats.alertasMedicas}
+          icon={<AlertTriangle size={24} color="#ef4444" />}
+          trend="Atención requerida"
+          color="danger" // Clase para poner el borde o fondo rojo
         />
       </section>
 
