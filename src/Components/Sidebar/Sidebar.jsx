@@ -13,9 +13,14 @@ const Sidebar = () => {
 
   if (!user) return null
 
-  const role = user.roles?.[0] || user.role
-  const canViewPagos = ["SUPER_ADMIN", "ADMIN", "ENCARGADO"].includes(role)
-  const canViewPlanes = ["SUPER_ADMIN", "ADMIN", "ENCARGADO"].includes(role)
+  // Normalizamos el rol para que no falle por mayúsculas o prefijos
+  const role = (user.roles?.[0] || user.role || "").replace("ROLE_", "").toUpperCase();
+
+  // 👉 AÑADIMOS "SUPERVISOR" a las condiciones de vista
+  const canViewPagos = ["SUPER_ADMIN", "ADMIN", "ENCARGADO", "SUPERVISOR"].includes(role)
+  const canViewPlanes = ["SUPER_ADMIN", "ADMIN", "ENCARGADO", "SUPERVISOR"].includes(role)
+  
+  // Estos se mantienen solo para Admins
   const canViewPermisos = ["SUPER_ADMIN", "ADMIN"].includes(role)
   const canViewMovimientos = ["SUPER_ADMIN", "ADMIN"].includes(role)
 
@@ -24,6 +29,7 @@ const Sidebar = () => {
       case "SUPER_ADMIN": return "Super Admin"
       case "ADMIN": return "Admin"
       case "ENCARGADO": return "Encargado"
+      case "SUPERVISOR": return "Supervisor" // 👉 Agregado para el perfil
       default: return "Usuario"
     }
   }
@@ -47,7 +53,7 @@ const Sidebar = () => {
             </NavLink>
           </div>
 
-          {/* GRUPO 2: GESTIÓN COMERCIAL */}
+          {/* GRUPO 2: GESTIÓN COMERCIAL - AHORA VISIBLE PARA SUPERVISOR */}
           {(canViewPagos || canViewPlanes) && (
             <div className={styles.navGroup}>
               <span className={styles.groupLabel}>Gestión</span>
@@ -64,7 +70,7 @@ const Sidebar = () => {
             </div>
           )}
 
-          {/* GRUPO 3: SERVICIOS AL CLIENTE (NUEVO) */}
+          {/* GRUPO 3: SERVICIOS AL CLIENTE */}
           <div className={styles.navGroup}>
             <span className={styles.groupLabel}>Servicios</span>
             <NavLink to="/asistencia" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
@@ -78,7 +84,7 @@ const Sidebar = () => {
             </NavLink>
           </div>
 
-          {/* GRUPO 4: ADMINISTRACIÓN */}
+          {/* GRUPO 4: ADMINISTRACIÓN - Sigue oculto para Supervisor */}
           {(canViewMovimientos || canViewPermisos) && (
             <div className={styles.navGroup}>
               <span className={styles.groupLabel}>Admin</span>
