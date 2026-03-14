@@ -9,21 +9,17 @@ import {
   toggleUserStatus,
 } from "../../assets/services/authService";
 import { useAuth } from "../../context/AuthContext";
+import { ROLES } from "../../config/permissions"; // 👈 Crucial para la sincronización
 import { Shield, Plus, X, Edit3, Trash2, CheckCircle, AlertCircle, Power, PowerOff, UserCog } from 'lucide-react';
 
 const Configuracion = () => {
-  const { user } = useAuth();
-  const storedUser = JSON.parse(localStorage.getItem("fitseoUser") || "null");
-
-  const normalizeRole = (r) => r ? r.replace("ROLE_", "").toUpperCase() : "";
-  const currentUserRole = normalizeRole(user?.role) || normalizeRole(storedUser?.role) || "";
+  const { user: currentUser } = useAuth();
 
   // --- Estados ---
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState({ msg: "", type: "" });
   const [editUser, setEditUser] = useState(null);
@@ -32,30 +28,31 @@ const Configuracion = () => {
     nombre: "", apellido: "", dni: "", nombreUsuario: "", email: "", password: "", tipo: "",
   });
 
-  // --- Mapeo de Roles UI <-> API ---
+  // --- Mapeo de Roles UI <-> Sistema ---
   const mapRoleToTipo = (roleRaw) => {
-    const role = normalizeRole(roleRaw);
+    const role = roleRaw ? roleRaw.toUpperCase() : "";
     switch (role) {
-      case "SUPER_ADMIN": return "Superadministrador";
-      case "ADMIN": return "Administrador";
-      case "SUPERVISOR": return "Supervisor";
-      default: return role;
+      case ROLES.SUPER_ADMIN: return "Superadministrador";
+      case ROLES.ADMIN: return "Administrador";
+      case ROLES.SUPERVISOR: return "Supervisor";
+      default: return "Personal";
     }
   };
 
   const mapTipoToRole = (tipo) => {
     switch (tipo) {
-      case "Superadministrador": return "SUPER_ADMIN";
-      case "Administrador": return "ADMIN";
-      case "Supervisor": return "SUPERVISOR";
-      default: return "CLIENT";
+      case "Superadministrador": return ROLES.SUPER_ADMIN;
+      case "Administrador": return ROLES.ADMIN;
+      case "Supervisor": return ROLES.SUPERVISOR;
+      default: return ROLES.SUPERVISOR;
     }
   };
 
   const getAllowedTipos = () => {
-    switch (currentUserRole) {
-      case "SUPER_ADMIN": return ["Superadministrador", "Administrador", "Supervisor"];
-      case "ADMIN": return ["Supervisor"];
+    const myRole = currentUser?.role?.toUpperCase();
+    switch (myRole) {
+      case ROLES.SUPER_ADMIN: return ["Superadministrador", "Administrador", "Supervisor"];
+      case ROLES.ADMIN: return ["Administrador", "Supervisor"];
       default: return [];
     }
   };
@@ -69,27 +66,26 @@ const Configuracion = () => {
   };
 
   // --- Cargar Usuarios ---
-  useEffect(() => {
-    const cargar = async () => {
-      try {
-        const data = await getUsers();
-        const staffUsers = data.filter(u => {
-            const r = normalizeRole(u.role);
-            return ["SUPER_ADMIN", "ADMIN", "SUPERVISOR"].includes(r);
-        });
+  const cargarUsuarios = async () => {
+    try {
+      setLoading(true);
+      const data = await getUsers();
+      // Solo mostramos personal del staff (CRM)
+      const staffRoles = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.SUPERVISOR];
+      const filtered = data.filter(u => staffRoles.includes(u.role?.toUpperCase()));
+      setUsuarios(filtered);
+    } catch (e) {
+      mostrarToast("Error al conectar con el servidor", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        setUsuarios(staffUsers.map((u) => ({ ...u, normalizedRole: normalizeRole(u.role) })));
-      } catch (e) {
-        console.error(e);
-        mostrarToast("Error al cargar usuarios", "error");
-      } finally {
-        setLoading(false);
-      }
-    };
-    cargar();
+  useEffect(() => {
+    cargarUsuarios();
   }, []);
 
-  // --- Form Handlers ---
+  // --- Handlers ---
   const limpiarFormulario = () => {
     setNuevoUsuario({ nombre: "", apellido: "", dni: "", nombreUsuario: "", email: "", password: "", tipo: allowedTipos[0] || "" });
     setErrors({});
@@ -108,25 +104,25 @@ const Configuracion = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setNuevoUsuario((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: "" }));
+    setNuevoUsuario(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
   };
 
   const validarCampos = () => {
     const { nombre, apellido, dni, nombreUsuario, email, password, tipo } = nuevoUsuario;
     const newErrors = {};
-    if (!nombre) newErrors.nombre = "Requerido.";
-    if (!apellido) newErrors.apellido = "Requerido.";
-    if (!dni) newErrors.dni = "Requerido.";
-    if (!nombreUsuario) newErrors.nombreUsuario = "Requerido.";
-    if (!email) newErrors.email = "Requerido.";
-    if (!tipo) newErrors.tipo = "Requerido.";
-    if (!editUser && !password) newErrors.password = "Requerido.";
+    if (!nombre) newErrors.nombre = "Campo requerido";
+    if (!apellido) newErrors.apellido = "Campo requerido";
+    if (!dni) newErrors.dni = "Campo requerido";
+    if (!nombreUsuario) newErrors.nombreUsuario = "Campo requerido";
+    if (!email) newErrors.email = "Email requerido";
+    if (!tipo) newErrors.tipo = "Seleccione un rol";
+    if (!editUser && (!password || password.length < 6)) newErrors.password = "Mínimo 6 caracteres";
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // --- Submit (Crear/Editar) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validarCampos()) return;
@@ -136,41 +132,35 @@ const Configuracion = () => {
 
       if (editUser) {
         await updateUser(editUser.id, {
-          first_name: nuevoUsuario.nombre, last_name: nuevoUsuario.apellido,
-          dni: nuevoUsuario.dni, username: nuevoUsuario.nombreUsuario,
-          email: nuevoUsuario.email, role: apiRole,
+          first_name: nuevoUsuario.nombre,
+          last_name: nuevoUsuario.apellido,
+          dni: nuevoUsuario.dni,
+          username: nuevoUsuario.nombreUsuario,
+          email: nuevoUsuario.email,
+          role: apiRole,
         });
-
-        setUsuarios((prev) => prev.map((u) => u.id === editUser.id ? {
-            ...u, first_name: nuevoUsuario.nombre, last_name: nuevoUsuario.apellido,
-            dni: nuevoUsuario.dni, username: nuevoUsuario.nombreUsuario,
-            email: nuevoUsuario.email, role: apiRole, normalizedRole: normalizeRole(apiRole),
-          } : u
-        ));
-        mostrarToast("Usuario actualizado correctamente");
+        mostrarToast("Operador actualizado");
       } else {
-        const created = await registerUser(
-            nuevoUsuario.nombre, nuevoUsuario.apellido, nuevoUsuario.email,
-            nuevoUsuario.nombreUsuario, nuevoUsuario.password, apiRole, nuevoUsuario.dni 
+        await registerUser(
+          nuevoUsuario.nombre, nuevoUsuario.apellido, nuevoUsuario.email,
+          nuevoUsuario.nombreUsuario, nuevoUsuario.password, apiRole, nuevoUsuario.dni 
         );
-
-        setUsuarios((prev) => [
-          { ...created, first_name: nuevoUsuario.nombre, last_name: nuevoUsuario.apellido, normalizedRole: normalizeRole(apiRole) },
-          ...prev,
-        ]);
-        mostrarToast("Perfil creado correctamente");
+        mostrarToast("Operador registrado con éxito");
       }
+      await cargarUsuarios();
       cerrarModal();
-    } catch (err) { mostrarToast(err.message || "Error al guardar", "error"); } 
-    finally { setSaving(false); }
+    } catch (err) {
+      mostrarToast(err.message || "Error al procesar solicitud", "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // --- Acciones Usuario ---
   const handleDelete = async (id) => {
-    if (!window.confirm("¿Seguro que querés eliminar este perfil? Esta acción no se puede deshacer.")) return;
+    if (!window.confirm("¿Deseas eliminar este acceso? Esta acción es permanente.")) return;
     try {
       await deleteUser(id);
-      setUsuarios((prev) => prev.filter((u) => u.id !== id));
+      setUsuarios(prev => prev.filter(u => u.id !== id));
       mostrarToast("Usuario eliminado");
     } catch (err) { mostrarToast("Error al eliminar", "error"); }
   };
@@ -179,15 +169,15 @@ const Configuracion = () => {
     const newStatus = !u.enabled;
     try {
       await toggleUserStatus(u.id, newStatus);
-      setUsuarios((prev) => prev.map((x) => (x.id === u.id ? { ...x, enabled: newStatus } : x)));
-      mostrarToast(newStatus ? "Usuario habilitado" : "Usuario deshabilitado");
+      setUsuarios(prev => prev.map(x => (x.id === u.id ? { ...x, enabled: newStatus } : x)));
+      mostrarToast(newStatus ? "Acceso restaurado" : "Acceso revocado");
     } catch (err) { mostrarToast("Error al cambiar estado", "error"); }
   };
 
   const startEdit = (u) => {
     setEditUser(u);
     setNuevoUsuario({
-      nombre: u.first_name || u.name || "", apellido: u.last_name || u.lastName || "",
+      nombre: u.first_name || "", apellido: u.last_name || "",
       dni: u.dni || "", email: u.email, nombreUsuario: u.username,
       tipo: mapRoleToTipo(u.role), password: "",
     });
@@ -196,8 +186,6 @@ const Configuracion = () => {
 
   return (
     <section className={styles.configLayout}>
-      
-      {/* Toast Notification */}
       {toast.msg && (
         <div className={`${styles.toast} ${toast.type === "error" ? styles.toastError : styles.toastSuccess}`}>
           {toast.type === 'error' ? <AlertCircle size={18}/> : <CheckCircle size={18}/>}
@@ -205,14 +193,12 @@ const Configuracion = () => {
         </div>
       )}
 
-      {/* BLOQUE SUPERIOR ESTÁTICO (Header) */}
       <div className={styles.topSection}>
         <div className={styles.header}>
           <div className={styles.headerText}>
             <h2>Control de Accesos</h2>
-            <p>Gestión del staff, niveles de seguridad y permisos de la plataforma.</p>
+            <p>Gestión del staff y niveles de seguridad del sistema.</p>
           </div>
-          
           {canCreateProfiles && (
             <button className={styles.btnPrimary} onClick={abrirModalCrear}>
               <Plus size={16} /> Crear Operador
@@ -221,7 +207,6 @@ const Configuracion = () => {
         </div>
       </div>
 
-      {/* BLOQUE INFERIOR: Tabla (Scroll Interno) */}
       <div className={styles.tableCard}>
         <div className={styles.tableToolbar}>
           <h3><Shield size={18} className={styles.titleIcon}/> Personal Autorizado</h3>
@@ -229,7 +214,7 @@ const Configuracion = () => {
 
         <div className={styles.tableScrollArea}>
           {loading ? (
-            <div className={styles.loaderArea}><Loader text="Verificando identidades..." /></div>
+            <div className={styles.loaderArea}><Loader text="Cargando operadores..." /></div>
           ) : usuarios.length > 0 ? (
             <table className={styles.modernTable}>
               <thead>
@@ -238,42 +223,28 @@ const Configuracion = () => {
                   <th>Credenciales</th>
                   <th>Nivel de Acceso</th>
                   <th>Estado</th>
-                  <th className={styles.textRight}>Acciones de Seguridad</th>
+                  <th className={styles.textRight}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {usuarios.map((u) => {
-                  const targetRole = normalizeRole(u.role);
-                  const isMe = u.id === user.id;
+                  const targetRole = u.role?.toUpperCase();
+                  const isMe = u.id === currentUser?.id;
                   
-                  let canEdit = false;
-                  let canDelete = false;
-
-                  if (currentUserRole === "SUPER_ADMIN") {
-                      canEdit = true;
-                      canDelete = !isMe;
-                  } else if (currentUserRole === "ADMIN") {
-                      if (isMe) {
-                          canEdit = true;
-                          canDelete = false;
-                      } else if (targetRole === "SUPERVISOR") {
-                          canEdit = true;
-                          canDelete = true;
-                      }
-                  }
+                  // Lógica de permisos visuales
+                  const myRole = currentUser?.role?.toUpperCase();
+                  const canEdit = myRole === ROLES.SUPER_ADMIN || (myRole === ROLES.ADMIN && (isMe || targetRole === ROLES.SUPERVISOR));
+                  const canDelete = !isMe && (myRole === ROLES.SUPER_ADMIN || (myRole === ROLES.ADMIN && targetRole === ROLES.SUPERVISOR));
 
                   return (
                     <tr key={u.id} className={!u.enabled ? styles.rowDisabled : ""}>
                       <td>
                         <div className={styles.userProfile}>
-                          <div className={`${styles.avatarMini} ${
-                            targetRole === 'SUPER_ADMIN' ? styles.avatarSuper : 
-                            targetRole === 'ADMIN' ? styles.avatarAdmin : styles.avatarSupervisor
-                          }`}>
-                            {(u.first_name?.[0] || u.name?.[0] || '') + (u.last_name?.[0] || u.lastName?.[0] || '')}
+                          <div className={`${styles.avatarMini} ${styles['avatar' + targetRole]}`}>
+                            {(u.first_name?.[0] || '') + (u.last_name?.[0] || '')}
                           </div>
                           <div className={styles.cellName}>
-                            <strong>{u.first_name || u.name} {u.last_name || u.lastName} {isMe && <span className={styles.itsMe}>(Tú)</span>}</strong>
+                            <strong>{u.first_name} {u.last_name} {isMe && <span className={styles.itsMe}>(Tú)</span>}</strong>
                             <small>DNI: {u.dni || "-"}</small>
                           </div>
                         </div>
@@ -285,40 +256,27 @@ const Configuracion = () => {
                         </div>
                       </td>
                       <td>
-                        <span className={`${styles.roleBadge} ${
-                          targetRole === 'SUPER_ADMIN' ? styles.badgeSuper : 
-                          targetRole === 'ADMIN' ? styles.badgeAdmin : styles.badgeSupervisor
-                        }`}>
-                          <Shield size={12}/> {mapRoleToTipo(targetRole)}
+                        <span className={`${styles.roleBadge} ${styles['badge' + targetRole]}`}>
+                          <Shield size={12}/> {mapRoleToTipo(u.role)}
                         </span>
                       </td>
                       <td>
                         <span className={u.enabled ? styles.statusActive : styles.statusInactive}>
-                          {u.enabled ? "Habilitado" : "Acceso Revocado"}
+                          {u.enabled ? "Habilitado" : "Revocado"}
                         </span>
                       </td>
                       <td>
                         <div className={styles.actions}>
                           {canEdit && (
-                            <button className={styles.btnAction} onClick={() => startEdit(u)} title="Modificar Permisos">
-                              <Edit3 size={16} />
-                            </button>
+                            <button className={styles.btnAction} onClick={() => startEdit(u)} title="Editar"><Edit3 size={16} /></button>
                           )}
-                          
                           {canEdit && !isMe && (
-                            <button 
-                              className={`${styles.btnAction} ${u.enabled ? styles.btnPause : styles.btnPlay}`} 
-                              onClick={() => handleToggleEnabled(u)}
-                              title={u.enabled ? "Revocar Acceso" : "Restaurar Acceso"}
-                            >
+                            <button className={`${styles.btnAction} ${u.enabled ? styles.btnPause : styles.btnPlay}`} onClick={() => handleToggleEnabled(u)}>
                               {u.enabled ? <PowerOff size={16}/> : <Power size={16}/>}
                             </button>
                           )}
-                          
                           {canDelete && (
-                            <button className={`${styles.btnAction} ${styles.btnDelete}`} onClick={() => handleDelete(u.id)} title="Eliminar Registro">
-                              <Trash2 size={16} />
-                            </button>
+                            <button className={`${styles.btnAction} ${styles.btnDelete}`} onClick={() => handleDelete(u.id)}><Trash2 size={16} /></button>
                           )}
                         </div>
                       </td>
@@ -330,90 +288,71 @@ const Configuracion = () => {
           ) : (
             <div className={styles.emptyState}>
               <UserCog size={48} className={styles.emptyIcon} />
-              <p>No hay personal registrado en el sistema.</p>
+              <p>No se encontraron operadores.</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* MODAL POPUP (GLASSMORPHISM) */}
       {mostrarFormulario && (
         <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && cerrarModal()}>
           <div className={styles.largeModalCard}>
-            
             <div className={styles.modalHeaderFlex}>
               <div>
-                <h3 className={styles.modalTitle}>{editUser ? "Modificar Credenciales" : "Alta de Operador"}</h3>
-                <p className={styles.modalSubtitle}>Asigna roles y accesos seguros para el equipo.</p>
+                <h3 className={styles.modalTitle}>{editUser ? "Editar Operador" : "Nuevo Operador"}</h3>
+                <p className={styles.modalSubtitle}>Configura los accesos del equipo.</p>
               </div>
-              <button className={styles.closeIconButton} onClick={cerrarModal}>
-                <X size={20} />
-              </button>
+              <button className={styles.closeIconButton} onClick={cerrarModal}><X size={20} /></button>
             </div>
 
-            <form onSubmit={handleSubmit} id="userForm">
+            <form onSubmit={handleSubmit}>
               <div className={styles.formSplit}>
-                
-                {/* Columna Izquierda: Identidad */}
                 <div className={styles.formColumn}>
-                  <h4 className={styles.columnTitle}>Identidad Personal</h4>
+                  <h4 className={styles.columnTitle}>Identidad</h4>
                   <div className={styles.formGroup}>
                     <label>Nombre</label>
-                    <input type="text" name="nombre" value={nuevoUsuario.nombre} onChange={handleChange} className={errors.nombre ? styles.inputError : ""} autoFocus />
+                    <input type="text" name="nombre" value={nuevoUsuario.nombre} onChange={handleChange} className={errors.nombre ? styles.inputError : ""} />
                   </div>
                   <div className={styles.formGroup}>
                     <label>Apellido</label>
                     <input type="text" name="apellido" value={nuevoUsuario.apellido} onChange={handleChange} className={errors.apellido ? styles.inputError : ""} />
                   </div>
                   <div className={styles.formGroup}>
-                    <label>Documento (DNI)</label>
+                    <label>DNI</label>
                     <input type="text" name="dni" value={nuevoUsuario.dni} onChange={handleChange} className={errors.dni ? styles.inputError : ""} />
                   </div>
                 </div>
 
-                {/* Columna Derecha: Sistema */}
                 <div className={styles.formColumn}>
-                  <h4 className={styles.columnTitle}>Accesos al Sistema</h4>
-                  
+                  <h4 className={styles.columnTitle}>Accesos</h4>
                   <div className={styles.formGroup}>
                     <label>Nivel de Permisos</label>
-                    <select name="tipo" value={nuevoUsuario.tipo} onChange={handleChange} className={errors.tipo ? styles.inputError : ""} disabled={!!editUser && editUser.id === user.id}>
+                    <select name="tipo" value={nuevoUsuario.tipo} onChange={handleChange} className={errors.tipo ? styles.inputError : ""} disabled={!!editUser && editUser.id === currentUser.id}>
                       <option value="">Seleccionar rol...</option>
                       {allowedTipos.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
-                      {editUser && editUser.id === user.id && !allowedTipos.includes(mapRoleToTipo(editUser.role)) && (
-                          <option value={mapRoleToTipo(editUser.role)}>{mapRoleToTipo(editUser.role)}</option>
-                      )}
                     </select>
                   </div>
-
-                  <div className={styles.rowTwo}>
-                    <div className={styles.formGroup}>
-                      <label>ID Usuario</label>
-                      <input type="text" name="nombreUsuario" value={nuevoUsuario.nombreUsuario} onChange={handleChange} className={errors.nombreUsuario ? styles.inputError : ""} />
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label>Correo Electrónico</label>
-                      <input type="email" name="email" value={nuevoUsuario.email} onChange={handleChange} className={errors.email ? styles.inputError : ""} />
-                    </div>
+                  <div className={styles.formGroup}>
+                    <label>ID Usuario / Username</label>
+                    <input type="text" name="nombreUsuario" value={nuevoUsuario.nombreUsuario} onChange={handleChange} className={errors.nombreUsuario ? styles.inputError : ""} />
                   </div>
-
+                  <div className={styles.formGroup}>
+                    <label>Email</label>
+                    <input type="email" name="email" value={nuevoUsuario.email} onChange={handleChange} className={errors.email ? styles.inputError : ""} />
+                  </div>
                   {!editUser && (
                     <div className={styles.formGroup}>
-                      <label>Contraseña Maestra</label>
-                      <input type="password" name="password" value={nuevoUsuario.password} onChange={handleChange} className={errors.password ? styles.inputError : ""} placeholder="Mínimo 6 caracteres" />
+                      <label>Contraseña</label>
+                      <input type="password" name="password" value={nuevoUsuario.password} onChange={handleChange} className={errors.password ? styles.inputError : ""} />
                     </div>
                   )}
                 </div>
               </div>
-              
               <div className={styles.formFooter}>
                 <button type="button" className={styles.btnCancelText} onClick={cerrarModal}>Cancelar</button>
-                <button type="submit" className={styles.btnSubmit} disabled={saving}>
-                  {saving ? "Procesando..." : (editUser ? "Actualizar Accesos" : "Generar Credencial")}
-                </button>
+                <button type="submit" className={styles.btnSubmit} disabled={saving}>{saving ? "Guardando..." : "Guardar Operador"}</button>
               </div>
             </form>
-            
           </div>
         </div>
       )}
