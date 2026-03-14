@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import styles from './App.module.css'
 
 import Sidebar from './Components/Sidebar/Sidebar'
@@ -16,8 +16,8 @@ import RutinaNutricion from './Pages/Clientes/RutinaNutricion'
 import Asistencia from './Pages/Asistencia/Asistencia' 
 
 import { useAuth } from './context/AuthContext'
-import { PERMISOS } from './config/permissions' // Asegúrate de crear este archivo
-import ProtectedRoute from './Components/ProtectedRoute' // Asegúrate de crear este componente
+
+// 👉 Importamos el nuevo componente notificador
 import AccessNotifier from './Components/AccessNotifier/AccessNotifier'
 
 const App = () => {
@@ -27,6 +27,7 @@ const App = () => {
     <Router>
       <div className={styles.appContainer}>
         
+        {/* 👉 El Notificador Global corre en segundo plano y muestra los pop-ups */}
         <AccessNotifier />
 
         {user && <Sidebar />}
@@ -37,33 +38,19 @@ const App = () => {
               <Header />
 
               <Routes>
-                {/* 🏠 Rutas Comunes (Admin, SuperAdmin, Supervisor) */}
                 <Route path="/" element={<Inicio />} />
                 <Route path="/clientes" element={<Clientes />} />
                 <Route path="/pagos" element={<Pagos />} />
                 <Route path="/planes" element={<Planes />} />
-                <Route path="/asistencia" element={<Asistencia />} />
-                <Route path="/rutinas" element={<RutinaNutricion />} />
+                <Route path="/configuracion" element={<Configuracion />} />
                 <Route path="/soporte" element={<Soporte />} />
-
-                {/* 🔐 Rutas Protegidas (Solo ADMIN y SUPER_ADMIN) */}
-                <Route element={<ProtectedRoute permisoRequerido={PERMISOS.VER_MOVIMIENTOS} />}>
-                  <Route path="/movimientos" element={<Movimientos />} />
-                </Route>
-
-                <Route element={<ProtectedRoute permisoRequerido={PERMISOS.GESTIONAR_PERMISOS} />}>
-                  <Route path="/configuracion" element={<Configuracion />} />
-                </Route>
-
-                {/* Redirección por defecto si la ruta no existe */}
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="/movimientos" element={<Movimientos />} />
+                <Route path="/rutinas" element={<RutinaNutricion />} />
+                <Route path="/asistencia" element={<Asistencia />} />
               </Routes>
             </div>
           ) : (
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
+            <Login />
           )}
         </main>
       </div>
