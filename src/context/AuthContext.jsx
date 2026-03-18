@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }) => {
       if (!data) return null;
 
       const normalizedRole = data.role ? data.role.toUpperCase() : "";
-      if (normalizedRole === "CLIENTE") {
+      if (normalizedRole === "CLIENT") {
         throw new Error("Acceso denegado: Los clientes deben usar la App móvil.");
       }
 
