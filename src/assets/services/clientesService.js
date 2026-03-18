@@ -65,13 +65,13 @@ export const crearCliente = async (cliente) => {
     );
 
     if (nuevoUsuario && nuevoUsuario.id) {
-      // 👉 1. Actualizamos teléfono, plan y ponemos CONDITION en TRUE (Activo)
+      // 👉 1. Actualizamos teléfono, plan y ponemos ENABLED en TRUE (Activo)
       const { data, error } = await supabase
         .from('users')
         .update({ 
           phone: cliente.phone, 
           plan_id: cliente.plan_id,
-          condition: true 
+          enabled: true // <--- ¡AQUÍ ESTABA EL ERROR! AHORA DICE ENABLED
         })
         .eq('id', nuevoUsuario.id)
         .select()
