@@ -98,33 +98,12 @@ const CustomersTable = ({ onSelectCliente }) => {
     return planEncontrado ? planEncontrado.name : "Sin Plan";
   };
 
-  // 👉 LÓGICA INTELIGENTE: Lee "condition" y las fechas
+  // 👉 LÓGICA SIMPLIFICADA: Solo lee el booleano 'condition'
   const resolverEstadoCuota = (u) => {
-    // Leemos el atributo exacto de tu DB
-    const estaActivoDB = u.condition === true; 
-
-    // Si el booleano es false, directamente devolvemos Inactivo en rojo
-    if (!estaActivoDB) return { texto: "Inactivo", clase: styles.inactive };
-
-    // Si está en true, miramos la suscripción para ver si está al día o en Retraso (amarillo)
-    if (u.subscriptions && u.subscriptions.length > 0) {
-      // Ordenamos las suscripciones para agarrar la última
-      const ultimaSub = [...u.subscriptions].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
-      
-      if (ultimaSub && ultimaSub.due_date) {
-        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-        const venc = new Date(ultimaSub.due_date); venc.setHours(0, 0, 0, 0);
-        
-        // Diferencia en días
-        const diffDays = Math.ceil((venc.getTime() - hoy.getTime()) / (1000 * 3600 * 24));
-
-        if (diffDays >= 0) return { texto: "Activo", clase: styles.active };
-        if (diffDays >= -5) return { texto: "Retraso", clase: styles.warning }; // Los 5 días de gracia
-      }
-    }
-    
-    // Si por algún motivo está en true pero no tiene sub, lo mostramos activo
-    return { texto: "Activo", clase: styles.active };
+    const estaActivoDB = u.condition === true || u.condition === "true" || u.condition === "TRUE"; 
+    return estaActivoDB 
+      ? { texto: "Activo", clase: styles.active } 
+      : { texto: "Inactivo", clase: styles.inactive };
   };
 
   const abrirModalCrear = () => {
@@ -221,34 +200,19 @@ const CustomersTable = ({ onSelectCliente }) => {
               {editIndex === null && (
                 <div className={styles.medicalSection}>
                   <div className={styles.medicalToggle}>
-                    <input 
-                      type="checkbox" 
-                      id="medicalCheck" 
-                      checked={tieneAlerta} 
-                      onChange={(e) => setTieneAlerta(e.target.checked)} 
-                    />
+                    <input type="checkbox" id="medicalCheck" checked={tieneAlerta} onChange={(e) => setTieneAlerta(e.target.checked)} />
                     <label htmlFor="medicalCheck">¿Posee alertas médicas u observaciones?</label>
                   </div>
-
                   {tieneAlerta && (
                     <div className={styles.medicalFields}>
                       <div className={styles.row}>
                         <div className={styles.inputGroup}>
                           <label>Condición / Alerta</label>
-                          <input 
-                            type="text" 
-                            placeholder="Ej: Asma, Diabetes..." 
-                            value={alertaMedica.name} 
-                            onChange={(e) => setAlertaMedica({...alertaMedica, name: e.target.value})} 
-                            required={tieneAlerta}
-                          />
+                          <input type="text" placeholder="Ej: Asma, Diabetes..." value={alertaMedica.name} onChange={(e) => setAlertaMedica({...alertaMedica, name: e.target.value})} required={tieneAlerta} />
                         </div>
                         <div className={styles.inputGroup}>
                           <label>Gravedad</label>
-                          <select 
-                            value={alertaMedica.severity} 
-                            onChange={(e) => setAlertaMedica({...alertaMedica, severity: e.target.value})}
-                          >
+                          <select value={alertaMedica.severity} onChange={(e) => setAlertaMedica({...alertaMedica, severity: e.target.value})}>
                             <option value="Baja">Baja (Amarillo)</option>
                             <option value="Media">Media (Naranja)</option>
                             <option value="Alta">Alta (Rojo)</option>
@@ -257,12 +221,7 @@ const CustomersTable = ({ onSelectCliente }) => {
                       </div>
                       <div className={styles.inputGroup}>
                         <label>Observación</label>
-                        <textarea 
-                          rows="2" 
-                          placeholder="Detalles sobre la condición..."
-                          value={alertaMedica.observation} 
-                          onChange={(e) => setAlertaMedica({...alertaMedica, observation: e.target.value})}
-                        />
+                        <textarea rows="2" placeholder="Detalles sobre la condición..." value={alertaMedica.observation} onChange={(e) => setAlertaMedica({...alertaMedica, observation: e.target.value})} />
                       </div>
                     </div>
                   )}
@@ -307,7 +266,8 @@ const CustomersTable = ({ onSelectCliente }) => {
                 <tbody>
                   {usuariosPagina.map((u) => {
                     const nombrePlan = resolverNombrePlan(u);
-                    const estado = resolverEstadoCuota(u); // 👉 ACÁ APLICAMOS LA FUNCIÓN
+                    const estado = resolverEstadoCuota(u);
+                    
                     return (
                       <tr key={u.id}>
                         <td className={styles.nameCell}>
@@ -323,7 +283,6 @@ const CustomersTable = ({ onSelectCliente }) => {
                           <span className={`${styles.planBadge} ${getPlanClass(nombrePlan)}`}>{nombrePlan}</span>
                         </td>
                         <td>
-                          {/* 👉 ACÁ SE PINTA CON EL COLOR Y TEXTO CALCULADO */}
                           <span className={estado.clase}>{estado.texto}</span>
                         </td>
                         <td className={styles.actionsCell}>

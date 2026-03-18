@@ -13,7 +13,7 @@ import ClienteAsistencia from "./ClienteAsistencia"
 import HistorialPagos from "./HistorialPagos"
 import Loader from "../../Components/Loader/Loader"
 import CustomersTable from '../../Components/CustomersTable/CustomersTable';
-import { Search, User, Mail, Phone, CreditCard, Calendar, Edit3, X, ArrowLeft, AlertCircle, Plus, MoreVertical, Trash2, Edit2 } from 'lucide-react'
+import { Search, User, Mail, Phone, CreditCard, Calendar, Edit3, ArrowLeft, AlertCircle, Plus, MoreVertical, Trash2, Edit2 } from 'lucide-react'
 
 const Clientes = () => {
   const [busqueda, setBusqueda] = useState("")
@@ -182,29 +182,15 @@ const Clientes = () => {
     return p ? p.name : "Plan no encontrado";
   }, [cliente, planes]);
 
-  // 👉 LÓGICA DE ESTADO INTELIGENTE PARA LA VISTA INDIVIDUAL
+  // 👉 LÓGICA SIMPLIFICADA: Solo lee el booleano 'condition'
   const estadoVisual = useMemo(() => {
     if (!cliente) return { texto: "", clase: "" };
+    const estaActivoDB = cliente.condition === true || cliente.condition === "true" || cliente.condition === "TRUE"; 
     
-    const estaActivoDB = cliente.condition === true; 
-
-    if (!estaActivoDB) return { texto: "Inactivo", clase: styles.statusInactive };
-
-    if (cliente.subscriptions && cliente.subscriptions.length > 0) {
-      const ultimaSub = [...cliente.subscriptions].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
-      
-      if (ultimaSub && ultimaSub.due_date) {
-        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-        const venc = new Date(ultimaSub.due_date); venc.setHours(0, 0, 0, 0);
-        const diffDays = Math.ceil((venc.getTime() - hoy.getTime()) / (1000 * 3600 * 24));
-
-        if (diffDays >= 0) return { texto: "Socio Activo", clase: styles.statusActive };
-        if (diffDays >= -5) return { texto: "En Retraso", clase: styles.statusWarning };
-      }
-    }
-    return { texto: "Socio Activo", clase: styles.statusActive };
+    return estaActivoDB 
+      ? { texto: "Socio Activo", clase: styles.statusActive } 
+      : { texto: "Inactivo", clase: styles.statusInactive };
   }, [cliente]);
-
 
   return (
     <section className={styles.clientesLayout}>
@@ -256,7 +242,7 @@ const Clientes = () => {
                     <div className={styles.avatarLarge}>{cliente.first_name[0]}{cliente.last_name[0]}</div>
                     <div className={styles.userNameBox}>
                       <h3>{cliente.first_name} {cliente.last_name}</h3>
-                      {/* 👉 ACÁ SE PINTA LA ETIQUETA INTELIGENTE */}
+                      {/* 👉 ACÁ SE PINTA LA ETIQUETA BASADA EN EL BOOLEANO */}
                       <span className={estadoVisual.clase}>
                         {estadoVisual.texto}
                       </span>
