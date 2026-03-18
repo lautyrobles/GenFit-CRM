@@ -24,15 +24,15 @@ const QuickActions = () => {
     {
       title: 'Control Acceso',
       icon: <QrCode size={24} />,
-      path: '/asistencias',
-      description: 'Escanear QR',
+      path: '/asistencia',
+      description: 'Dar presente',
       color: '#3b82f6'
     },
     {
       title: 'Ver Rutinas',
       icon: <ClipboardList size={24} />,
-      path: '/clientes',
-      description: 'Planes IA',
+      path: '/rutinas',
+      description: 'Validar solicitudes',
       color: '#f97316'
     }
   ];
