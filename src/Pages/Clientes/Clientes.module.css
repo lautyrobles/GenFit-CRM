@@ -305,3 +305,12 @@
   color: gray;
   font-style: italic;
 }
+
+.statusWarning {
+  color: #d97706;
+  background: #fef3c7;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}

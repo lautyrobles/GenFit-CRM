@@ -41,28 +41,36 @@ export const obtenerPagos = async () => {
    ========================================= */
 export const registrarPago = async (pagoData) => {
   try {
-    // 1. Guardamos el pago
+    // 👉 CLAVE 1: Normalizamos el ID del usuario para evitar errores
+    // Si viene desde ModalNuevoPago, se llama 'clienteId'. Si viene de otro lado, 'user_id'.
+    const userIdFinal = pagoData.clienteId || pagoData.user_id;
+
+    if (!userIdFinal) {
+        throw new Error("No se proporcionó un ID de usuario válido para el pago.");
+    }
+
+    // 1. Guardamos el pago en la tabla payments
     const { data: paymentData, error: paymentError } = await supabase
       .from('payments')
       .insert([
         {
-          user_id: pagoData.user_id,
-          amount: pagoData.amount,
-          payment_date: pagoData.payment_date || new Date().toISOString(), 
-          payment_method: pagoData.payment_method,
+          user_id: userIdFinal,
+          amount: pagoData.montoFinal || pagoData.amount, // Lo mismo para el monto
+          payment_date: pagoData.fechaPago || pagoData.payment_date || new Date().toISOString(), 
+          payment_method: pagoData.metodoPago || pagoData.payment_method,
           status: pagoData.status || 'COMPLETED',
-          notes: pagoData.notes
+          notes: pagoData.notes || null
         }
       ])
       .select().single();
 
     if (paymentError) throw paymentError;
 
-    // 2. Buscamos la suscripción para saber la fecha de vencimiento actual
+    // 2. Buscamos la suscripción actual para saber la fecha de vencimiento actual
     const { data: sub } = await supabase
       .from('subscriptions')
       .select('id, due_date')
-      .eq('user_id', pagoData.user_id)
+      .eq('user_id', userIdFinal)
       .maybeSingle();
 
     let nuevaFecha = new Date();
@@ -93,13 +101,14 @@ export const registrarPago = async (pagoData) => {
     if (sub && sub.id) {
         await supabase.from('subscriptions').update({ due_date: nuevaFecha.toISOString(), active: true }).eq('id', sub.id);
     } else {
+        // Si no tenemos el plan_id a mano, lo dejamos en nulo o buscamos el del usuario
         await supabase.from('subscriptions').insert([{
-            user_id: pagoData.user_id, plan_id: pagoData.plan_id || null, start_date: new Date().toISOString(), due_date: nuevaFecha.toISOString(), active: true
+            user_id: userIdFinal, plan_id: pagoData.plan_id || null, start_date: new Date().toISOString(), due_date: nuevaFecha.toISOString(), active: true
         }]);
     }
 
     // 👉 4. CLAVE: Volvemos a poner el booleano condition en TRUE al pagar
-    await supabase.from('users').update({ condition: true }).eq('id', pagoData.user_id);
+    await supabase.from('users').update({ condition: true }).eq('id', userIdFinal);
 
     return paymentData;
   } catch (error) {

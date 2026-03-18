@@ -9,7 +9,7 @@ import {
   actualizarCliente,
 } from "../../assets/services/clientesService";
 import { obtenerPlanes } from "../../assets/services/planesService";
-import { crearAlertaMedica } from "../../assets/services/medicalService"; // Importado nuevo servicio
+import { crearAlertaMedica } from "../../assets/services/medicalService";
 
 // Iconos refinados
 const SearchIcon = () => (
@@ -50,7 +50,6 @@ const CustomersTable = ({ onSelectCliente }) => {
     dni: "", first_name: "", last_name: "", email: "", phone: "", plan_id: "",
   });
 
-  // --- NUEVOS ESTADOS PARA ALERTAS MÉDICAS ---
   const [tieneAlerta, setTieneAlerta] = useState(false);
   const [alertaMedica, setAlertaMedica] = useState({
     name: "", severity: "Baja", observation: ""
@@ -99,6 +98,35 @@ const CustomersTable = ({ onSelectCliente }) => {
     return planEncontrado ? planEncontrado.name : "Sin Plan";
   };
 
+  // 👉 LÓGICA INTELIGENTE: Lee "condition" y las fechas
+  const resolverEstadoCuota = (u) => {
+    // Leemos el atributo exacto de tu DB
+    const estaActivoDB = u.condition === true; 
+
+    // Si el booleano es false, directamente devolvemos Inactivo en rojo
+    if (!estaActivoDB) return { texto: "Inactivo", clase: styles.inactive };
+
+    // Si está en true, miramos la suscripción para ver si está al día o en Retraso (amarillo)
+    if (u.subscriptions && u.subscriptions.length > 0) {
+      // Ordenamos las suscripciones para agarrar la última
+      const ultimaSub = [...u.subscriptions].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+      
+      if (ultimaSub && ultimaSub.due_date) {
+        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+        const venc = new Date(ultimaSub.due_date); venc.setHours(0, 0, 0, 0);
+        
+        // Diferencia en días
+        const diffDays = Math.ceil((venc.getTime() - hoy.getTime()) / (1000 * 3600 * 24));
+
+        if (diffDays >= 0) return { texto: "Activo", clase: styles.active };
+        if (diffDays >= -5) return { texto: "Retraso", clase: styles.warning }; // Los 5 días de gracia
+      }
+    }
+    
+    // Si por algún motivo está en true pero no tiene sub, lo mostramos activo
+    return { texto: "Activo", clase: styles.active };
+  };
+
   const abrirModalCrear = () => {
     setNuevoUsuario({ dni: "", first_name: "", last_name: "", email: "", phone: "", plan_id: "" });
     setTieneAlerta(false);
@@ -128,10 +156,8 @@ const CustomersTable = ({ onSelectCliente }) => {
         await actualizarCliente(userId, nuevoUsuario);
         mostrarToast("✅ Usuario actualizado");
       } else {
-        // 1. Crear el usuario
         const clienteCreado = await crearCliente(nuevoUsuario);
         
-        // 2. Si se marcó la alerta médica, crearla en la nueva tabla
         if (clienteCreado && tieneAlerta && alertaMedica.name) {
           await crearAlertaMedica({
             user_id: clienteCreado.id,
@@ -192,7 +218,6 @@ const CustomersTable = ({ onSelectCliente }) => {
                 </select>
               </div>
 
-              {/* --- NUEVA SECCIÓN: ALERTA MÉDICA (SOLO CREACIÓN) --- */}
               {editIndex === null && (
                 <div className={styles.medicalSection}>
                   <div className={styles.medicalToggle}>
@@ -282,6 +307,7 @@ const CustomersTable = ({ onSelectCliente }) => {
                 <tbody>
                   {usuariosPagina.map((u) => {
                     const nombrePlan = resolverNombrePlan(u);
+                    const estado = resolverEstadoCuota(u); // 👉 ACÁ APLICAMOS LA FUNCIÓN
                     return (
                       <tr key={u.id}>
                         <td className={styles.nameCell}>
@@ -297,7 +323,8 @@ const CustomersTable = ({ onSelectCliente }) => {
                           <span className={`${styles.planBadge} ${getPlanClass(nombrePlan)}`}>{nombrePlan}</span>
                         </td>
                         <td>
-                          <span className={u.enabled ? styles.active : styles.inactive}>{u.enabled ? "Activo" : "Inactivo"}</span>
+                          {/* 👉 ACÁ SE PINTA CON EL COLOR Y TEXTO CALCULADO */}
+                          <span className={estado.clase}>{estado.texto}</span>
                         </td>
                         <td className={styles.actionsCell}>
                           <button className={styles.actionBtn} onClick={() => onSelectCliente(u)} title="Ver Perfil"><EyeIcon /></button>

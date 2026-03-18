@@ -182,9 +182,32 @@ const Clientes = () => {
     return p ? p.name : "Plan no encontrado";
   }, [cliente, planes]);
 
+  // 👉 LÓGICA DE ESTADO INTELIGENTE PARA LA VISTA INDIVIDUAL
+  const estadoVisual = useMemo(() => {
+    if (!cliente) return { texto: "", clase: "" };
+    
+    const estaActivoDB = cliente.condition === true; 
+
+    if (!estaActivoDB) return { texto: "Inactivo", clase: styles.statusInactive };
+
+    if (cliente.subscriptions && cliente.subscriptions.length > 0) {
+      const ultimaSub = [...cliente.subscriptions].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+      
+      if (ultimaSub && ultimaSub.due_date) {
+        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+        const venc = new Date(ultimaSub.due_date); venc.setHours(0, 0, 0, 0);
+        const diffDays = Math.ceil((venc.getTime() - hoy.getTime()) / (1000 * 3600 * 24));
+
+        if (diffDays >= 0) return { texto: "Socio Activo", clase: styles.statusActive };
+        if (diffDays >= -5) return { texto: "En Retraso", clase: styles.statusWarning };
+      }
+    }
+    return { texto: "Socio Activo", clase: styles.statusActive };
+  }, [cliente]);
+
+
   return (
     <section className={styles.clientesLayout}>
-      {/* NOTIFICACIÓN FLOTANTE */}
       {mensajeTemporal && <div className={styles.floatingToast}>{mensajeTemporal}</div>}
 
       <div className={styles.searchSection}>
@@ -197,7 +220,6 @@ const Clientes = () => {
           )}
         </div>
         
-        {/* EL BUSCADOR SIEMPRE VISIBLE COMO EN LA IMAGEN */}
         <div className={styles.searchControls}>
           <div className={styles.inputWrapper}>
             <Search className={styles.searchIcon} size={18} />
@@ -228,15 +250,15 @@ const Clientes = () => {
 
           {cliente && (
             <div className={styles.dashboardGrid}>
-              {/* CARD INFO */}
               <div className={`${styles.card} ${styles.infoCard}`}>
                 <div className={styles.cardHeader}>
                   <div className={styles.userHead}>
                     <div className={styles.avatarLarge}>{cliente.first_name[0]}{cliente.last_name[0]}</div>
                     <div className={styles.userNameBox}>
                       <h3>{cliente.first_name} {cliente.last_name}</h3>
-                      <span className={cliente.enabled ? styles.statusActive : styles.statusInactive}>
-                        {cliente.enabled ? "Socio Activo" : "Inactivo"}
+                      {/* 👉 ACÁ SE PINTA LA ETIQUETA INTELIGENTE */}
+                      <span className={estadoVisual.clase}>
+                        {estadoVisual.texto}
                       </span>
                     </div>
                   </div>
@@ -298,18 +320,15 @@ const Clientes = () => {
                 </div>
               </div>
 
-              {/* CARD ASISTENCIA */}
               <div className={`${styles.card} ${styles.asistenciaCard}`}>
                 <div className={styles.cardHeader}><h3>Asistencia</h3><Calendar size={18}/></div>
                 <ClienteAsistencia socio={cliente} />
               </div>
 
-              {/* CARD PAGOS */}
               <div className={`${styles.card} ${styles.pagosCard}`}>
                 <HistorialPagos pagos={pagos} loading={pagosLoading} />
               </div>
 
-              {/* CARD RUTINA */}
               <div className={`${styles.card} ${styles.rutinaCard}`}>
                 <RutinaNutricion cliente={cliente} styles={styles} />
               </div>
