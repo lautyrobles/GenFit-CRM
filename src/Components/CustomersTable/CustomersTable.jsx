@@ -100,7 +100,7 @@ const CustomersTable = ({ onSelectCliente }) => {
 
   // 👉 LÓGICA SIMPLIFICADA: Solo lee el booleano 'condition'
   const resolverEstadoCuota = (u) => {
-    const estaActivoDB = u.condition === true || u.condition === "true" || u.condition === "TRUE"; 
+    const estaActivoDB = u.enabled === true || u.condition === "true" || u.condition === "TRUE"; 
     return estaActivoDB 
       ? { texto: "Activo", clase: styles.active } 
       : { texto: "Inactivo", clase: styles.inactive };

@@ -185,7 +185,9 @@ const Clientes = () => {
   // 👉 LÓGICA SIMPLIFICADA: Solo lee el booleano 'condition'
   const estadoVisual = useMemo(() => {
     if (!cliente) return { texto: "", clase: "" };
-    const estaActivoDB = cliente.condition === true || cliente.condition === "true" || cliente.condition === "TRUE"; 
+    
+    // CAMBIO ACÁ: cliente.condition -> cliente.enabled
+    const estaActivoDB = cliente.enabled === true || cliente.enabled === "true" || cliente.enabled === "TRUE"; 
     
     return estaActivoDB 
       ? { texto: "Socio Activo", clase: styles.statusActive } 
