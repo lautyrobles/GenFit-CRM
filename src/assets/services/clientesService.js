@@ -50,7 +50,7 @@ export const obtenerClientePorDocumento = async (dni) => {
 };
 
 /* ===================================================
-    🔹 CREAR CLIENTE (El que faltaba el export)
+    🔹 CREAR CLIENTE (Actualizado con Lógica de Activo)
    =================================================== */
 export const crearCliente = async (cliente) => {
   try {
@@ -65,17 +65,32 @@ export const crearCliente = async (cliente) => {
     );
 
     if (nuevoUsuario && nuevoUsuario.id) {
+      // 👉 1. Actualizamos teléfono, plan y ponemos CONDITION en TRUE (Activo)
       const { data, error } = await supabase
         .from('users')
         .update({ 
           phone: cliente.phone, 
-          plan_id: cliente.plan_id 
+          plan_id: cliente.plan_id,
+          condition: true 
         })
         .eq('id', nuevoUsuario.id)
         .select()
         .single();
 
       if (error) throw error;
+
+      // 👉 2. Creamos sus primeros 30 días de suscripción
+      const hoy = new Date();
+      const due_date = new Date(hoy.getTime() + (30 * 24 * 60 * 60 * 1000));
+
+      await supabase.from('subscriptions').insert([{
+         user_id: nuevoUsuario.id, 
+         plan_id: cliente.plan_id || null, 
+         start_date: hoy.toISOString(), 
+         due_date: due_date.toISOString(), 
+         active: true
+      }]);
+
       return data; 
     }
     return nuevoUsuario;
