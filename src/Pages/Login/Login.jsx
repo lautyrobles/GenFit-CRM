@@ -44,7 +44,7 @@ const Login = () => {
     <div className={styles.loginWrapper}>
       <div className={styles.loginContainer}>
         <header className={styles.header}>
-          <h1 className={styles.logo}>FitSEO <span>CRM</span></h1>
+          <h1 className={styles.logo}>GenFit <span>CRM</span></h1>
           <h2 className={styles.title}>¡Bienvenido de nuevo!</h2>
           <p className={styles.subtitle}>Ingresá tus credenciales para acceder</p>
         </header>
@@ -101,7 +101,7 @@ const Login = () => {
         </form>
 
         <footer className={styles.footer}>
-          <p>Acceso restringido a personal autorizado</p>
+          <p>Acceso exclusivo para el personal autorizado</p>
         </footer>
       </div>
     </div>
