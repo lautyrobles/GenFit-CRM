@@ -33,28 +33,40 @@
 
 /* ==================== CONTENEDORES GLOBALES ==================== */
 .pageContainer {
-  padding: 30px;
+  padding: 30 0px 30px 0px;
   background-color: transparent;
   min-height: 100%;
   animation: fadeIn 0.5s ease-out;
+  margin-top: 20px;
 }
 
 .header {
-  margin-bottom: 30px;
+  background: #ffffff;
+  padding: 24px 32px;
+  border-radius: 24px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  margin-bottom: 24px;
 }
 
 .header h2 {
-  font-size: 2.2rem;
-  color: #0f172a;
-  margin: 0 0 8px 0;
-  font-weight: 800;
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: #727d8d;
+  margin: 0;
   letter-spacing: -0.5px;
 }
 
 .header p {
   color: #64748b;
-  margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
+  margin: 4px 0 0 0;
 }
 
 /* ==================== ESTADOS DE CARGA Y VACÍO ==================== */

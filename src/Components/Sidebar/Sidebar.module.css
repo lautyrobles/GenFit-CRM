@@ -298,3 +298,56 @@
   color: #ef4444;
   border-color: #fee2e2;
 }
+
+/* Sidebar.module.css */
+
+/* ... (tus estilos anteriores) ... */
+
+/* Estilo para ítem deshabilitado (Nutrición) */
+.navItemDisabled {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Para mandar el PRONTO a la derecha */
+  gap: 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #94a3b8; /* Gris más claro */
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.navItemMain {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.badgePronto {
+  background-color: #0e00a973;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+/* Ajuste sutil al perfil para que no se corte el nombre si es largo */
+.userDetails {
+  display: flex;
+  flex-direction: column;
+  max-width: 130px; /* Limita el ancho para que el nombre no empuje el botón de logout */
+}
+
+.userName {
+  margin: 0;
+  font-size: 0.85rem; /* Un pelín más chico para que entre el nombre completo */
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Pone puntos suspensivos si el nombre es kilométrico */
+}

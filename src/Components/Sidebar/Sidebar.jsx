@@ -1,3 +1,5 @@
+// src/Components/Sidebar/Sidebar.jsx
+
 import React from 'react'
 import styles from './Sidebar.module.css'
 import { 
@@ -24,12 +26,16 @@ const Sidebar = () => {
   const canViewPermisos = ["SUPER_ADMIN", "ADMIN"].includes(role)
   const canViewMovimientos = ["SUPER_ADMIN", "ADMIN"].includes(role)
 
+  // Concatenamos nombre y apellido si existen por separado, sino usamos user.name
+  const nombreCompleto = user?.first_name && user?.last_name 
+    ? `${user.first_name} ${user.last_name}` 
+    : user?.name || "Usuario GenFIT";
+
   const mostrarRol = () => {
     switch (role) {
       case "SUPER_ADMIN": return "Super Admin"
       case "ADMIN": return "Admin"
-      case "ENCARGADO": return "Encargado"
-      case "SUPERVISOR": return "Supervisor" // 👉 Agregado para el perfil
+      case "SUPERVISOR": return "Supervisor" 
       default: return "Usuario"
     }
   }
@@ -76,12 +82,19 @@ const Sidebar = () => {
             <NavLink to="/asistencia" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
               <CheckCircle size={18} /> <span>Asistencia</span>
             </NavLink>
+            
+            {/* 🛠️ RUTINAS: NavLink normal (como estaba antes) */}
             <NavLink to="/rutinas" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
               <ClipboardList size={18} /> <span>Rutinas</span>
             </NavLink>
-            <NavLink to="/nutricion" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
-              <Apple size={18} /> <span>Nutrición</span>
-            </NavLink>
+            
+            {/* 🍎 NUTRICIÓN: No clickeable y con badge PRONTO (Corregido) */}
+            <div className={styles.navItemDisabled}>
+              <div className={styles.navItemMain}>
+                <Apple size={18} /> <span>Nutrición</span>
+              </div>
+              <span className={styles.badgePronto}>PRONTO</span>
+            </div>
           </div>
 
           {/* GRUPO 4: ADMINISTRACIÓN - Sigue oculto para Supervisor */}
@@ -117,6 +130,7 @@ const Sidebar = () => {
           </NavLink>
         </div>
 
+{/* 👤 PERFIL DE USUARIO ACTUALIZADO */}
         <div className={styles.userProfile}>
           <div className={styles.userAccount}>
             <div className={styles.avatarContainer}>
@@ -124,7 +138,7 @@ const Sidebar = () => {
               <div className={styles.activeIndicator}></div>
             </div>
             <div className={styles.userDetails}>
-              <h4 className={styles.userName}>{user.name}</h4>
+              <h4 className={styles.userName}>{nombreCompleto}</h4>
               <span className={styles.userRole}>{mostrarRol()}</span>
             </div>
           </div>

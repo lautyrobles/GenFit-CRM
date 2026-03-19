@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom"; // Importante para recibir el DNI
 import styles from "./Asistencia.module.css";
-import { Search, CheckCircle, XCircle, AlertTriangle, Clock, UserCheck } from "lucide-react";
+import { Search, CheckCircle, XCircle, AlertTriangle, QrCode, Clock, UserCheck } from "lucide-react";
 import Loader from "../../Components/Loader/Loader";
 
 // Servicios
@@ -111,10 +111,19 @@ const Asistencia = () => {
 
   return (
     <section className={styles.asistenciaLayout}>
-      <div className={styles.headerTitle}>
-        <h2 className={styles.sectionTitle}>Control de Acceso</h2>
-        <p>Busca por DNI o escanea el carnet para ticar el ingreso.</p>
-      </div>
+<div className={styles.headerTitle}>
+  {/* Agrupamos los textos en un contenedor para que sigan en columna */}
+  <div className={styles.titleGroup}>
+    <h2 className={styles.sectionTitle}>Control de Acceso</h2>
+    <p>Busca por DNI o escanea el carnet para ticar el ingreso.</p>
+  </div>
+
+  {/* Botón nuevo a la derecha */}
+  <button className={styles.btnQR}>
+    <QrCode size={18} />
+    <span>Generar QR</span>
+  </button>
+</div>
 
       <div className={styles.mainGrid}>
         

@@ -9,20 +9,62 @@
 }
 
 .headerTitle {
+  background: #ffffff;
+  padding: 24px 32px;
+  border-radius: 24px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03);
+  
+  /* CAMBIO: De column a row para alinear textos vs botón */
+  display: flex;
+  flex-direction: row; 
+  justify-content: space-between; 
+  align-items: center; /* Centrado vertical entre textos y botón */
+  
+  border: 1px solid rgba(255, 255, 255, 0.8);
   margin-bottom: 24px;
+}
+
+/* Nuevo contenedor para mantener h2 y p uno abajo del otro */
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
 }
 
 .sectionTitle {
   font-size: 1.6rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin: 0 0 4px 0;
+  font-weight: 500;
+  color: #727d8d;
+  margin: 0;
+  letter-spacing: -0.5px;
 }
 
-.headerTitle p {
+.titleGroup p {
   color: #64748b;
-  margin: 0;
   font-size: 0.95rem;
+  margin: 4px 0 0 0;
+}
+
+/* Estilo para el nuevo botón QR (Siguiendo tu estética violeta) */
+.btnQR {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #f5f3ff; /* Violeta muy suave de fondo */
+  color: #7c3aed; /* Violeta principal */
+  border: 1px solid #ddd6fe;
+  padding: 12px 20px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnQR:hover {
+  background-color: #7c3aed;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
 }
 
 .mainGrid {
