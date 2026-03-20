@@ -151,3 +151,82 @@
 .notifText p { margin: 0; font-size: 0.9rem; color: #334155; line-height: 1.4; }
 .notifText strong { color: #1e293b; }
 .notifText span { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; display: block; }
+
+.drawerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refreshBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.refreshBtn:hover { color: #7c3aed; }
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.emptyNotif {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.drawerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.refreshBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.refreshBtn:hover:not(:disabled) {
+  color: #7c3aed;
+  background-color: #f5f3ff;
+  border-radius: 50%;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.statusMsg {
+  text-align: center;
+  padding: 40px 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.subtext {
+  margin: 2px 0 !important;
+  color: #475569 !important;
+  font-size: 0.85rem !important;
+}

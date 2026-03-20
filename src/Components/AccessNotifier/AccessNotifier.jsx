@@ -38,12 +38,11 @@ const AccessNotifier = () => {
         .eq('user_id', userId)
         .gte('check_in_time', haceUnaSemana.toISOString());
 
-      // Usamos el estado que ya calculamos para la notificación
       setModalData({
         user: userData || {},
         alertas: alertsData || [],
         asistenciasSemanales: count || 0,
-        ...estadoCalculado // Trae estadoCuota, badgeClass y diasRestantes
+        ...estadoCalculado
       });
 
     } catch (error) {
@@ -64,7 +63,6 @@ const AccessNotifier = () => {
         async (payload) => {
           const nuevoIngreso = payload.new;
 
-          // 1. Buscamos al usuario
           const { data: userData } = await supabase
             .from('users')
             .select('first_name, last_name')
@@ -73,7 +71,6 @@ const AccessNotifier = () => {
 
           const nombreCliente = userData ? `${userData.first_name} ${userData.last_name}` : 'Un cliente';
 
-          // 👉 2. BUSCAMOS LA SUSCRIPCIÓN PARA LA NOTIFICACIÓN
           const { data: subData } = await supabase
             .from('subscriptions')
             .select('due_date')
@@ -86,8 +83,6 @@ const AccessNotifier = () => {
           let diasRestantes = 0;
           let badgeClass = styles.statusInactive;
           let mensajeCuota = 'No tiene un plan registrado.';
-          
-          // Por defecto, si el QR entró bien en la app, es válido. Pero lo podemos sobreescribir si está muy vencido.
           let accesoValido = nuevoIngreso.access_granted !== false; 
 
           if (subData && subData.due_date) {
@@ -108,19 +103,17 @@ const AccessNotifier = () => {
               estadoCuota = 'RETRASO';
               badgeClass = styles.statusWarning;
               mensajeCuota = `Cuota atrasada por ${Math.abs(diffDays)} días.`;
-              accesoValido = true; // Sigue entrando porque está en los 5 días de gracia
+              accesoValido = true;
             } else {
               estadoCuota = 'NO ACTIVO';
               badgeClass = styles.statusInactive;
               mensajeCuota = `Cuota vencida hace ${Math.abs(diffDays)} días.`;
-              accesoValido = false; // Se le bloquea el acceso en la notificación visual
+              accesoValido = false;
             }
           }
 
-          // Guardamos el cálculo para pasárselo al Modal del "ojo" y no calcularlo 2 veces
           const estadoCalculado = { estadoCuota, badgeClass, diasRestantes };
 
-          // 👉 3. DISPARAMOS EL TOAST CON LOS DÍAS RESTANTES
           toast.custom((t) => (
             <div className={`${styles.toastWrapper} ${t.visible ? styles.visible : styles.hidden} ${accesoValido ? styles.borderSuccess : styles.borderError}`}>
               <div className={`${styles.iconContainer} ${accesoValido ? styles.iconSuccess : styles.iconError}`}>
@@ -134,7 +127,6 @@ const AccessNotifier = () => {
                 <span className={styles.subtitle}>
                   <strong className={styles.name}>{nombreCliente}</strong>
                   <br/>
-                  {/* Acá mostramos el estado de la cuota en el pop-up chiquito */}
                   <span style={{ 
                     color: estadoCuota === 'ACTIVO' ? '#059669' : (estadoCuota === 'RETRASO' ? '#d97706' : '#dc2626'),
                     fontWeight: '600',
@@ -151,7 +143,6 @@ const AccessNotifier = () => {
                   toast.dismiss(t.id);
                   abrirDetalleUsuario(nuevoIngreso.user_id, estadoCalculado);
                 }}
-                title="Ver detalle del cliente"
               >
                 <FiEye size={22} />
               </button>
@@ -192,7 +183,6 @@ const AccessNotifier = () => {
                     <span className={styles.infoValue}>{modalData.user.dni || 'No registrado'}</span>
                   </div>
 
-                  {/* ESTADO DE LA CUOTA */}
                   <div className={styles.infoRow}>
                     <span className={styles.infoLabel}><FiCreditCard /> Estado de Cuota</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -222,20 +212,17 @@ const AccessNotifier = () => {
                         <span>El usuario no presenta alertas médicas.</span>
                       </div>
                     ) : (
-                      modalData.alertas.map((alerta, index) => {
-                        const esAlta = alerta.severity === 'Alta' || alerta.severity === 'high';
-                        return (
-                          <div key={index} className={`${styles.alertBox} ${esAlta ? styles.alertBoxHigh : ''}`}>
-                            <FiAlertTriangle className={`${styles.alertIcon} ${esAlta ? styles.alertIconHigh : styles.alertIconNormal}`} />
-                            <div className={styles.alertContent}>
-                              <p className={`${styles.alertName} ${esAlta ? styles.alertNameHigh : styles.alertNameNormal}`}>
-                                {alerta.name}
-                              </p>
-                              <p className={styles.alertObs}>{alerta.observation}</p>
-                            </div>
+                      modalData.alertas.map((alerta, index) => (
+                        <div key={index} className={`${styles.alertBox} ${alerta.severity === 'Alta' ? styles.alertBoxHigh : ''}`}>
+                          <FiAlertTriangle className={alerta.severity === 'Alta' ? styles.alertIconHigh : styles.alertIconNormal} />
+                          <div className={styles.alertContent}>
+                            <p className={alerta.severity === 'Alta' ? styles.alertNameHigh : styles.alertNameNormal}>
+                              {alerta.name}
+                            </p>
+                            <p className={styles.alertObs}>{alerta.observation}</p>
                           </div>
-                        );
-                      })
+                        </div>
+                      ))
                     )}
                   </div>
                 </>
