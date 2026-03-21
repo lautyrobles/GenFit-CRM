@@ -189,13 +189,13 @@
 }
 
 .btnCheckInAmarillo {
-  background: #fffbeb;
+  background: #1e293b;
   color: #92400e;
-  border: 2px solid #fde68a;
+  border: 2px solid #ffcc00;
 }
 
 .btnCheckInRojo {
-  background: #fef2f2;
+  background: #1e293b;
   color: #991b1b;
   border: 2px solid #fecaca;
   cursor: not-allowed;
