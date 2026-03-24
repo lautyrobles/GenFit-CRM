@@ -230,3 +230,8 @@
   color: #475569 !important;
   font-size: 0.85rem !important;
 }
+
+.nuevoUsuario {
+  background-color: #eff6ff; /* Azul clarito */
+  color: #3b82f6;            /* Azul GenFit */
+}
