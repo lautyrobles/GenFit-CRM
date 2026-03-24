@@ -14,7 +14,7 @@ import Login from './Pages/Login/Login'
 import Movimientos from './Pages/Movimientos/Movimientos'
 import RutinaNutricion from './Pages/Clientes/RutinaNutricion'
 import Asistencia from './Pages/Asistencia/Asistencia' 
-
+import CierreCaja from './Pages/CierreCaja/CierreCaja';
 import { useAuth } from './context/AuthContext'
 
 // 👉 Importamos el nuevo componente notificador
@@ -45,6 +45,7 @@ const App = () => {
                 <Route path="/configuracion" element={<Configuracion />} />
                 <Route path="/soporte" element={<Soporte />} />
                 <Route path="/movimientos" element={<Movimientos />} />
+                <Route path="/cierre-caja" element={<CierreCaja />} />
                 <Route path="/rutinas" element={<RutinaNutricion />} />
                 <Route path="/asistencia" element={<Asistencia />} />
               </Routes>

@@ -2,9 +2,10 @@
 
 import React from 'react'
 import styles from './Sidebar.module.css'
+// 👉 Usamos 'Archive' de lucide-react para mantener todo uniforme
 import { 
   Home, Users, CreditCard, Gift, HelpCircle, 
-  Activity, LogOut, CheckCircle, ClipboardList, Apple 
+  Activity, LogOut, CheckCircle, ClipboardList, Apple, Archive
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import userIcon from '/src/assets/user-icon.png'
@@ -18,9 +19,11 @@ const Sidebar = () => {
   // Normalizamos el rol para que no falle por mayúsculas o prefijos
   const role = (user.roles?.[0] || user.role || "").replace("ROLE_", "").toUpperCase();
 
-  // 👉 AÑADIMOS "SUPERVISOR" a las condiciones de vista
+  // AÑADIMOS "SUPERVISOR" a las condiciones de vista
   const canViewPagos = ["SUPER_ADMIN", "ADMIN", "ENCARGADO", "SUPERVISOR"].includes(role)
   const canViewPlanes = ["SUPER_ADMIN", "ADMIN", "ENCARGADO", "SUPERVISOR"].includes(role)
+  // 👉 Nueva condición para la caja
+  const canViewCaja = ["SUPER_ADMIN", "ADMIN", "ENCARGADO", "SUPERVISOR"].includes(role)
   
   // Estos se mantienen solo para Admins
   const canViewPermisos = ["SUPER_ADMIN", "ADMIN"].includes(role)
@@ -60,17 +63,26 @@ const Sidebar = () => {
           </div>
 
           {/* GRUPO 2: GESTIÓN COMERCIAL - AHORA VISIBLE PARA SUPERVISOR */}
-          {(canViewPagos || canViewPlanes) && (
+          {(canViewPagos || canViewPlanes || canViewCaja) && (
             <div className={styles.navGroup}>
               <span className={styles.groupLabel}>Gestión</span>
+              
               {canViewPagos && (
                 <NavLink to="/pagos" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
                   <CreditCard size={18} /> <span>Pagos</span>
                 </NavLink>
               )}
+              
               {canViewPlanes && (
                 <NavLink to="/planes" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
                   <Gift size={18} /> <span>Planes</span>
+                </NavLink>
+              )}
+              
+              {/* 👉 NUEVO BOTÓN: CIERRE DE CAJA */}
+              {canViewCaja && (
+                <NavLink to="/cierre-caja" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
+                  <Archive size={18} /> <span>Caja Diaria</span>
                 </NavLink>
               )}
             </div>
@@ -83,12 +95,12 @@ const Sidebar = () => {
               <CheckCircle size={18} /> <span>Asistencia</span>
             </NavLink>
             
-            {/* 🛠️ RUTINAS: NavLink normal (como estaba antes) */}
+            {/* 🛠️ RUTINAS */}
             <NavLink to="/rutinas" className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}>
               <ClipboardList size={18} /> <span>Rutinas</span>
             </NavLink>
             
-            {/* 🍎 NUTRICIÓN: No clickeable y con badge PRONTO (Corregido) */}
+            {/* 🍎 NUTRICIÓN */}
             <div className={styles.navItemDisabled}>
               <div className={styles.navItemMain}>
                 <Apple size={18} /> <span>Nutrición</span>
@@ -130,7 +142,7 @@ const Sidebar = () => {
           </NavLink>
         </div>
 
-{/* 👤 PERFIL DE USUARIO ACTUALIZADO */}
+        {/* 👤 PERFIL DE USUARIO ACTUALIZADO */}
         <div className={styles.userProfile}>
           <div className={styles.userAccount}>
             <div className={styles.avatarContainer}>
