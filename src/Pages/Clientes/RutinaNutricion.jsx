@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import localStyles from "./RutinaNutricion.module.css";
 // 👉 Ajustá la ruta a tu supabaseClient si es necesario
 import { supabase } from "../../assets/services/supabaseClient"; 
-import { FiCalendar, FiActivity, FiUser, FiCheckCircle, FiLoader } from "react-icons/fi";
+import { FiCalendar, FiActivity, FiUser, FiCheckCircle, FiLoader, FiTrash2, FiPlus } from "react-icons/fi";
 
 const RutinaNutricion = () => {
   const [pendientes, setPendientes] = useState([]);
@@ -83,6 +83,20 @@ const RutinaNutricion = () => {
     setEditingData(newData);
   };
 
+  const addExercise = (dayIdx, groupIdx) => {
+    const newData = [...editingData];
+    newData[dayIdx].grupos[groupIdx].exercises.push({
+      name: "", sets: "", reps: "", rest: ""
+    });
+    setEditingData(newData);
+  };
+
+  const removeExercise = (dayIdx, groupIdx, exIdx) => {
+    const newData = [...editingData];
+    newData[dayIdx].grupos[groupIdx].exercises.splice(exIdx, 1);
+    setEditingData(newData);
+  };
+
   /* ==================== GUARDAR Y APROBAR ==================== */
   const aprobarRutina = async () => {
     if (!selectedRoutine?.user_id) return;
@@ -93,10 +107,10 @@ const RutinaNutricion = () => {
     try {
         const userId = selectedRoutine.user_id;
 
-        // 1. ELIMINAR rutinas anteriores de ESE usuario específico
+        // 1. ELIMINAR rutinas anteriores del usuario
         await supabase.from('routines').delete().eq('user_id', userId);
 
-        // 2. INSERTAR la nueva rutina con is_active: TRUE (Aprobada)
+        // 2. INSERTAR nueva rutina aprobada
         const { data: routineData, error: routineError } = await supabase
           .from('routines')
           .insert({
@@ -121,7 +135,9 @@ const RutinaNutricion = () => {
                 const { data: blockData } = await supabase.from('muscle_blocks').insert({ day_id: dayId, muscle_name: group.label.replace('_', ' '), order_index: gIdx }).select().single();
                 const blockId = blockData.id;
 
-                const exercisesToInsert = group.exercises.map((ex) => ({
+                const exercisesToInsert = group.exercises
+                  .filter(ex => ex.name.trim() !== "") // Ignorar los vacíos
+                  .map((ex) => ({
                     block_id: blockId,
                     name: ex.name,
                     sets: String(ex.sets), 
@@ -135,7 +151,7 @@ const RutinaNutricion = () => {
             }
         }
         
-        // 4. Sacar la tarjeta de la fila visualmente
+        // 4. Limpiar UI
         setPendientes(prev => prev.filter(r => r.id !== selectedRoutine.id));
         setFeedback("¡Aprobada exitosamente!");
         
@@ -176,7 +192,6 @@ const RutinaNutricion = () => {
       ) : (
         <div className={localStyles.grid}>
           {pendientes.map((rutina, index) => (
-            // 👇 Le agregamos un delay dinámico para que entren en cascada (escalonadas)
             <div key={rutina.id} className={localStyles.card} style={{ animationDelay: `${index * 0.15}s` }}>
               <div style={{ marginBottom: '12px' }}>
                 <span className={localStyles.badge}>NUEVA SOLICITUD</span>
@@ -202,9 +217,10 @@ const RutinaNutricion = () => {
       {showModal && editingData && (
         <div className={localStyles.modalOverlay}>
           <div className={localStyles.modalContent}>
+            
             <div className={localStyles.modalHeader}>
               <h3 style={{margin:0, color: '#0f172a', fontWeight: '800'}}>
-                 🏋️ Revisar Rutina de {selectedRoutine?.users?.first_name}
+                  🏋️ Revisar Rutina de {selectedRoutine?.users?.first_name}
               </h3>
               <button className={localStyles.modalCloseBtn} onClick={() => setShowModal(false)} title="Cerrar">×</button>
             </div>
@@ -213,17 +229,82 @@ const RutinaNutricion = () => {
                 {editingData.map((dia, dayIdx) => (
                     <div key={dayIdx} className={localStyles.editableCard}>
                         <div className={localStyles.editableHeader}>{dia.dia}</div>
+                        
                         {dia.grupos.map((grupo, groupIdx) => (
                             <React.Fragment key={groupIdx}>
                                 <div className={localStyles.groupLabel}>{grupo.label.replace('_',' ')}</div>
+                                
+                                {/* ÍNDICE DE COLUMNAS (Alineado perfecto con el CSS) */}
+                                {grupo.exercises.length > 0 && (
+                                  <div style={{ 
+                                    display: 'flex', 
+                                    gap: '12px', /* Mismo gap que .editableRow */
+                                    padding: '0 4px', 
+                                    marginBottom: '8px', 
+                                    fontSize: '0.75rem', 
+                                    fontWeight: '700', 
+                                    color: '#64748b', 
+                                    textTransform: 'uppercase', 
+                                    letterSpacing: '0.5px' 
+                                  }}>
+                                      <span style={{ flex: 1 }}>Ejercicio</span>
+                                      <span style={{ width: '70px', textAlign: 'center' }}>Series</span>
+                                      <span style={{ width: '90px', textAlign: 'center' }}>Reps</span>
+                                      <span style={{ width: '120px', textAlign: 'center' }}>Descanso</span>
+                                      <span style={{ width: '36px', marginLeft: '0.5rem' }}></span> {/* Espacio para el tacho */}
+                                  </div>
+                                )}
+                                
                                 {grupo.exercises.map((ex, exIdx) => (
                                     <div key={exIdx} className={localStyles.editableRow}>
-                                        <input className={localStyles.inputClean} value={ex.name} onChange={(e) => updateExercise(dayIdx, groupIdx, exIdx, 'name', e.target.value)} placeholder="Ejercicio" />
-                                        <input className={localStyles.inputClean} style={{textAlign: 'center', width: '70px'}} value={ex.sets} onChange={(e) => updateExercise(dayIdx, groupIdx, exIdx, 'sets', e.target.value)} placeholder="Sets" />
-                                        <input className={localStyles.inputClean} style={{textAlign: 'center', width: '90px'}} value={ex.reps} onChange={(e) => updateExercise(dayIdx, groupIdx, exIdx, 'reps', e.target.value)} placeholder="Reps" />
-                                        <input className={localStyles.inputClean} style={{width: '120px'}} value={ex.rest} onChange={(e) => updateExercise(dayIdx, groupIdx, exIdx, 'rest', e.target.value)} placeholder="Descanso" />
+                                        <input 
+                                          className={localStyles.inputClean} 
+                                          style={{ flex: 1 }} 
+                                          value={ex.name} 
+                                          onChange={(e) => updateExercise(dayIdx, groupIdx, exIdx, 'name', e.target.value)} 
+                                          placeholder="Ejercicio" 
+                                        />
+                                        <input 
+                                          className={localStyles.inputClean} 
+                                          style={{ textAlign: 'center', width: '70px', flex: 'none' }} 
+                                          value={ex.sets} 
+                                          onChange={(e) => updateExercise(dayIdx, groupIdx, exIdx, 'sets', e.target.value)} 
+                                          placeholder="Sets" 
+                                        />
+                                        <input 
+                                          className={localStyles.inputClean} 
+                                          style={{ textAlign: 'center', width: '90px', flex: 'none' }} 
+                                          value={ex.reps} 
+                                          onChange={(e) => updateExercise(dayIdx, groupIdx, exIdx, 'reps', e.target.value)} 
+                                          placeholder="Reps" 
+                                        />
+                                        <input 
+                                          className={localStyles.inputClean} 
+                                          style={{ textAlign: 'center', width: '120px', flex: 'none' }} 
+                                          value={ex.rest} 
+                                          onChange={(e) => updateExercise(dayIdx, groupIdx, exIdx, 'rest', e.target.value)} 
+                                          placeholder="Descanso" 
+                                        />
+                                        
+                                        <button 
+                                          className={localStyles.btnRemoveExercise} 
+                                          onClick={() => removeExercise(dayIdx, groupIdx, exIdx)}
+                                          title="Eliminar Ejercicio"
+                                        >
+                                          <FiTrash2 />
+                                        </button>
                                     </div>
                                 ))}
+
+                                {/* BOTÓN AGREGAR */}
+                                <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '0.5rem', marginBottom: '1.5rem' }}>
+                                  <button 
+                                    className={localStyles.btnAddExercise}
+                                    onClick={() => addExercise(dayIdx, groupIdx)}
+                                  >
+                                    <FiPlus /> Agregar Ejercicio
+                                  </button>
+                                </div>
                             </React.Fragment>
                         ))}
                     </div>
@@ -241,6 +322,7 @@ const RutinaNutricion = () => {
                     {isSaving ? "Aprobando..." : "Aprobar y Enviar"}
                 </button>
             </div>
+            
           </div>
         </div>
       )}
