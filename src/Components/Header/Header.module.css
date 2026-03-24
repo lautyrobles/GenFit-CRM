@@ -145,11 +145,23 @@
 .notifItem:hover { background: #f8fafc; }
 
 .iconBox { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.asistencia { background: #ecfdf5; color: #10b981; }
+.asistencia {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+}
 .pago { background: #f5f3ff; color: #7c3aed; }
 
 .notifText p { margin: 0; font-size: 0.9rem; color: #334155; line-height: 1.4; }
-.notifText strong { color: #1e293b; }
+.notifText strong {
+  color: #1e293b;
+  font-size: 0.95rem;
+}
 .notifText span { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; display: block; }
 
 .drawerActions {
@@ -226,7 +238,55 @@
 }
 
 .subtext {
-  margin: 2px 0 !important;
-  color: #475569 !important;
-  font-size: 0.85rem !important;
+  color: #64748b;
+  font-size: 0.85rem;
+  margin: 2px 0;
+}
+
+.nuevoUsuario {
+  background-color: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #dbeafe;
+}
+
+.headerInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 15px;
+}
+
+.dateBadge {
+  font-size: 0.75rem;
+  background: #f8fafc;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+}
+
+.emptyIcon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.emptyState span {
+  font-size: 0.75rem;
+  display: block;
+  margin-top: 8px;
+  font-style: italic;
 }
