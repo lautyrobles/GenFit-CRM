@@ -3,7 +3,7 @@ import { supabase } from "./supabaseClient";
 
 export const getRecentActivity = async () => {
   try {
-    // 1. Traemos los accesos usando la columna REAL: check_in_time
+    // 1. Traemos los últimos 8 ingresos
     const { data: accesos, error: errAcc } = await supabase
       .from('access_logs')
       .select('user_id, check_in_time, access_granted')
@@ -12,16 +12,16 @@ export const getRecentActivity = async () => {
 
     if (errAcc) throw errAcc;
 
-    // 2. Traemos los logs del sistema (aquí sí suele ser created_at)
+    // 2. Traemos los últimos 8 logs de sistema
     const { data: logsSistema, error: errSys } = await supabase
       .from('system_logs')
-      .select('created_at, action, details, user_id')
+      .select('id, created_at, action, details, user_id, module')
       .order('created_at', { ascending: false })
       .limit(8);
 
     if (errSys) throw errSys;
 
-    // 3. Recolectamos IDs de usuarios para buscar sus nombres
+    // 3. Recolectamos IDs para nombres
     const userIds = [...new Set([
       ...(accesos?.map(a => a.user_id) || []),
       ...(logsSistema?.map(l => l.user_id) || [])
@@ -37,7 +37,7 @@ export const getRecentActivity = async () => {
       userMap[u.id] = `${u.first_name} ${u.last_name}`;
     });
 
-    // 4. Formateamos las Asistencias con la columna correcta
+    // 4. Formateamos Asistencias
     const formatoAsistencias = (accesos || []).map(a => ({
       id: `acc-${a.check_in_time}-${a.user_id}`,
       tipo: 'ASISTENCIA',
@@ -46,21 +46,21 @@ export const getRecentActivity = async () => {
       fecha: new Date(a.check_in_time),
     }));
 
-    // 5. Formateamos los Logs del Sistema
-const formatoLogs = (logsSistema || [])
-  .filter(l => l.action === 'CREACIÓN' && l.module === 'Clientes') // 🎯 EL FILTRO CLAVE
-  .map(l => ({
-    id: `sys-${l.created_at}-${Math.random()}`,
-    tipo: 'SISTEMA',
-    titulo: 'Nuevo Socio Registrado', // Título más descriptivo
-    subtitulo: l.details || `Por ${userMap[l.user_id] || 'Staff'}`,
-    fecha: new Date(l.created_at),
-  }));
+    // 5. Formateamos Logs (FILTRANDO SOLO CREACIÓN)
+    const formatoLogs = (logsSistema || [])
+      .filter(l => l.action === 'CREACIÓN' && l.module === 'Clientes')
+      .map(l => ({
+        id: `sys-${l.id}`,
+        tipo: 'SISTEMA',
+        titulo: 'Nuevo Socio Registrado',
+        subtitulo: l.details || `Por ${userMap[l.user_id] || 'Staff'}`,
+        fecha: new Date(l.created_at),
+      }));
 
-    // 6. Unificamos y ordenamos por fecha real
-return [...formatoAsistencias, ...formatoLogs]
-  .sort((a, b) => b.fecha - a.fecha)
-  .slice(0, 15);
+    // 6. Unificamos y ordenamos por fecha (Histórico reciente)
+    return [...formatoAsistencias, ...formatoLogs]
+      .sort((a, b) => b.fecha - a.fecha)
+      .slice(0, 15);
 
   } catch (error) {
     console.error("❌ Error en getRecentActivity:", error.message);

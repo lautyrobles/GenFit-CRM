@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, X, UserCheck, UserPlus, RefreshCw } from 'lucide-react'; // Cambiamos Activity por UserPlus
+import { Bell, X, UserCheck, UserPlus, RefreshCw } from 'lucide-react';
 import styles from '../Header/Header.module.css';
 import { getRecentActivity } from '../../assets/services/notificationService';
 
@@ -9,26 +9,9 @@ const Notificaciones = ({ isOpen, onClose }) => {
 
   const fetchNotificaciones = useCallback(async () => {
     setLoading(true);
-    try {
-      const data = await getRecentActivity();
-      
-      // 🎯 FILTRO CLAVE:
-      // 1. Mantenemos todas las ASISTENCIAS.
-      // 2. De los logs de SISTEMA, solo dejamos los de "CREACIÓN" de "Clientes".
-      const datosFiltrados = data.filter(item => {
-        if (item.tipo === 'ASISTENCIA') return true;
-        
-        // Si es de sistema, verificamos que el título/acción sea la que queremos
-        // Basado en el mapeo de tu notificationService:
-        return item.titulo === 'CREACIÓN' || item.titulo === 'Nuevo Socio Registrado';
-      });
-
-      setActividad(datosFiltrados);
-    } catch (error) {
-      console.error("Error cargando notificaciones:", error);
-    } finally {
-      setLoading(false);
-    }
+    const data = await getRecentActivity();
+    setActividad(data);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -82,17 +65,16 @@ const Notificaciones = ({ isOpen, onClose }) => {
           )}
 
           {!loading && actividad.length === 0 && (
-            <div className={styles.statusMsg}>No hay actividad relevante.</div>
+            <div className={styles.statusMsg}>No se detectó actividad nueva.</div>
           )}
 
           {actividad.map((item) => (
             <div key={item.id} className={styles.notifItem}>
-              {/* Cambiamos el estilo del icono según el tipo */}
               <div className={`${styles.iconBox} ${item.tipo === 'ASISTENCIA' ? styles.asistencia : styles.nuevoUsuario}`}>
                 {item.tipo === 'ASISTENCIA' ? <UserCheck size={18} /> : <UserPlus size={18} />}
               </div>
               <div className={styles.notifText}>
-                <p><strong>{item.tipo === 'SISTEMA' ? 'Nuevo Socio Registrado' : item.titulo}</strong></p>
+                <p><strong>{item.titulo}</strong></p>
                 <p className={styles.subtext}>{item.subtitulo}</p>
                 <span>{formatRelativeTime(item.fecha)}</span>
               </div>
