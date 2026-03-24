@@ -47,18 +47,20 @@ export const getRecentActivity = async () => {
     }));
 
     // 5. Formateamos los Logs del Sistema
-    const formatoLogs = (logsSistema || []).map(l => ({
-      id: `sys-${l.created_at}-${Math.random()}`,
-      tipo: 'SISTEMA',
-      titulo: l.action || 'Actividad',
-      subtitulo: l.details || `Por ${userMap[l.user_id] || 'Staff'}`,
-      fecha: new Date(l.created_at),
-    }));
+const formatoLogs = (logsSistema || [])
+  .filter(l => l.action === 'CREACIÓN' && l.module === 'Clientes') // 🎯 EL FILTRO CLAVE
+  .map(l => ({
+    id: `sys-${l.created_at}-${Math.random()}`,
+    tipo: 'SISTEMA',
+    titulo: 'Nuevo Socio Registrado', // Título más descriptivo
+    subtitulo: l.details || `Por ${userMap[l.user_id] || 'Staff'}`,
+    fecha: new Date(l.created_at),
+  }));
 
     // 6. Unificamos y ordenamos por fecha real
-    return [...formatoAsistencias, ...formatoLogs]
-      .sort((a, b) => b.fecha - a.fecha)
-      .slice(0, 15);
+return [...formatoAsistencias, ...formatoLogs]
+  .sort((a, b) => b.fecha - a.fecha)
+  .slice(0, 15);
 
   } catch (error) {
     console.error("❌ Error en getRecentActivity:", error.message);

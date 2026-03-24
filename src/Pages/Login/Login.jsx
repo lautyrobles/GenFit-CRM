@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import styles from "./Login.module.css";
 import { useAuth } from "../../context/AuthContext";
 import { Lock, Mail, Loader2 } from "lucide-react";
+// 1. Importamos el servicio de movimientos
+import { registrarMovimiento } from "../../assets/services/movimientosService";
 
 const Login = () => {
   const { login } = useAuth();
@@ -29,12 +31,24 @@ const Login = () => {
       });
 
       if (loggedUser) {
-        // Si el login es exitoso y pasó los filtros de rol del contexto
+        // 2. REGISTRAMOS EL MOVIMIENTO EN EL LOG
+        // El loggedUser ya trae el ID y el nombre del objeto que retorna el context/supabase
+        await registrarMovimiento(
+          loggedUser.id, 
+          'Sistema', 
+          'LOGIN', 
+          `Sesión iniciada correctamente desde el panel administrativo.`
+        );
+
+        // Si el login es exitoso, navegamos al home
         navigate("/"); 
       }
     } catch (err) {
-      // Capturamos el error de "Cliente" o de credenciales
+      // Si el error es por credenciales, lo mostramos
       setError(err.message || "Credenciales incorrectas o error de conexión.");
+      
+      // OPCIONAL: Podrías registrar intentos fallidos si tuvieras el ID, 
+      // pero como falló el login, el ID suele ser desconocido.
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import styles from "./CustomersTable.module.css";
 import Loader from "../../Components/Loader/Loader";
+import { useAuth } from "../../context/AuthContext"; // 1. Importamos Auth para saber qué admin opera
 
 // 📦 Servicios
 import {
@@ -10,6 +11,7 @@ import {
 } from "../../assets/services/clientesService";
 import { obtenerPlanes } from "../../assets/services/planesService";
 import { crearAlertaMedica } from "../../assets/services/medicalService";
+import { registrarMovimiento } from "../../assets/services/movimientosService"; // 2. Servicio de Logs
 
 // Iconos refinados
 const SearchIcon = () => (
@@ -34,6 +36,7 @@ const EditIcon = () => (
 );
 
 const CustomersTable = ({ onSelectCliente }) => {
+  const { user } = useAuth(); // 3. Extraemos el usuario administrativo logueado
   const [usuarios, setUsuarios] = useState([]);
   const [planesDisponibles, setPlanesDisponibles] = useState([]);
   const [mostrarModal, setMostrarModal] = useState(false);
@@ -98,7 +101,6 @@ const CustomersTable = ({ onSelectCliente }) => {
     return planEncontrado ? planEncontrado.name : "Sin Plan";
   };
 
-  // 👉 LÓGICA SIMPLIFICADA: Solo lee el booleano 'condition'
   const resolverEstadoCuota = (u) => {
     const estaActivoDB = u.enabled === true || u.condition === "true" || u.condition === "TRUE"; 
     return estaActivoDB 
@@ -131,12 +133,31 @@ const CustomersTable = ({ onSelectCliente }) => {
     try {
       setSaving(true);
       if (editIndex !== null) {
+        // --- ACTUALIZACIÓN ---
         const userId = usuariosPagina[editIndex].id;
         await actualizarCliente(userId, nuevoUsuario);
+        
+        // ✍️ Log de Actualización
+        await registrarMovimiento(
+          user.id,
+          'Clientes',
+          'ACTUALIZACIÓN',
+          `Modificó datos de: ${nuevoUsuario.first_name} ${nuevoUsuario.last_name} (DNI: ${nuevoUsuario.dni})`
+        );
+
         mostrarToast("✅ Usuario actualizado");
       } else {
+        // --- CREACIÓN ---
         const clienteCreado = await crearCliente(nuevoUsuario);
         
+        // ✍️ Log de Creación
+        await registrarMovimiento(
+          user.id,
+          'Clientes',
+          'CREACIÓN',
+          `Registró a: ${nuevoUsuario.first_name} ${nuevoUsuario.last_name} con DNI ${nuevoUsuario.dni}`
+        );
+
         if (clienteCreado && tieneAlerta && alertaMedica.name) {
           await crearAlertaMedica({
             user_id: clienteCreado.id,
@@ -144,6 +165,14 @@ const CustomersTable = ({ onSelectCliente }) => {
             severity: alertaMedica.severity,
             observation: alertaMedica.observation
           });
+          
+          // Log adicional para la alerta médica si lo deseás
+          await registrarMovimiento(
+            user.id,
+            'Clientes',
+            'ACTUALIZACIÓN',
+            `Asignó alerta médica (${alertaMedica.severity}) a ${nuevoUsuario.first_name}`
+          );
         }
         mostrarToast("✅ Usuario creado");
       }

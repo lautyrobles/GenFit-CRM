@@ -332,3 +332,9 @@
   .filtersGrid { grid-template-columns: 1fr; }
   .filterGroupAction { margin-top: 10px; }
 }
+
+.actionLogout {
+  background-color: #fff7ed; /* Naranja muy suave */
+  color: #ea580c;            /* Naranja oscuro */
+  border: 1px solid #ffedd5;
+}

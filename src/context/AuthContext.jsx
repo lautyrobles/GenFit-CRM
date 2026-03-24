@@ -1,6 +1,8 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { login as loginAPI } from "../assets/services/authService";
+// 1. Importamos el servicio de movimientos
+import { registrarMovimiento } from "../assets/services/movimientosService";
 
 const AuthContext = createContext();
 const INACTIVITY_LIMIT = 15 * 60 * 1000; 
@@ -9,21 +11,40 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loadingInitial, setLoadingInitial] = useState(true);
   
-  // Usamos una referencia para evitar que el intervalo dispare re-renders innecesarios
-  const logoutTimerRef = useRef(null);
+  // Referencia para acceder al estado actual del usuario dentro de funciones estables (useCallback)
+  // Esto es clave para que el logout sepa qué ID registrar sin depender del ciclo de renderizado
+  const userRef = useRef(null);
 
-  const logout = useCallback(() => {
-    console.log("🔒 Sesión finalizada.");
+  // Sincronizamos la referencia cada vez que el usuario cambia
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  /* ===================================================
+      🔐 LOGOUT (Manual y Automático)
+     =================================================== */
+  const logout = useCallback(async (reason = "manual") => {
+    console.log(`🔒 Sesión finalizada (${reason}).`);
+    
+    // 2. Registramos el movimiento antes de limpiar los estados
+    if (userRef.current) {
+      const detalle = reason === "inactivity" 
+        ? "Sesión cerrada automáticamente por inactividad (15 min)."
+        : "El usuario cerró sesión de forma manual.";
+        
+      await registrarMovimiento(userRef.current.id, 'Sistema', 'LOGOUT', detalle);
+    }
+
     localStorage.removeItem("fitseoUser");
     localStorage.removeItem("lastActivity");
     setUser(null);
-    // Solo redirigir si no estamos ya en login para evitar bucles de redirección
+    userRef.current = null;
+
     if (window.location.pathname !== "/login") {
       window.location.href = "/login";
     }
   }, []);
 
-  // Función para actualizar la actividad sin disparar re-renders
   const updateActivity = useCallback(() => {
     localStorage.setItem("lastActivity", new Date().getTime().toString());
   }, []);
@@ -35,13 +56,13 @@ export const AuthProvider = ({ children }) => {
     if (lastActivity && storedUser) {
       const now = new Date().getTime();
       if (now - parseInt(lastActivity) > INACTIVITY_LIMIT) {
-        logout();
+        logout("inactivity"); // 👈 Pasamos la razón para el log
       }
     }
   }, [logout]);
 
   /* ===================================================
-     🔄 1. CARGA INICIAL (Solo se ejecuta una vez)
+      🔄 CARGA INICIAL
      =================================================== */
   useEffect(() => {
     const initAuth = () => {
@@ -50,13 +71,13 @@ export const AuthProvider = ({ children }) => {
 
       if (storedUser && lastActivity) {
         const now = new Date().getTime();
-        // Verificar si expiró mientras estaba cerrado
         if (now - parseInt(lastActivity) > INACTIVITY_LIMIT) {
-          logout();
+          logout("inactivity");
         } else {
           try {
             const parsedUser = JSON.parse(storedUser);
             setUser(parsedUser);
+            userRef.current = parsedUser;
             updateActivity();
           } catch (e) {
             logout();
@@ -67,21 +88,19 @@ export const AuthProvider = ({ children }) => {
     };
 
     initAuth();
-  }, [logout, updateActivity]); // Estas funciones son estables gracias a useCallback
+  }, [logout, updateActivity]);
 
   /* ===================================================
-     🖱️ 2. LISTENERS DE ACTIVIDAD
+      🖱️ LISTENERS DE ACTIVIDAD
      =================================================== */
   useEffect(() => {
     if (!user) return;
 
     const handleUserActivity = () => updateActivity();
-
     const events = ["mousedown", "keydown", "scroll", "touchstart"];
     events.forEach(event => window.addEventListener(event, handleUserActivity));
     
-    // Intervalo para checkear inactividad
-    const interval = setInterval(checkInactivity, 30000); // Check cada 30 seg
+    const interval = setInterval(checkInactivity, 30000); 
 
     return () => {
       events.forEach(event => window.removeEventListener(event, handleUserActivity));
@@ -90,7 +109,7 @@ export const AuthProvider = ({ children }) => {
   }, [user, updateActivity, checkInactivity]);
 
   /* ===================================================
-     🔐 LOGIN
+      🔐 LOGIN
      =================================================== */
   const login = async ({ usuario, password }) => {
     try {
@@ -105,9 +124,10 @@ export const AuthProvider = ({ children }) => {
       const fixedUser = { ...data, role: normalizedRole };
       
       localStorage.setItem("fitseoUser", JSON.stringify(fixedUser));
-      updateActivity(); // Registrar tiempo inicial
+      updateActivity(); 
 
       setUser(fixedUser);
+      userRef.current = fixedUser;
       return fixedUser;
     } catch (err) {
       throw err; 
