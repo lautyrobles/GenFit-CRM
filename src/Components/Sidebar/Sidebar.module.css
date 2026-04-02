@@ -269,30 +269,48 @@
   border-radius: 6px;
 }
 
+.closeBtnMobile {
+  display: none; /* Oculto en desktop */
+}
+
 /* --- MEDIA QUERIES ORDENADAS --- */
 
 /* 1. MODO ICONOS (Basado en ancho) */
 @media (max-width: 1024px) {
+  .sidebar {
+    /* En lugar de achicarse, se mueve fuera de la pantalla a la izquierda */
+    transform: translateX(-100%); 
+    width: 260px; /* Recupera su ancho original para ser legible en móvil */
+    transition: transform 0.3s ease;
+    box-shadow: 10px 0 15px rgba(0,0,0,0.05);
+  }
+
+  /* Esta clase se activa desde el JS */
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Mostramos los textos de nuevo porque ahora es un menú desplegable, no una barra de iconos */
   .logo span, 
   .groupLabel, 
   .navItem span, 
-  .supportCard, 
-  .userDetails,
-  .badgePronto {
-    display: none;
+  .userDetails {
+    display: inline; 
   }
-  .logo {
-    padding-left: 5px;
-    font-size: 18px;
-    text-align: center;
-  }
+
   .navItem {
-    justify-content: center;
-    padding: 12px;
+    justify-content: flex-start;
+    padding: 12px 16px;
   }
-  .userProfile {
-    justify-content: center;
-    padding: 10px 0;
+
+  .closeBtnMobile {
+    display: flex;
+    background: #f8fafc;
+    border: none;
+    padding: 8px;
+    border-radius: 10px;
+    color: #64748b;
+    cursor: pointer;
   }
 }
 

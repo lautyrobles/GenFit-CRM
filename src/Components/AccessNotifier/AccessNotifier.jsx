@@ -3,6 +3,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import { supabase } from '../../assets/services/supabaseClient'; 
 import { useAuth } from '../../context/AuthContext';
 import styles from './AccessNotifier.module.css';
+import { useNavigate } from 'react-router-dom';
 
 import { FiEye, FiUser, FiActivity, FiAlertTriangle, FiHash, FiCheckCircle, FiCreditCard } from 'react-icons/fi';
 
@@ -12,6 +13,21 @@ const AccessNotifier = () => {
   const [modalData, setModalData] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
+  const navigate = useNavigate();
+
+  const irAlPerfil = () => {
+    if (!modalData) return;
+    
+    // Cerramos el modal
+    setIsModalOpen(false);
+    
+    // Redireccionamos pasando el ID del usuario en el state
+    navigate('/clientes', { 
+      state: { 
+        autoOpenUserId: modalData.user_id // 👈 Pasamos el ID para que Clientes lo use
+      } 
+    });
+  };
 
   const abrirDetalleUsuario = async (userId, estadoCalculado) => {
     setLoadingData(true);
@@ -39,6 +55,7 @@ const AccessNotifier = () => {
         .gte('check_in_time', haceUnaSemana.toISOString());
 
       setModalData({
+        user_id: userId,
         user: userData || {},
         alertas: alertsData || [],
         asistenciasSemanales: count || 0,
@@ -168,65 +185,79 @@ const AccessNotifier = () => {
               <button className={styles.modalCloseBtn} onClick={() => { setIsModalOpen(false); setModalData(null); }}>×</button>
             </div>
 
-            <div className={styles.modalBody}>
-              {loadingData || !modalData ? (
-                <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Cargando datos del cliente...</div>
-              ) : (
-                <>
-                  <div className={styles.infoRow}>
-                    <span className={styles.infoLabel}><FiUser /> Nombre Completo</span>
-                    <span className={styles.infoValue}>{modalData.user.first_name} {modalData.user.last_name}</span>
-                  </div>
+<div className={styles.modalBody}>
+  {loadingData || !modalData ? (
+    <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+      Cargando datos del cliente...
+    </div>
+  ) : (
+    <>
+      {/* --- Información General --- */}
+      <div className={styles.infoRow}>
+        <span className={styles.infoLabel}><FiUser /> Nombre Completo</span>
+        <span className={styles.infoValue}>{modalData.user.first_name} {modalData.user.last_name}</span>
+      </div>
 
-                  <div className={styles.infoRow}>
-                    <span className={styles.infoLabel}><FiHash /> DNI</span>
-                    <span className={styles.infoValue}>{modalData.user.dni || 'No registrado'}</span>
-                  </div>
+      <div className={styles.infoRow}>
+        <span className={styles.infoLabel}><FiHash /> DNI</span>
+        <span className={styles.infoValue}>{modalData.user.dni || 'No registrado'}</span>
+      </div>
 
-                  <div className={styles.infoRow}>
-                    <span className={styles.infoLabel}><FiCreditCard /> Estado de Cuota</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span className={`${styles.badgeStatus} ${modalData.badgeClass}`}>
-                        {modalData.estadoCuota}
-                      </span>
-                      <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>
-                        {modalData.diasRestantes >= 0 
-                          ? `(Quedan ${modalData.diasRestantes} días)` 
-                          : `(Hace ${Math.abs(modalData.diasRestantes)} días)`}
-                      </span>
-                    </div>
-                  </div>
+      <div className={styles.infoRow}>
+        <span className={styles.infoLabel}><FiCreditCard /> Estado de Cuota</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span className={`${styles.badgeStatus} ${modalData.badgeClass}`}>
+            {modalData.estadoCuota}
+          </span>
+          <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>
+            {modalData.diasRestantes >= 0 
+              ? `(Quedan ${modalData.diasRestantes} días)` 
+              : `(Hace ${Math.abs(modalData.diasRestantes)} días)`}
+          </span>
+        </div>
+      </div>
 
-                  <div className={styles.infoRow}>
-                    <span className={styles.infoLabel}><FiActivity /> Asistencia (Últ. 7 días)</span>
-                    <span className={styles.infoValue}>{modalData.asistenciasSemanales} días</span>
-                  </div>
+      <div className={styles.infoRow}>
+        <span className={styles.infoLabel}><FiActivity /> Asistencia (Últ. 7 días)</span>
+        <span className={styles.infoValue}>{modalData.asistenciasSemanales} días</span>
+      </div>
 
-                  <div className={styles.alertsSection}>
-                    <h4 className={styles.alertsTitle}>
-                      <FiAlertTriangle color="#d97706" /> Alertas Médicas
-                    </h4>
-                    {modalData.alertas.length === 0 ? (
-                      <div className={styles.noAlerts}>
-                        <FiCheckCircle size={20} />
-                        <span>El usuario no presenta alertas médicas.</span>
-                      </div>
-                    ) : (
-                      modalData.alertas.map((alerta, index) => (
-                        <div key={index} className={`${styles.alertBox} ${alerta.severity === 'Alta' ? styles.alertBoxHigh : ''}`}>
-                          <FiAlertTriangle className={alerta.severity === 'Alta' ? styles.alertIconHigh : styles.alertIconNormal} />
-                          <div className={styles.alertContent}>
-                            <p className={alerta.severity === 'Alta' ? styles.alertNameHigh : styles.alertNameNormal}>
-                              {alerta.name}
-                            </p>
-                            <p className={styles.alertObs}>{alerta.observation}</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </>
-              )}
+      {/* --- Alertas Médicas --- */}
+      <div className={styles.alertsSection}>
+        <h4 className={styles.alertsTitle}>
+          <FiAlertTriangle color="#d97706" /> Alertas Médicas
+        </h4>
+        {modalData.alertas.length === 0 ? (
+          <div className={styles.noAlerts}>
+            <FiCheckCircle size={20} />
+            <span>El usuario no presenta alertas médicas.</span>
+          </div>
+        ) : (
+          modalData.alertas.map((alerta, index) => (
+            <div key={index} className={`${styles.alertBox} ${alerta.severity === 'Alta' ? styles.alertBoxHigh : ''}`}>
+              <FiAlertTriangle className={alerta.severity === 'Alta' ? styles.alertIconHigh : styles.alertIconNormal} />
+              <div className={styles.alertContent}>
+                <p className={alerta.severity === 'Alta' ? styles.alertNameHigh : styles.alertNameNormal}>
+                  {alerta.name}
+                </p>
+                <p className={styles.alertObs}>{alerta.observation}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* --- Botón de Redirección (Ver Perfil Completo) --- */}
+      <div style={{ marginTop: '10px' }}>
+        <button 
+          className={styles.btnFullProfile} 
+          onClick={irAlPerfil}
+        >
+          <FiEye /> Ver Perfil Detallado
+        </button>
+      </div>
+    </>
+  )}
             </div>
           </div>
         </div>

@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import styles from './Header.module.css'
 import { useAuth } from '../../context/AuthContext'
-import { Bell, Calendar } from 'lucide-react'
+import { Bell, Calendar, Menu } from 'lucide-react' // 👈 Añadimos Menu
 import { useLocation } from 'react-router-dom'
-import Notificaciones from '../Notifications/Notifications' // 👈 Importamos el nuevo componente
+import Notificaciones from '../Notifications/Notifications'
 
-const Header = () => {
+const Header = ({ onOpenSidebar }) => { // 👈 Recibimos la función para abrir el sidebar
   const { user } = useAuth()
   const location = useLocation()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -18,8 +18,8 @@ const Header = () => {
       '/planes': 'Planes de Entrenamiento',
       '/movimientos': 'Caja Diaria',
       '/configuracion': 'Permisos y Acceso',
-      '/asistencia': 'Control de Asistencia', // 👈 Agregamos la nueva ruta
-      '/nutricion': 'Módulo de Nutrición'     // 👈 Agregamos la nueva ruta
+      '/asistencia': 'Control de Asistencia',
+      '/nutricion': 'Módulo de Nutrición'
     }
     return titles[path] || 'Panel';
   }
@@ -28,6 +28,11 @@ const Header = () => {
     <header className={styles.header}>
       <div className={styles.leftSection}>
         <div className={styles.sectionBadge}>
+          {/* 🍔 BOTÓN HAMBURGUESA: Solo visible en pantallas pequeñas vía CSS */}
+          <button className={styles.menuBtn} onClick={onOpenSidebar} title="Abrir menú">
+            <Menu size={24} />
+          </button>
+          
           <span className={styles.dot}></span>
           <h1 className={styles.sectionTitle}>{getSectionTitle(location.pathname)}</h1>
         </div>
@@ -49,7 +54,6 @@ const Header = () => {
         </button>
       </div>
 
-      {/* Componente Modular de Notificaciones */}
       <Notificaciones 
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 

@@ -69,7 +69,7 @@ const CierreCaja = () => {
   };
 
   return (
-    <div className={styles.pageContainer}>
+    <div className={styles.container}>
       <div className={styles.header}>
         <h2>Control y Cierre de Caja</h2>
         <p>Registrá salidas de dinero y realizá el arqueo final de tu turno.</p>

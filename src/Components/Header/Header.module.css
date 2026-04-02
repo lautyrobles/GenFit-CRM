@@ -290,3 +290,53 @@
   margin-top: 8px;
   font-style: italic;
 }
+
+.menuBtn {
+  display: none; /* 👈 Oculto en Desktop */
+  background: none;
+  border: none;
+  color: #1e293b;
+  cursor: pointer;
+  padding: 8px;
+  margin-right: 10px;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.menuBtn:hover {
+  color: #7c3aed;
+}
+
+@media (max-width: 1024px) {
+  .header {
+    height: auto;
+    padding: 15px 10px;
+    margin-bottom: 10px;
+  }
+
+  .menuBtn {
+    display: flex; /* 👈 Aparece en Tablets/Móviles */
+  }
+
+  .dot {
+    display: none; /* Quitamos el punto para ganar espacio */
+  }
+
+  .sectionTitle {
+    font-size: 1.2rem; /* Título más pequeño */
+  }
+
+  .dateDisplay {
+    display: none; /* Ocultamos la fecha larga en móviles para evitar amontonamiento */
+  }
+
+  .userGreeting {
+    display: none; /* Ocultamos el saludo "Hola, Admin" para dar prioridad a la campana */
+  }
+
+  .notifBtn {
+    width: 42px;
+    height: 42px;
+  }
+}

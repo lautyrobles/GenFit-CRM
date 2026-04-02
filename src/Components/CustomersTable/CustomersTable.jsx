@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import styles from "./CustomersTable.module.css";
 import Loader from "../../Components/Loader/Loader";
-import { useAuth } from "../../context/AuthContext"; // 1. Importamos Auth para saber qué admin opera
+import { useAuth } from "../../context/AuthContext";
+import { useLocation } from "react-router-dom";
 
 // 📦 Servicios
 import {
@@ -46,6 +47,7 @@ const CustomersTable = ({ onSelectCliente }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  const location = useLocation();
 
   const itemsPerPage = 6; 
 
@@ -58,15 +60,32 @@ const CustomersTable = ({ onSelectCliente }) => {
     name: "", severity: "Baja", observation: ""
   });
 
-  const fetchData = async () => {
+const fetchData = async () => {
     try {
       setLoading(true);
       const [clientesData, planesData] = await Promise.all([
         obtenerClientes(),
         obtenerPlanes(),
       ]);
+      
       setUsuarios(clientesData || []);
       setPlanesDisponibles(planesData || []);
+
+      // 🎯 LÓGICA DE VISUALIZACIÓN AUTOMÁTICA (MODO LECTURA)
+      const autoOpenId = location.state?.autoOpenUserId;
+      
+      if (autoOpenId && clientesData) {
+        const clienteAVer = clientesData.find(u => u.id === autoOpenId);
+        
+        if (clienteAVer) {
+          // Ejecutamos la selección del cliente para cargar su perfil completo
+          onSelectCliente(clienteAVer);
+
+          // Limpiamos el estado de la navegación para evitar que se abra solo al refrescar
+          window.history.replaceState({}, document.title);
+        }
+      }
+
     } catch (error) {
       mostrarToast("Error de conexión", "error");
     } finally {
@@ -167,6 +186,10 @@ const editarUsuario = (u) => {
       phone: u.phone ?? "",
       plan_id: u.plan_id ?? "",
     });
+
+    const userIndex = usuarios.findIndex(user => user.id === u.id);
+    setEditIndex(userIndex); 
+    setMostrarModal(true);
 
     const relativeIndex = usuariosPagina.findIndex(user => user.id === u.id);
     setEditIndex(relativeIndex);

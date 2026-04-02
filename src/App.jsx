@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react' // 👈 Añadimos useState
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import styles from './App.module.css'
 
@@ -16,26 +16,40 @@ import RutinaNutricion from './Pages/Clientes/RutinaNutricion'
 import Asistencia from './Pages/Asistencia/Asistencia' 
 import CierreCaja from './Pages/CierreCaja/CierreCaja';
 import { useAuth } from './context/AuthContext'
-
-// 👉 Importamos el nuevo componente notificador
 import AccessNotifier from './Components/AccessNotifier/AccessNotifier'
 
 const App = () => {
   const { user } = useAuth()
+  
+  // 🍔 ESTADO PARA EL MENÚ HAMBURGUESA
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
+  const closeSidebar = () => setIsSidebarOpen(false)
 
   return (
     <Router>
       <div className={styles.appContainer}>
         
-        {/* 👉 El Notificador Global corre en segundo plano y muestra los pop-ups */}
         <AccessNotifier />
 
-        {user && <Sidebar />}
+        {/* Pasamos el estado y la función de cierre al Sidebar */}
+        {user && (
+          <>
+            <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
+            
+            {/* Capa oscura que aparece solo en móvil cuando el sidebar está abierto */}
+            {isSidebarOpen && (
+              <div className={styles.sidebarOverlay} onClick={closeSidebar}></div>
+            )}
+          </>
+        )}
 
         <main className={user ? styles.mainContent : styles.loginMain}>
           {user ? (
             <div className={styles.contentWrapper}>
-              <Header />
+              {/* Pasamos la función de apertura al Header */}
+              <Header onOpenSidebar={toggleSidebar} />
 
               <Routes>
                 <Route path="/" element={<Inicio />} />
