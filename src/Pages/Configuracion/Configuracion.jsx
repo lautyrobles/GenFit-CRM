@@ -32,6 +32,16 @@ const Configuracion = () => {
     nombre: "", apellido: "", dni: "", nombreUsuario: "", email: "", password: "", tipo: "",
   });
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  // Lógica de Paginación
+  const totalPaginas = Math.ceil(usuarios.length / itemsPerPage);
+  const usuariosPagina = usuarios.slice(
+    (currentPage - 1) * itemsPerPage, 
+    currentPage * itemsPerPage
+  );
+
   // --- Mapeo de Roles UI <-> API ---
   const mapRoleToTipo = (roleRaw) => {
     const role = normalizeRole(roleRaw);
@@ -68,24 +78,44 @@ const Configuracion = () => {
     setTimeout(() => setToast({ msg: "", type: "" }), 3000);
   };
 
-  // --- Cargar Usuarios ---
+// --- Cargar Usuarios ---
   useEffect(() => {
     const cargar = async () => {
       try {
+        setLoading(true);
         const data = await getUsers();
+        
+        // Filtramos solo el personal del staff
         const staffUsers = data.filter(u => {
-            const r = normalizeRole(u.role);
-            return ["SUPER_ADMIN", "ADMIN", "SUPERVISOR"].includes(r);
+          const r = normalizeRole(u.role);
+          return ["SUPER_ADMIN", "ADMIN", "SUPERVISOR"].includes(r);
         });
 
-        setUsuarios(staffUsers.map((u) => ({ ...u, normalizedRole: normalizeRole(u.role) })));
+        const mappendUsers = staffUsers.map((u) => ({ 
+          ...u, 
+          normalizedRole: normalizeRole(u.role) 
+        }));
+
+        setUsuarios(mappendUsers);
+
+        // 🎯 LÓGICA DE AUTO-APERTURA (Opcional, por consistencia con Clientes)
+        const autoOpenId = location.state?.autoOpenUserId;
+        if (autoOpenId) {
+          const userToEdit = mappendUsers.find(u => u.id === autoOpenId);
+          if (userToEdit) {
+            startEdit(userToEdit);
+            window.history.replaceState({}, document.title);
+          }
+        }
+
       } catch (e) {
         console.error(e);
-        mostrarToast("Error al cargar usuarios", "error");
+        mostrarToast("Error al cargar la lista de staff", "error");
       } finally {
         setLoading(false);
       }
     };
+    
     cargar();
   }, []);
 
@@ -239,7 +269,7 @@ const Configuracion = () => {
                 </tr>
               </thead>
               <tbody>
-                {usuarios.map((u) => {
+                {usuariosPagina.map((u) => {
                   const targetRole = normalizeRole(u.role);
                   const isMe = u.id === user.id;
                   
@@ -324,6 +354,7 @@ const Configuracion = () => {
                 })}
               </tbody>
             </table>
+            
           ) : (
             <div className={styles.emptyState}>
               <UserCog size={48} className={styles.emptyIcon} />
@@ -331,6 +362,25 @@ const Configuracion = () => {
             </div>
           )}
         </div>
+        {usuarios.length > itemsPerPage && (
+          <div className={styles.paginador}>
+            <button 
+              onClick={() => setCurrentPage(prev => prev - 1)} 
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </button>
+            <span className={styles.paginaInfo}>
+              Página {currentPage} de {totalPaginas}
+            </span>
+            <button 
+              onClick={() => setCurrentPage(prev => prev + 1)} 
+              disabled={currentPage === totalPaginas}
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
       </div>
 
       {mostrarFormulario && (

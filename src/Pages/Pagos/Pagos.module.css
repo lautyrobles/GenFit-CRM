@@ -136,8 +136,8 @@
   border: 1px solid #f1f5f9;
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
+  min-height: 600px; /* 🎯 Evita que el paginador salte */
+  overflow: hidden;
 }
 
 .tableToolbar {
@@ -189,13 +189,16 @@
 
 .tableScrollArea {
   flex: 1;
-  padding: 24px 24px 24px 24px;
+  padding: 0 24px; 
+  display: flex;
+  flex-direction: column;
 }
 
 .modernTable {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
+  table-layout: fixed; /* 🎯 CLAVE: Las columnas no cambian de ancho */
 }
 
 .modernTable th {
@@ -214,10 +217,17 @@
 }
 
 .modernTable td {
-  padding: 16px 12px;
   font-size: 0.9rem;
   color: #334155;
   border-bottom: 1px solid #f8fafc;
+  height: 64px; /* 🎯 Alto fijo para consistencia */
+}
+
+.modernTable th, .modernTable td {
+  padding: 16px 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .modernTable tr:hover td { background-color: #fcfcfd; }
@@ -752,9 +762,33 @@
 
 /* 2. Contenedor de la tabla para evitar que el paginador suba */
 .tableMinHeight {
-  min-height: 420px; /* Espacio suficiente para 6 filas */
+  flex: 1;
   display: flex;
-  flex-direction: column; 
+  flex-direction: column;
+  /* 🎯 Esto permite el scroll horizontal cuando la tabla supera el ancho */
+  overflow-x: auto; 
+  -webkit-overflow-scrolling: touch; /* Suavidad en móviles */
+}
+
+/* 🎨 Aplicamos el estilo de scrollbar que diseñamos para que combine */
+.tableMinHeight::-webkit-scrollbar {
+  height: 6px; /* Scroll horizontal un poco más fino */
+  width: 6px;
+}
+
+.tableMinHeight::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.tableMinHeight::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+  border: 1px solid #f8fafc;
+}
+
+.tableMinHeight::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* 3. El paginador con margin-top: auto se pega al fondo del tableCard */
@@ -794,7 +828,7 @@
   padding: 0 24px; 
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* 👈 Evita el scroll doble que mencionaste */
+  overflow-y:  hidden;
 }
 
 /* Asegúrate que .tableMinHeight controle el espacio de las 6 filas */
@@ -814,4 +848,63 @@
   border-top: 1px solid #f1f5f9;
   margin-top: auto;
   background: white; /* Para que al scrollear no se transparente */
+}
+
+/* --- RESPONSIVE PAGOS --- */
+
+@media (max-width: 1100px) {
+.modernTable {
+    /* 🎯 Forzamos el ancho de la tabla para que "empuje" el contenedor y salga el scroll */
+    min-width: 900px; 
+    table-layout: fixed;
+  }
+}
+
+@media (max-width: 768px) {
+  .pagosLayout {
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .topSection {
+    gap: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    padding: 20px;
+    gap: 15px;
+    text-align: center;
+  }
+
+  .kpiGrid {
+    grid-template-columns: 1fr;
+  }
+  
+
+  /* Redefinimos anchos para las columnas restantes */
+  .colClient { width: 40%; }
+  .colPlan   { width: 20%; }
+  .colAmount { width: 20%; }
+  .colStatus { width: 20%; }
+
+.modernTable {
+    min-width: 100%; 
+    table-layout: auto;
+  }
+
+.amountText {
+    font-size: 0.85rem;
+  }
+}
+
+/* --- PAGINACIÓN --- */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: auto;
+  background: white;
 }
