@@ -253,7 +253,7 @@ const AccessNotifier = () => {
           className={styles.btnFullProfile} 
           onClick={irAlPerfil}
         >
-          <FiEye /> Ver Perfil Detallado
+          <FiEye /> Ir al Perfil
         </button>
       </div>
     </>
