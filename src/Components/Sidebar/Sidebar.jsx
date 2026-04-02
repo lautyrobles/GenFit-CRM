@@ -45,6 +45,7 @@ const Sidebar = () => {
 
   return (
     <aside className={styles.sidebar}>
+
       <div className={styles.topSection}>
         <h1 className={styles.logo}>
           GenFIT <span>CRM</span>

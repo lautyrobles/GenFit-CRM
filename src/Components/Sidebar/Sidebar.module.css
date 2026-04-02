@@ -1,37 +1,66 @@
+/* Sidebar.module.css */
+
 .sidebar {
-  background-color: #ffffff; /* Fondo blanco limpio como la referencia */
-  width: 260px;
+  background-color: #ffffff;
+  width: var(--sidebar-width);
   height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 32px 20px;
   position: fixed;
   top: 0;
   left: 0;
   border-right: 1px solid #f1f5f9;
   z-index: 100;
+  transition: width 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  padding: 2vh 16px; 
+  box-sizing: border-box;
+  overflow: hidden; 
+}
+
+.topSection {
+  flex-shrink: 0;
 }
 
 .logo {
+  flex-shrink: 0;
   font-size: 22px;
   font-weight: 800;
   color: #1e293b;
-  margin-bottom: 40px;
+  margin-bottom: 3vh; 
   padding-left: 12px;
-  letter-spacing: -1px;
 }
 
 .logo span {
-  color: #7c3aed; /* Violeta principal */
+  color: #7c3aed;
 }
 
-/* Agrupación Lógica */
+.nav {
+  flex: 1; 
+  display: flex;
+  flex-direction: column;
+  gap: 0.5vh; 
+  overflow-y: auto; 
+  overflow-x: hidden;
+  min-height: 0; 
+  padding-right: 4px;
+}
+
+.nav::-webkit-scrollbar {
+  width: 4px;
+}
+.nav::-webkit-scrollbar-thumb {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+.nav::-webkit-scrollbar-thumb:hover {
+  background: #e2e8f0;
+}
+
 .navGroup {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 24px;
+  gap: 2px;
+  margin-bottom: 2vh; 
 }
 
 .groupLabel {
@@ -63,108 +92,24 @@
 }
 
 .active {
-  background-color: #f5f3ff; /* Lavanda muy suave */
+  background-color: #f5f3ff;
   color: #7c3aed;
   font-weight: 600;
 }
 
-/* Caja de Soporte Estilo Moderno */
-.proBox {
-  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-  border-radius: 20px;
-  padding: 20px;
-  text-align: center;
-  margin-bottom: 24px;
-  box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.2);
-}
-
-.proBox p {
-  font-size: 0.85rem;
-  margin-bottom: 12px;
-  color: #ede9fe;
-  font-weight: 500;
-}
-
-.soporteBtn {
-  background-color: #fff;
-  color: #7c3aed;
-  text-decoration: none;
-  display: inline-block;
-  font-size: 0.85rem;
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-weight: 600;
-  transition: 0.2s;
-}
-
-.soporteBtn:hover {
-  transform: scale(1.05);
-}
-
-/* Footer de Usuario */
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 20px;
-  border-top: 1px solid #f1f5f9;
-}
-
-.userInfo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.userInfo img {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background-color: #f1f5f9;
-}
-
-.userTitle h4 {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #1e293b;
-}
-
-.userTitle span {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  font-weight: 500;
-}
-
-.logoutBtn {
-  background: #fff;
-  color: #94a3b8;
-  border: 1px solid #f1f5f9;
-  padding: 8px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logoutBtn:hover {
-  background-color: #fef2f2;
-  color: #ef4444;
-  border-color: #fee2e2;
-}
-
-/* --- SECCIÓN INFERIOR --- */
 .bottomSection {
+  flex-shrink: 0; 
   margin-top: auto;
+  padding-top: 2vh;
+  border-top: 1px solid #f1f5f9;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 1.5vh;
+  background-color: #ffffff;
 }
 
-/* Tarjeta de Soporte Estilo Moderno */
 .supportCard {
-  background-color: #f8fafc; /* Slate 50 */
+  background-color: #f8fafc;
   border: 1px solid #f1f5f9;
   border-radius: 20px;
   padding: 16px;
@@ -217,18 +162,11 @@
   transition: all 0.2s ease;
 }
 
-.supportAction:hover {
-  background-color: #6d28d9;
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
-}
-
-/* Perfil de Usuario Refinado */
 .userProfile {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 4px;
-  border-top: 1px solid #f1f5f9;
+  padding: 8px 4px;
 }
 
 .userAccount {
@@ -245,7 +183,7 @@
 .avatar {
   width: 40px;
   height: 40px;
-  border-radius: 14px; /* Estilo squircle */
+  border-radius: 14px;
   background-color: #f1f5f9;
   object-fit: cover;
 }
@@ -256,7 +194,7 @@
   right: -2px;
   width: 12px;
   height: 12px;
-  background-color: #10b981; /* Esmeralda */
+  background-color: #10b981;
   border: 2.5px solid #ffffff;
   border-radius: 50%;
 }
@@ -264,14 +202,18 @@
 .userDetails {
   display: flex;
   flex-direction: column;
+  max-width: 110px;
 }
 
 .userName {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #1e293b;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .userRole {
@@ -299,23 +241,17 @@
   border-color: #fee2e2;
 }
 
-/* Sidebar.module.css */
-
-/* ... (tus estilos anteriores) ... */
-
-/* Estilo para ítem deshabilitado (Nutrición) */
 .navItemDisabled {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Para mandar el PRONTO a la derecha */
+  justify-content: space-between;
   gap: 12px;
   font-size: 0.95rem;
   font-weight: 500;
-  color: #94a3b8; /* Gris más claro */
+  color: #94a3b8;
   padding: 10px 14px;
   border-radius: 12px;
   cursor: not-allowed;
-  user-select: none;
 }
 
 .navItemMain {
@@ -331,23 +267,105 @@
   font-weight: 800;
   padding: 4px 8px;
   border-radius: 6px;
-  letter-spacing: 0.5px;
 }
 
-/* Ajuste sutil al perfil para que no se corte el nombre si es largo */
-.userDetails {
-  display: flex;
-  flex-direction: column;
-  max-width: 130px; /* Limita el ancho para que el nombre no empuje el botón de logout */
+/* --- MEDIA QUERIES ORDENADAS --- */
+
+/* 1. MODO ICONOS (Basado en ancho) */
+@media (max-width: 1024px) {
+  .logo span, 
+  .groupLabel, 
+  .navItem span, 
+  .supportCard, 
+  .userDetails,
+  .badgePronto {
+    display: none;
+  }
+  .logo {
+    padding-left: 5px;
+    font-size: 18px;
+    text-align: center;
+  }
+  .navItem {
+    justify-content: center;
+    padding: 12px;
+  }
+  .userProfile {
+    justify-content: center;
+    padding: 10px 0;
+  }
 }
 
-.userName {
-  margin: 0;
-  font-size: 0.85rem; /* Un pelín más chico para que entre el nombre completo */
-  font-weight: 700;
-  color: #1e293b;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis; /* Pone puntos suspensivos si el nombre es kilométrico */
+@media (max-height: 900px) {
+  .logo {
+    margin-bottom: 2vh; /* Reducimos aire arriba */
+  }
+  .navGroup {
+    margin-bottom: 1.5vh; /* Apretamos los grupos de botones */
+  }
+  .navItem {
+    padding: 8px 14px; /* Botones un poco más finos */
+    font-size: 0.9rem;
+  }
+}
+
+/* 2. PANTALLAS MEDIANAS / LAPTOPS (Basado en altura) */
+@media (max-height: 850px) {
+  .supportCard {
+    padding: 10px;
+  }
+  .supportTitle { font-size: 0.75rem; }
+  .supportSub { display: none; }
+  .supportAction { padding: 6px; font-size: 0.7rem; }
+  
+  .navItem {
+    padding: 8px 12px;
+    font-size: 0.88rem;
+  }
+  .navGroup {
+    margin-bottom: 1.5vh;
+  }
+}
+
+@media (max-height: 800px) {
+  .supportCard {
+    padding: 12px; /* Achicamos la tarjeta de soporte */
+  }
+  .supportSub {
+    display: none; /* Quitamos el texto secundario de soporte */
+  }
+  .bottomSection {
+    gap: 1vh; /* Menos espacio entre soporte y perfil */
+  }
+  .supportContent {
+    display: none;
+  }
+}
+
+/* 3. PANTALLAS CHICAS / ZOOM ALTO (Basado en altura) */
+@media (max-height: 720px) {
+  .supportCard {
+    display: none !important; 
+  }
+  .logo { 
+    margin-bottom: 1.5vh; 
+  }
+  .navGroup { 
+    margin-bottom: 1vh; 
+  }
+}
+
+@media (max-height: 700px) {
+  .supportCard {
+    display: none !important; /* Sacamos soporte para priorizar el Perfil */
+  }
+  .logo {
+    margin-bottom: 1vh;
+  }
+  .navGroup {
+    margin-bottom: 1vh;
+  }
+  .navItem {
+    padding: 6px 12px; /* Botones al mínimo tamaño legible */
+  }
 }
