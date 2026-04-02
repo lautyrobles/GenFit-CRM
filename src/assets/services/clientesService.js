@@ -20,6 +20,10 @@ export const obtenerClientes = async () => {
   }
 };
 
+const COLUMNAS_PERMITIDAS = [
+  'dni', 'first_name', 'last_name', 'email', 'phone', 'plan_id', 'enabled', 'role'
+];
+
 /* ===================================================
     🔹 BUSCAR POR DNI
    =================================================== */
@@ -100,16 +104,29 @@ export const crearCliente = async (cliente) => {
   }
 };
 
+const sanitizarDatosUsuario = (datos) => {
+  return Object.keys(datos)
+    .filter(key => COLUMNAS_PERMITIDAS.includes(key))
+    .reduce((obj, key) => {
+      // Si el valor es null, lo mandamos como null o string vacío según prefieras
+      // Para BD suele ser mejor mantener el null si la columna lo permite
+      obj[key] = datos[key];
+      return obj;
+    }, {});
+};
+
 /* ===================================================
     🔹 ACTUALIZAR CLIENTE
    =================================================== */
-export const actualizarCliente = async (id, datos) => {
+export const actualizarCliente = async (id, datosSucios) => {
   try {
+    const datosLimpios = sanitizarDatosUsuario(datosSucios);
+
     const { data, error } = await supabase
       .from('users')
-      .update(datos)
+      .update(datosLimpios)
       .eq('id', id)
-      .select('*, plans(*), subscriptions(*)');
+      .select(); 
 
     if (error) throw error;
     return data[0];
