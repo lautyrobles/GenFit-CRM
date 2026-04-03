@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, Printer } from 'lucide-react';
+import { Check, Printer, AlertCircle, XCircle } from 'lucide-react';
 import Loader from '../../../Components/Loader/Loader';
 import { supabase } from '../../../assets/services/supabaseClient';
 import { registrarPago } from '../../../assets/services/paymentsService';
@@ -10,45 +10,32 @@ import styles from '../Pagos.module.css';
 const ModalConfirmacion = ({ datos, onBack, onSuccess, user }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(""); // 👈 Estado para manejar errores sin alerts
 
-  const ejecutarPago = async () => {
-    setIsProcessing(true);
-    try {
-      const fechaVencimiento = new Date();
-      fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
+const ejecutarPago = async () => {
+  setIsProcessing(true);
+  try {
+    // Llamamos al servicio pasando los datos y el gym_id
+    await registrarPago(datos, user.gym_id);
+    
+    // Log de movimiento (opcional hacerlo aquí o dentro del service)
+    await registrarMovimiento(user.id, "Pagos", "COBRO", `Cobro a ${datos.clienteNombre}`, user.gym_id);
 
-      await registrarPago({
-        user_id: datos.clienteId, amount: Number(datos.montoFinal),
-        payment_date: datos.fechaPago, payment_method: datos.metodoPago,
-        status: 'COMPLETED', notes: `Periodo: ${datos.periodo}`
-      });
-
-      const { error: subError } = await supabase
-        .from('subscriptions').update({ 
-          due_date: fechaVencimiento.toISOString().split('T')[0],
-          active: true, amount_paid: Number(datos.montoFinal)
-        }).eq('user_id', datos.clienteId);
-
-      if (subError) throw subError;
-      await actualizarCliente(datos.clienteId, { enabled: true });
-
-      if (user?.id) {
-        await registrarMovimiento(user.id, "Pagos", "COBRO", `Cobro a ${datos.clienteNombre}`);
-      }
-
-      setIsSuccess(true);
-    } catch (e) {
-      console.error(e);
-      alert("Error al procesar el pago.");
-      onBack();
-    } finally { setIsProcessing(false); }
-  };
+    setIsSuccess(true);
+  } catch (e) {
+    setErrorMessage(e.message);
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   return (
     <div className={`${styles.modalOverlay} ${styles.confirmOverlay}`}>
       <div className={styles.modalCard}>
         {isProcessing ? (
-          <div className={styles.processingState}><Loader text="Sincronizando..." /></div>
+          <div className={styles.processingState}>
+            <Loader text="Procesando transacción..." />
+          </div>
         ) : isSuccess ? (
           <div className={styles.successState}>
             <div className={styles.successIconBox}><Check size={40} /></div>
@@ -61,19 +48,33 @@ const ModalConfirmacion = ({ datos, onBack, onSuccess, user }) => {
           </div>
         ) : (
           <>
-            <div className={styles.modalHeader}><h3>Verificar Emisión</h3></div>
+            <div className={styles.modalHeader}>
+              <h3>Verificar Emisión</h3>
+            </div>
+
+            {/* --- Mensaje de Error dentro del Modal --- */}
+            {errorMessage && (
+              <div className={styles.errorAlertInner}>
+                <XCircle size={18} />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
             <div className={styles.modalBody}>
               <div className={styles.receiptLine}><span>Socio:</span><strong>{datos.clienteNombre}</strong></div>
-              <div className={styles.receiptLine}><span>Monto:</span><strong className={styles.receiptTotal}>${datos.montoFinal}</strong></div>
+              <div className={styles.receiptLine}><span>Monto:</span><strong className={styles.receiptTotal}>${Number(datos.montoFinal).toLocaleString()}</strong></div>
               <div className={styles.hrLine}></div>
               <div className={styles.receiptGrid}>
                 <div className={styles.gridItem}><small>Canal</small><p>{datos.metodoPago}</p></div>
                 <div className={styles.gridItem}><small>Fecha</small><p>{datos.fechaPago}</p></div>
               </div>
             </div>
+
             <div className={styles.modalActions}>
-              <button className={styles.btnOutline} onClick={onBack}>Revisar</button>
-              <button className={styles.btnConfirm} onClick={ejecutarPago}>Confirmar Pago</button>
+              <button className={styles.btnOutline} onClick={onBack} disabled={isProcessing}>Revisar</button>
+              <button className={styles.btnConfirm} onClick={ejecutarPago} disabled={isProcessing}>
+                Confirmar Pago
+              </button>
             </div>
           </>
         )}

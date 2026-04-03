@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react" // 🎯 Añadimos useRef
+import React, { useState, useEffect, useMemo, useRef } from "react"
 import styles from "./Clientes.module.css"
 import { useNavigate, useLocation } from "react-router-dom"
 
@@ -15,12 +15,13 @@ import HistorialPagos from "./HistorialPagos"
 import Loader from "../../Components/Loader/Loader"
 import CustomersTable from '../../Components/CustomersTable/CustomersTable';
 import { Search, User, Mail, Phone, CreditCard, Calendar, Edit3, ArrowLeft, AlertCircle, Plus, MoreVertical, Trash2, Edit2 } from 'lucide-react'
+import { useAuth } from "../../context/AuthContext" // 👈 Importante
 
 const Clientes = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth(); // 👈 Obtenemos el gym_id del contexto
   
-  // 🎯 REFERENCIA DE CONTROL: Evita que el QR se procese más de una vez
   const qrProcesado = useRef(false);
 
   const [busqueda, setBusqueda] = useState("")
@@ -33,7 +34,6 @@ const Clientes = () => {
   const [pagosLoading, setPagosLoading] = useState(false)
   const [planes, setPlanes] = useState([])
 
-  // Alertas Médicas
   const [alertas, setAlertas] = useState([])
   const [alertasLoading, setAlertasLoading] = useState(false)
   const [mostrarModalAlerta, setMostrarModalAlerta] = useState(false)
@@ -50,50 +50,40 @@ const Clientes = () => {
     dni: "", first_name: "", last_name: "", email: "", phone: "", plan_id: "",
   })
 
-  // 🎯 SOLUCIÓN BLINDADA PARA EL QR
   useEffect(() => {
     const incomingClient = location.state?.clienteSeleccionado;
-
-    // Solo procesamos si hay un cliente Y si no lo hemos procesado ya en este montaje
     if (incomingClient && !qrProcesado.current) {
       setCliente(incomingClient);
-      
-      // Marcamos como procesado para que el useEffect no vuelva a entrar aquí jamás
       qrProcesado.current = true;
-
-      // Limpiamos la navegación
-      navigate(location.pathname, { 
-        replace: true, 
-        state: {} 
-      });
+      navigate(location.pathname, { replace: true, state: {} });
       window.history.replaceState({}, document.title);
     }
   }, [location, navigate]);
 
-  // 🎯 FUNCIÓN VOLVER: Ahora es infalible
-const handleVolverAlListado = () => {
-    // En lugar de navegar con React Router, forzamos una recarga limpia del navegador
-    // Esto limpia TODO el estado de navegación de memoria.
+  const handleVolverAlListado = () => {
     window.location.href = "/clientes"; 
   };
 
+  // 🔄 Carga de planes (Filtrado por Gym)
   useEffect(() => {
+    if (!user?.gym_id) return;
     const loadPlanes = async () => {
       try {
-        const data = await obtenerPlanes();
+        const data = await obtenerPlanes(user.gym_id);
         setPlanes(data || []);
       } catch (err) { console.error("Error planes", err) }
     }
     loadPlanes()
-  }, [])
+  }, [user?.gym_id]);
 
+  // 🔄 Carga de datos extra del cliente seleccionado (Pagos y Alertas)
   useEffect(() => {
-    if (!cliente?.id) return;
+    if (!cliente?.id || !user?.gym_id) return;
     const fetchDatosExtras = async () => {
       setPagosLoading(true); setAlertasLoading(true);
       try {
         const [dataPagos, dataAlertas] = await Promise.all([
-          obtenerPagos(),
+          obtenerPagos(user.gym_id), // 👈 Pasamos gym_id
           obtenerAlertasMedicas(cliente.id)
         ]);
         const pagosFiltrados = dataPagos.filter(p => (p.users?.id === cliente.id) || (p.user_id === cliente.id));
@@ -104,7 +94,7 @@ const handleVolverAlListado = () => {
       } finally { setPagosLoading(false); setAlertasLoading(false); }
     }
     fetchDatosExtras()
-  }, [cliente])
+  }, [cliente, user?.gym_id]);
 
   useEffect(() => {
     const cerrar = () => setAlertaMenuAbierta(null);
@@ -112,16 +102,17 @@ const handleVolverAlListado = () => {
     return () => window.removeEventListener("click", cerrar);
   }, []);
 
+  // 🔍 Búsqueda (Filtrada por Gym)
   const handleBuscar = async () => {
-    if (!busqueda.trim()) return;
+    if (!busqueda.trim() || !user?.gym_id) return;
     setLoading(true); setCliente(null);
     try {
       let resultados = [];
       if (filtroActivo === "dni") {
-        const data = await obtenerClientePorDocumento(busqueda)
+        const data = await obtenerClientePorDocumento(busqueda, user.gym_id)
         resultados = data ? [data] : []
       } else {
-        const todos = await obtenerClientes()
+        const todos = await obtenerClientes(user.gym_id)
         resultados = todos.filter(c => 
           `${c.first_name} ${c.last_name}`.toLowerCase().includes(busqueda.toLowerCase().trim())
         )
@@ -184,7 +175,8 @@ const handleVolverAlListado = () => {
         setAlertas(prev => prev.map(a => a.id === alertaEditandoId ? data : a));
         mostrarNotificacion("✅ Alerta actualizada");
       } else {
-        const data = await crearAlertaMedica({ user_id: cliente.id, ...nuevaAlerta });
+        // 🎯 Inyectamos gym_id al crear la alerta médica
+        const data = await crearAlertaMedica({ user_id: cliente.id, ...nuevaAlerta }, user.gym_id);
         setAlertas(prev => [data, ...prev]);
         mostrarNotificacion("✅ Alerta añadida");
       }
@@ -252,7 +244,8 @@ const handleVolverAlListado = () => {
         <>
           {!cliente && (
             <div className={styles.tableFadeIn}>
-              <CustomersTable onSelectCliente={(c) => setCliente(c)} />
+              {/* 🎯 Pasamos el gym_id a la tabla de clientes general */}
+              <CustomersTable onSelectCliente={(c) => setCliente(c)} gymId={user?.gym_id} />
             </div>
           )}
 
@@ -314,6 +307,7 @@ const handleVolverAlListado = () => {
 
               <div className={`${styles.card} ${styles.asistenciaCard}`}>
                 <div className={styles.cardHeader}><h3>Asistencia</h3><Calendar size={18}/></div>
+                {/* 🎯 Pasamos el socio al componente, el cual debería manejar el filtrado interno */}
                 <ClienteAsistencia socio={cliente} />
               </div>
 

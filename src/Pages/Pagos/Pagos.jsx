@@ -17,6 +17,8 @@ const Pagos = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Lógica de permisos basada en el rol del usuario
   const role = user?.role || "USER";
   const canRegisterPayments = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR"].includes(role);
 
@@ -31,16 +33,29 @@ const Pagos = () => {
   const [datosTemporales, setDatosTemporales] = useState(null);
   const [socioPreseleccionado, setSocioPreseleccionado] = useState(null);
 
+  // Helper para notificaciones visuales
   const mostrarToast = (msg, tipo = "error") => {
-    if (tipo === "error") { setError(msg); setSuccess(""); } 
-    else { setSuccess(msg); setError(""); }
+    if (tipo === "error") { 
+      setError(msg); 
+      setSuccess(""); 
+    } else { 
+      setSuccess(msg); 
+      setError(""); 
+    }
     setTimeout(() => { setError(""); setSuccess(""); }, 4000);
   };
 
+  /**
+   * 🔄 Carga de historial (Actualizado con gym_id)
+   */
   const cargarHistorial = useCallback(async () => {
+    // 🛡️ Seguridad: Si no hay gym_id, no disparamos la carga para evitar errores de RLS
+    if (!user?.gym_id) return;
+
     try {
       setLoading(true);
-      const data = await obtenerPagos();
+      // Pasamos el gym_id al servicio para filtrar los ingresos de este gimnasio
+      const data = await obtenerPagos(user.gym_id);
       
       const pagosFormateados = data.map(p => ({
         id: p.id,
@@ -55,24 +70,31 @@ const Pagos = () => {
       
       setPagos(pagosFormateados);
     } catch (e) {
+      console.error("Error en Pagos:", e);
       mostrarToast("Error al sincronizar historial.", "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.gym_id]);
 
-  // 🎯 EFECTO PARA DETECTAR REDIRECCIÓN DESDE CLIENTES
+  /**
+   * 🎯 EFECTO PARA DETECTAR REDIRECCIÓN DESDE CLIENTES
+   * Permite abrir el modal de pago automáticamente si venimos del perfil de un socio
+   */
   useEffect(() => {
     if (location.state?.abrirNuevoPago && location.state?.clienteData) {
       setSocioPreseleccionado(location.state.clienteData);
       setStep("FORM");
       
-      // Limpiamos el state de la navegación para que no se abra solo al recargar
+      // Limpiamos el state de la navegación para evitar bucles al recargar
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location, navigate]);
 
-  useEffect(() => { cargarHistorial(); }, [cargarHistorial]);
+  // Recargar cuando el componente monta o el gym_id cambia
+  useEffect(() => { 
+    cargarHistorial(); 
+  }, [cargarHistorial]);
 
   return (
     <section className={styles.pagosLayout}>
@@ -92,7 +114,7 @@ const Pagos = () => {
           </div>
           {canRegisterPayments && (
             <button className={styles.btnPrimary} onClick={() => {
-                setSocioPreseleccionado(null); // Reset por si viene de una carga manual anterior
+                setSocioPreseleccionado(null); 
                 setStep("FORM");
             }}>
               <Plus size={16}/> Nuevo Cobro
@@ -112,7 +134,7 @@ const Pagos = () => {
               setStep("IDLE");
               setSocioPreseleccionado(null);
           }} 
-          socioInicial={socioPreseleccionado} // 👈 Pasamos el socio si existe
+          socioInicial={socioPreseleccionado} 
           onContinue={(datos) => {
             setDatosTemporales(datos);
             setStep("CONFIRM");
@@ -130,7 +152,7 @@ const Pagos = () => {
             setStep("IDLE");
             setDatosTemporales(null);
             setSocioPreseleccionado(null);
-            cargarHistorial();
+            cargarHistorial(); // Refrescamos la tabla tras el éxito
             mostrarToast("¡Transacción finalizada!", "success");
           }}
         />

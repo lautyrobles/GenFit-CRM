@@ -1,15 +1,14 @@
 import { supabase } from "./supabaseClient";
 import { registerUser } from "./authService"; 
 
-/* ===================================================
-    🔹 OBTENER TODOS LOS CLIENTES
-   =================================================== */
-export const obtenerClientes = async () => {
+export const obtenerClientes = async (gymId) => {
+  if (!gymId) return [];
   try {
     const { data, error } = await supabase
       .from('users')
       .select('*, plans(*), subscriptions(*)') 
       .eq('role', 'CLIENT')
+      .eq('gym_id', gymId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -20,32 +19,18 @@ export const obtenerClientes = async () => {
   }
 };
 
-const COLUMNAS_PERMITIDAS = [
-  'dni', 'first_name', 'last_name', 'email', 'phone', 'plan_id', 'enabled', 'role'
-];
-
-/* ===================================================
-    🔹 BUSCAR POR DNI
-   =================================================== */
-export const obtenerClientePorDocumento = async (dni) => {
+export const obtenerClientePorDocumento = async (dni, gymId) => {
+  if (!gymId || !dni) return null;
   try {
     const { data, error } = await supabase
       .from('users')
-      .select(`
-        *,
-        plans (*),
-        subscriptions (*) 
-      `) 
+      .select('*, plans (*), subscriptions (*)') 
       .eq('dni', dni)
+      .eq('gym_id', gymId)
       .maybeSingle();
 
     if (error) throw error;
-
-    // Si no tiene suscripción activa en la tabla, evitamos el undefined
-    if (data && !data.subscriptions) {
-      data.subscriptions = [];
-    }
-
+    if (data && !data.subscriptions) data.subscriptions = [];
     return data;
   } catch (error) {
     console.error("❌ Error al buscar por documento:", error.message);
@@ -53,10 +38,8 @@ export const obtenerClientePorDocumento = async (dni) => {
   }
 };
 
-/* ===================================================
-    🔹 CREAR CLIENTE (Actualizado con Lógica de Activo)
-   =================================================== */
-export const crearCliente = async (cliente) => {
+export const crearCliente = async (cliente, gymId) => {
+  if (!gymId) throw new Error("Gimnasio no especificado");
   try {
     const nuevoUsuario = await registerUser(
         cliente.first_name,
@@ -65,17 +48,17 @@ export const crearCliente = async (cliente) => {
         String(cliente.dni), 
         String(cliente.dni), 
         'CLIENT',            
-        cliente.dni          
+        cliente.dni,
+        gymId
     );
 
     if (nuevoUsuario && nuevoUsuario.id) {
-      // 👉 1. Actualizamos teléfono, plan y ponemos ENABLED en TRUE (Activo)
       const { data, error } = await supabase
         .from('users')
         .update({ 
           phone: cliente.phone, 
           plan_id: cliente.plan_id,
-          enabled: true // <--- ¡AQUÍ ESTABA EL ERROR! AHORA DICE ENABLED
+          enabled: true
         })
         .eq('id', nuevoUsuario.id)
         .select()
@@ -83,7 +66,6 @@ export const crearCliente = async (cliente) => {
 
       if (error) throw error;
 
-      // 👉 2. Creamos sus primeros 30 días de suscripción
       const hoy = new Date();
       const due_date = new Date(hoy.getTime() + (30 * 24 * 60 * 60 * 1000));
 
@@ -92,35 +74,27 @@ export const crearCliente = async (cliente) => {
          plan_id: cliente.plan_id || null, 
          start_date: hoy.toISOString(), 
          due_date: due_date.toISOString(), 
-         active: true
+         active: true,
+         gym_id: gymId
       }]);
 
       return data; 
     }
-    return nuevoUsuario;
   } catch (error) {
     console.error("❌ Error crear cliente:", error.message);
     throw error;
   }
 };
 
-const sanitizarDatosUsuario = (datos) => {
-  return Object.keys(datos)
-    .filter(key => COLUMNAS_PERMITIDAS.includes(key))
-    .reduce((obj, key) => {
-      // Si el valor es null, lo mandamos como null o string vacío según prefieras
-      // Para BD suele ser mejor mantener el null si la columna lo permite
-      obj[key] = datos[key];
-      return obj;
-    }, {});
-};
-
-/* ===================================================
-    🔹 ACTUALIZAR CLIENTE
-   =================================================== */
 export const actualizarCliente = async (id, datosSucios) => {
   try {
-    const datosLimpios = sanitizarDatosUsuario(datosSucios);
+    const COLUMNAS_PERMITIDAS = ['dni', 'first_name', 'last_name', 'email', 'phone', 'plan_id', 'enabled', 'role'];
+    const datosLimpios = Object.keys(datosSucios)
+      .filter(key => COLUMNAS_PERMITIDAS.includes(key))
+      .reduce((obj, key) => {
+        obj[key] = datosSucios[key];
+        return obj;
+      }, {});
 
     const { data, error } = await supabase
       .from('users')

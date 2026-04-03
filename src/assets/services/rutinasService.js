@@ -1,5 +1,8 @@
 import { supabase } from "./supabaseClient";
 
+/**
+ * Obtiene la rutina completa de un usuario específico
+ */
 export const obtenerRutinaPorUsuario = async (userId) => {
   const { data, error } = await supabase
     .from('routines')
@@ -14,29 +17,27 @@ export const obtenerRutinaPorUsuario = async (userId) => {
       )
     `)
     .eq('user_id', userId)
-    .maybeSingle(); // Trae la rutina actual o null
-
+    .maybeSingle();
+    
   if (error) throw error;
   return data;
 };
 
+/**
+ * Elimina la rutina de un usuario (para sobrescribir o dar de baja)
+ */
 export const eliminarRutinaPorUsuario = async (userId) => {
-  if (!userId) throw new Error("ID de usuario no proporcionado");
-
-  const { data, error } = await supabase
-    .from('routines')
-    .delete()
-    .eq('user_id', userId);
-
-  if (error) {
-    console.error("Error en service al eliminar rutina:", error);
-    throw error;
-  }
-  
+  const { error } = await supabase.from('routines').delete().eq('user_id', userId);
+  if (error) throw error;
   return true;
 };
 
-export const obtenerTodasLasPendientes = async () => {
+/**
+ * Obtiene todas las rutinas pendientes de validación de UN GIMNASIO
+ */
+export const obtenerTodasLasPendientes = async (gymId) => {
+  if (!gymId) return [];
+  
   const { data, error } = await supabase
     .from('routines')
     .select(`
@@ -50,8 +51,9 @@ export const obtenerTodasLasPendientes = async () => {
         )
       )
     `)
+    .eq('gym_id', gymId)
     .eq('is_active', false)
-    .order('id', { ascending: true });
+    .order('id', { ascending: true }); // 👈 Cambiado: created_at por id
 
   if (error) throw error;
   return data;

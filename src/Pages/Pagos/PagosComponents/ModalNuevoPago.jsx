@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search } from 'lucide-react';
 import { obtenerClientePorDocumento } from '../../../assets/services/clientesService';
+import { useAuth } from '../../../context/AuthContext'; // 👈 Importante para el filtro
 import styles from '../Pagos.module.css';
 
 const ModalNuevoPago = ({ onClose, onContinue, socioInicial }) => {
+  const { user } = useAuth(); // 👈 Obtenemos el gym_id
   const [loading, setLoading] = useState(false);
   const [nuevoPago, setNuevoPago] = useState({
     clienteId: null,
     clienteDocumento: "",
     clienteNombre: "",
     planNombre: "",
-    periodo: new Date().toISOString().slice(0, 7), // Precarga mes actual (YYYY-MM)
+    periodo: new Date().toISOString().slice(0, 7),
     montoFinal: "",
     fechaPago: new Date().toISOString().split("T")[0],
     metodoPago: "EFECTIVO",
     comprobante: ""
   });
 
-  // 🎯 EFECTO: Si venimos desde el perfil del cliente, autocompletamos todo
   useEffect(() => {
     if (socioInicial) {
       setNuevoPago(prev => ({
@@ -25,7 +26,6 @@ const ModalNuevoPago = ({ onClose, onContinue, socioInicial }) => {
         clienteId: socioInicial.id,
         clienteDocumento: socioInicial.dni || "",
         clienteNombre: `${socioInicial.first_name} ${socioInicial.last_name}`,
-        // Intentamos sacar el precio y nombre del plan si vienen en el objeto
         planNombre: socioInicial.plans?.name || socioInicial.plan_name || "Plan Estándar",
         montoFinal: socioInicial.plans?.price || socioInicial.plan_price || ""
       }));
@@ -39,10 +39,12 @@ const ModalNuevoPago = ({ onClose, onContinue, socioInicial }) => {
 
   const buscarCliente = async () => {
     const dni = nuevoPago.clienteDocumento.trim();
-    if (!dni) return;
+    if (!dni || !user?.gym_id) return;
+    
     setLoading(true);
     try {
-      const cliente = await obtenerClientePorDocumento(dni);
+      // 🎯 Buscamos solo socios que pertenezcan a este gimnasio
+      const cliente = await obtenerClientePorDocumento(dni, user.gym_id);
       if (cliente) {
         setNuevoPago(prev => ({
           ...prev,
@@ -51,7 +53,11 @@ const ModalNuevoPago = ({ onClose, onContinue, socioInicial }) => {
           planNombre: cliente.plans?.name || "Sin Plan",
           montoFinal: cliente.plans?.price || ""
         }));
+      } else {
+        alert("Socio no encontrado en este gimnasio.");
       }
+    } catch (error) {
+      console.error(error);
     } finally { setLoading(false); }
   };
 
@@ -75,7 +81,6 @@ const ModalNuevoPago = ({ onClose, onContinue, socioInicial }) => {
 
         <form onSubmit={handleSubmit}>
           <div className={styles.formSplit}>
-            {/* Columna Izquierda: Identificación */}
             <div className={styles.formColumn}>
               <h4 className={styles.columnTitle}>Información del Socio</h4>
               
@@ -108,7 +113,6 @@ const ModalNuevoPago = ({ onClose, onContinue, socioInicial }) => {
               </div>
             </div>
 
-            {/* Columna Derecha: Pago */}
             <div className={styles.formColumn}>
               <h4 className={styles.columnTitle}>Detalles del Pago</h4>
               

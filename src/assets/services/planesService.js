@@ -1,77 +1,87 @@
 import { supabase } from "./supabaseClient";
 
-/* =========================================
-   🟢 OBTENER TODOS LOS PLANES
-========================================= */
-export const obtenerPlanes = async () => {
+/**
+ * Obtiene los planes filtrados por el gimnasio del usuario
+ */
+export const obtenerPlanes = async (gymId) => {
   try {
-    console.log("📡 Obteniendo planes desde Supabase...");
-    
+    // Si por alguna razón no llega el gymId, no devolvemos nada para evitar mezclar datos
+    if (!gymId) return [];
+
     const { data, error } = await supabase
-      .from('plans')
-      .select('*')
-      .order('price', { ascending: true }); // Ordenamos por precio
+      .from("plans")
+      .select("*")
+      .eq("gym_id", gymId) // 👈 Filtro fundamental
+      .order("price", { ascending: true });
 
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error("❌ Error al obtener planes:", error.message);
+    console.error("Error al obtener planes:", error.message);
     throw error;
   }
 };
 
-/* =========================================
-   🟡 CREAR UN PLAN
-========================================= */
-export const crearPlan = async (plan) => {
+/**
+ * Crea un nuevo plan asignándole el gym_id correspondiente
+ */
+export const crearPlan = async (planData, gymId) => {
   try {
     const { data, error } = await supabase
-      .from('plans')
-      .insert([plan])
-      .select();
+      .from("plans")
+      .insert([
+        { 
+          ...planData, 
+          gym_id: gymId // 👈 Seteamos el gimnasio al crear
+        }
+      ])
+      .select()
+      .single();
 
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error("❌ Error al crear plan:", error.message);
+    console.error("Error al crear plan:", error.message);
     throw error;
   }
 };
 
-/* =========================================
-   🟠 ACTUALIZAR PLAN
-========================================= */
-export const actualizarPlan = async (id, plan) => {
+/**
+ * Actualiza un plan existente
+ */
+export const actualizarPlan = async (id, planData) => {
   try {
     const { data, error } = await supabase
-      .from('plans')
-      .update(plan)
-      .eq('id', id)
-      .select();
+      .from("plans")
+      .update(planData)
+      .eq("id", id)
+      .select()
+      .single();
 
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error("❌ Error al actualizar plan:", error.message);
+    console.error("Error al actualizar plan:", error.message);
     throw error;
   }
 };
 
-/* =========================================
-   🟣 CAMBIAR ESTADO
-========================================= */
+/**
+ * Cambia el estado (activo/inactivo) de un plan
+ */
 export const cambiarEstadoPlan = async (id, active) => {
   try {
     const { data, error } = await supabase
-      .from('plans')
-      .update({ active: active })
-      .eq('id', id)
-      .select();
+      .from("plans")
+      .update({ active })
+      .eq("id", id)
+      .select()
+      .single();
 
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error("❌ Error al cambiar estado:", error.message);
+    console.error("Error al cambiar estado del plan:", error.message);
     throw error;
   }
 };

@@ -2,9 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar as CalendarIcon, ArrowRight, CheckCircle2, Circle } from 'lucide-react';
 import { obtenerAsistenciasPorUsuario } from '../../assets/services/asistenciaService';
+import { useAuth } from '../../context/AuthContext'; 
 import styles from './ClienteAsistencia.module.css';
 
 const ClienteAsistencia = ({ socio }) => {
+  const { user } = useAuth(); 
   const [asistencias, setAsistencias] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -13,24 +15,24 @@ const ClienteAsistencia = ({ socio }) => {
 
   useEffect(() => {
     const cargarDatos = async () => {
-      if (!socio?.id) return;
+      if (!socio?.id || !user?.gym_id) return;
+      
       try {
         setLoading(true);
         const dias = await obtenerAsistenciasPorUsuario(socio.id);
-        setAsistencias(dias);
+        setAsistencias(dias || []);
       } catch (error) {
-        console.error("Error al cargar asistencias", error);
+        console.error("❌ Error al cargar asistencias del socio:", error);
       } finally {
         setLoading(false);
       }
     };
-    cargarDatos();
-  }, [socio]);
 
-  // Lógica para obtener los días de la semana actual (Lunes a Domingo)
+    cargarDatos();
+  }, [socio?.id, user?.gym_id]); 
+
   const diasSemana = useMemo(() => {
     const current = new Date();
-    // Ajuste para que la semana empiece el Lunes (1)
     const dayOfWeek = current.getDay();
     const diff = current.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
     const monday = new Date(current.setDate(diff));
@@ -45,7 +47,9 @@ const ClienteAsistencia = ({ socio }) => {
   const fechaHeader = `Semana del ${diasSemana[0].toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}`;
 
   const irAAsistencia = () => {
-    navigate('/asistencia', { state: { dni: socio.dni } });
+    if (socio?.dni) {
+      navigate('/asistencia', { state: { dni: socio.dni } });
+    }
   };
 
   return (
@@ -72,7 +76,9 @@ const ClienteAsistencia = ({ socio }) => {
               const diaISO = fecha.toISOString().split('T')[0];
               const asistio = asistencias.includes(diaISO);
               const esHoy = diaISO === hoyISO;
-              const nombreDia = fecha.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase().replace('.', '');
+              const nombreDia = fecha.toLocaleDateString('es-ES', { weekday: 'short' })
+                .toUpperCase()
+                .replace('.', '');
 
               return (
                 <div 
@@ -82,7 +88,7 @@ const ClienteAsistencia = ({ socio }) => {
                   <span className={styles.diaNombre}>{nombreDia}</span>
                   <div className={`${styles.statusDot} ${asistio ? styles.asistio : styles.falto}`}>
                     {asistio ? (
-                      <CheckCircle2 size={24} weight="fill" />
+                      <CheckCircle2 size={24} />
                     ) : (
                       <Circle size={24} className={styles.emptyCircle} />
                     )}
@@ -96,7 +102,9 @@ const ClienteAsistencia = ({ socio }) => {
       </div>
 
       <div className={styles.footerStats}>
-         <p>Has asistido a <strong>{asistencias.length}</strong> sesiones este mes</p>
+          <p>
+            Asistencias registradas: <strong>{asistencias.length}</strong>
+          </p>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import localStyles from "./RutinaNutricion.module.css";
 import { supabase } from "../../assets/services/supabaseClient";
+import { useAuth } from "../../context/AuthContext"; // 👈 Importante
 import { FiCalendar, FiActivity, FiUser, FiCheckCircle, FiLoader, FiTrash2, FiPlus, FiEdit3 } from "react-icons/fi";
 import {
   obtenerRutinaPorUsuario,
@@ -9,6 +10,7 @@ import {
 } from "../../assets/services/rutinasService";
 
 const RutinaNutricion = ({ cliente }) => {
+  const { user } = useAuth(); // 👈 Obtenemos el gym_id del staff
   const [pendientes, setPendientes] = useState([]);
   const [rutinaIndividual, setRutinaIndividual] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,57 +22,30 @@ const RutinaNutricion = ({ cliente }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  useEffect(() => {
-    const cargarDatos = async () => {
-      setLoading(true);
-      try {
-        if (cliente) {
-          const { data, error } = await supabase
-            .from('routines')
-            .select(`
-              id, name, is_active, user_id,
-              routine_days (
-                id, day_name, order_index,
-                muscle_blocks (
-                  id, muscle_name, order_index,
-                  exercises (id, name, sets, reps, video_url)
-                )
-              )
-            `)
-            .eq('user_id', cliente.id)
-            .maybeSingle();
-
-          if (error) throw error;
-          setRutinaIndividual(data);
-        } else {
-          const { data, error } = await supabase
-            .from('routines')
-            .select(`
-              id, name, is_active, user_id,
-              users (first_name, last_name),
-              routine_days (
-                id, day_name, order_index,
-                muscle_blocks (
-                  id, muscle_name, order_index,
-                  exercises (id, name, sets, reps, video_url)
-                )
-              )
-            `)
-            .eq('is_active', false)
-            .order('id', { ascending: true });
-
-          if (error) throw error;
-          setPendientes(data || []);
-        }
-      } catch (err) {
-        console.error("Error cargando rutinas:", err);
-      } finally {
-        setLoading(false);
+useEffect(() => {
+  const cargarDatos = async () => {
+    if (!user?.gym_id) return;
+    setLoading(true);
+    try {
+      if (cliente) {
+        // Usamos el service
+        const data = await obtenerRutinaPorUsuario(cliente.id);
+        setRutinaIndividual(data);
+      } else {
+        // Usamos el service (que ya corregimos con .order('id'))
+        const data = await obtenerTodasLasPendientes(user.gym_id);
+        setPendientes(data || []);
       }
-    };
+    } catch (err) {
+      console.error("Error cargando rutinas:", err);
+      // Opcional: mostrar un mensaje al usuario en lugar de solo consola
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    cargarDatos();
-  }, [cliente]);
+  cargarDatos();
+}, [cliente, user?.gym_id]);
 
   const handleEliminarRutina = async () => {
     try {
@@ -116,6 +91,7 @@ const RutinaNutricion = ({ cliente }) => {
     setShowModal(true);
   };
 
+  // ... (Funciones auxiliares updateExercise, addExercise, removeExercise se mantienen igual)
   const updateExercise = (dayIdx, groupIdx, exIdx, field, value) => {
     const newData = [...editingData];
     newData[dayIdx].grupos[groupIdx].exercises[exIdx][field] = value;
@@ -135,22 +111,31 @@ const RutinaNutricion = ({ cliente }) => {
   };
 
   const aprobarRutina = async () => {
-    if (!selectedRoutine?.user_id) return;
+    if (!selectedRoutine?.user_id || !user?.gym_id) return;
     setIsSaving(true);
-    setFeedback("Guardando cambios...");
+    setFeedback("Sincronizando con la App...");
 
     try {
       const userId = selectedRoutine.user_id;
+      
+      // 1. Limpiamos la rutina vieja para insertar la nueva versión validada
       await supabase.from('routines').delete().eq('user_id', userId);
 
+      // 2. Insertamos la cabecera con is_active: true y el GYM_ID
       const { data: routineData, error: routineError } = await supabase
         .from('routines')
-        .insert({ user_id: userId, name: `Plan Entrenamiento (Aprobado)`, is_active: true })
+        .insert({ 
+          user_id: userId, 
+          gym_id: user.gym_id, // 👈 Vínculo multi-tenant
+          name: `Plan Entrenamiento (Validado)`, 
+          is_active: true 
+        })
         .select().single();
 
       if (routineError) throw routineError;
       const routineId = routineData.id;
 
+      // 3. Iteración de Días, Bloques y Ejercicios (Se mantiene tu lógica funcional)
       for (let dIdx = 0; dIdx < editingData.length; dIdx++) {
         const day = editingData[dIdx];
         const { data: dayData } = await supabase.from('routine_days').insert({ routine_id: routineId, day_name: day.dia, order_index: dIdx }).select().single();
@@ -177,17 +162,15 @@ const RutinaNutricion = ({ cliente }) => {
         }
       }
 
+      // Refrescar UI
       if (cliente) {
-        const { data: refreshed } = await supabase
-          .from('routines')
-          .select(`id, name, is_active, user_id, routine_days(id, day_name, order_index, muscle_blocks(id, muscle_name, order_index, exercises(id, name, sets, reps, video_url)))`)
-          .eq('id', routineId).single();
+        const refreshed = await obtenerRutinaPorUsuario(cliente.id);
         setRutinaIndividual(refreshed);
       } else {
         setPendientes(prev => prev.filter(r => r.id !== selectedRoutine.id));
       }
 
-      setFeedback("¡Cambios guardados con éxito!");
+      setFeedback("¡Rutina validada y enviada al cliente!");
       setTimeout(() => {
         setShowModal(false);
         setFeedback("");
@@ -196,11 +179,12 @@ const RutinaNutricion = ({ cliente }) => {
 
     } catch (e) {
       console.error(e);
-      setFeedback("Error al guardar.");
+      setFeedback("Error en la sincronización.");
       setIsSaving(false);
     }
   };
 
+  // ... (renderModal y renderDeleteModal se mantienen igual con tus estilos)
   const renderModal = () => (
     <div className={localStyles.modalOverlay} onClick={() => setShowModal(false)}>
       <div className={localStyles.modalContent} onClick={e => e.stopPropagation()}>
@@ -244,7 +228,7 @@ const RutinaNutricion = ({ cliente }) => {
         <div className={localStyles.modalFooter}>
           <div style={{ marginRight: 'auto', fontWeight: '600', color: feedback.includes('Error') ? '#dc2626' : '#059669' }}>{feedback}</div>
           <button className={localStyles.btnCancel} onClick={() => setShowModal(false)} disabled={isSaving}>Cancelar</button>
-          <button className={localStyles.btnSave} onClick={aprobarRutina} disabled={isSaving}>{isSaving ? "Guardando..." : "Guardar Cambios"}</button>
+          <button className={localStyles.btnSave} onClick={aprobarRutina} disabled={isSaving}>{isSaving ? "Guardando..." : "Validar y Publicar"}</button>
         </div>
       </div>
     </div>
@@ -271,7 +255,6 @@ const RutinaNutricion = ({ cliente }) => {
   return (
     <>
       {cliente ? (
-        /* --- MODO PERFIL CLIENTE --- */
         <div className={localStyles.perfilModule}>
           <div className={localStyles.perfilHeader}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -307,11 +290,10 @@ const RutinaNutricion = ({ cliente }) => {
           )}
         </div>
       ) : (
-        /* --- MODO BANDEJA GLOBAL --- */
         <div className={localStyles.pageContainer}>
           <div className={localStyles.header}>
             <h2>Bandeja de Solicitudes</h2>
-            <p>Rutinas generadas por clientes esperando revisión.</p>
+            <p>Rutinas generadas por clientes esperando revisión en <strong>{user?.gym_name}</strong>.</p>
           </div>
           {loading ? (
             <div className={localStyles.loadingContainer}><FiLoader className={localStyles.spinner} /><p>Sincronizando...</p></div>
@@ -321,7 +303,7 @@ const RutinaNutricion = ({ cliente }) => {
                  <FiCheckCircle size={60} color="#10b981" />
               </div>
               <h3>¡Todo al día!</h3>
-              <p>No hay solicitudes pendientes.</p>
+              <p>No hay solicitudes pendientes en esta sucursal.</p>
             </div>
           ) : (
             <div className={localStyles.grid}>
@@ -339,7 +321,6 @@ const RutinaNutricion = ({ cliente }) => {
         </div>
       )}
 
-      {/* Modales fuera del flujo principal para evitar problemas de herencia CSS */}
       {showModal && renderModal()}
       {showDeleteConfirm && renderDeleteModal()}
     </>

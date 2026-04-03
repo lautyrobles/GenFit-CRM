@@ -1,0 +1,383 @@
+.container {
+  animation: fadeIn 0.5s ease-in-out;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  background: #ffffff;
+  padding: 24px 32px;
+  border-radius: 24px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.header h2 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.btnMain {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+}
+
+.btnMain:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.3);
+}
+
+/* --- SECCIÓN DIVIDER --- */
+.sectionDivider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  color: #7c3aed;
+}
+
+.sectionDivider h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #475569;
+  margin: 0;
+}
+
+/* --- EMPTY STATE (Corregido) --- */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 40px;
+  background: #ffffff;
+  border-radius: 24px;
+  border: 2px dashed #e2e8f0;
+  color: #94a3b8;
+  text-align: center;
+  gap: 16px;
+}
+
+.emptyState p {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* --- GRILLA Y CARDS --- */
+.gymGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.gymCard {
+  background: white;
+  padding: 28px;
+  border-radius: 24px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.gymCard:hover {
+  border-color: #7c3aed;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.08);
+}
+
+.gymCard h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.gymCard code {
+  background: #f8fafc;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  color: #64748b;
+  display: block;
+  margin-top: 12px;
+  border: 1px solid #f1f5f9;
+  font-family: 'JetBrains Mono', monospace;
+  word-break: break-all;
+}
+
+.badge {
+  background: #dcfce7;
+  color: #16a34a;
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+/* --- MODAL FORMULARIO --- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.modalCard {
+  background: white;
+  width: 100%;
+  max-width: 550px;
+  padding: 40px;
+  border-radius: 32px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.4s ease-out;
+}
+
+.modalTitle {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 24px 0;
+  text-align: center;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 24px 0;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.divider::before, .divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #f1f5f9;
+}
+
+.divider span {
+  padding: 0 15px;
+}
+
+/* --- INPUTS Y SELECT (Corregido) --- */
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.formGroup label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.formGroup input, .selectInput {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 0.95rem;
+  color: #1e293b;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+/* Estilo específico para el SELECT */
+.selectInput {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 18px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.formGroup input:focus, .selectInput:focus {
+  outline: none;
+  border-color: #7c3aed;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btnCancel {
+  background: #f1f5f9;
+  color: #64748b;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btnCancel:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- CARDS DE SUPER ADMIN --- */
+.saCard {
+  border-left: 5px solid #dc2626 !important;
+  background: linear-gradient(to right, #fff5f5, #ffffff);
+}
+
+.saInfo h4 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.1rem;
+}
+
+.saInfo p {
+  margin: 2px 0 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.badgeSA {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border: 1px solid #fecaca;
+}
+
+/* Efecto Hover para SA Card */
+.saCard:hover {
+  border-color: #dc2626;
+  box-shadow: 0 12px 30px rgba(220, 38, 38, 0.08);
+}
+
+.saActions {
+    display: flex;
+    gap: 8px;
+}
+
+.btnIconEdit, .btnIconDelete {
+    background: white;
+    border: 1px solid #e2e8f0;
+    padding: 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btnIconEdit { color: #64748b; }
+.btnIconEdit:hover { 
+    background: #f5f3ff; 
+    color: #7c3aed; 
+    border-color: #7c3aed; 
+}
+
+.btnIconDelete { color: #ef4444; }
+.btnIconDelete:hover { 
+    background: #fef2f2; 
+    border-color: #ef4444; 
+}
+
+/* Ajuste para que la card de SA no sea solo visual sino funcional */
+.saCard {
+    cursor: default; /* Evitamos el puntero de mano en toda la card si solo queremos clicks en botones */
+}
+
+/* --- ESTADOS DE LA CARD SA --- */
+.saCardDisabled {
+  opacity: 0.6;
+  filter: grayscale(0.5);
+  border-left: 5px solid #94a3b8 !important;
+  background: #f8fafc;
+}
+
+.btnIconStatus {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+/* Estilo cuando está Activo (Botón para apagar) */
+.btnEnabled {
+  color: #ef4444;
+}
+.btnEnabled:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+/* Estilo cuando está Bloqueado (Botón para prender) */
+.btnDisabled {
+  color: #10b981;
+}
+.btnDisabled:hover {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.badgeSA_Disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}

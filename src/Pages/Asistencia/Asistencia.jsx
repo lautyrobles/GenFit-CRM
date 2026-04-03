@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useLocation } from "react-router-dom"; // Importante para recibir el DNI
+import { useLocation } from "react-router-dom"; 
 import styles from "./Asistencia.module.css";
-import { Search, CheckCircle, XCircle, AlertTriangle, QrCode, Clock, UserCheck } from "lucide-react";
+import { Search, CheckCircle, XCircle, Clock, UserCheck, QrCode } from "lucide-react";
 import Loader from "../../Components/Loader/Loader";
+import { useAuth } from "../../context/AuthContext";
 
 // Servicios
 import { 
@@ -12,7 +13,8 @@ import {
 } from "../../assets/services/asistenciaService";
 
 const Asistencia = () => {
-  const { state } = useLocation(); // Capturamos el estado enviado desde Clientes
+  const { user } = useAuth();
+  const { state } = useLocation(); 
   const [busqueda, setBusqueda] = useState(state?.dni || "");
   const [socio, setSocio] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -20,61 +22,74 @@ const Asistencia = () => {
   const [loadingHistorial, setLoadingHistorial] = useState(true);
   const [mensajeTemporal, setMensajeTemporal] = useState("");
 
-  // Memorizamos la carga de historial para evitar re-renderizados innecesarios
   const cargarHistorial = useCallback(async () => {
+    if (!user?.gym_id) return;
     try {
-      const data = await obtenerHistorialHoy();
+      const data = await obtenerHistorialHoy(user.gym_id);
       setHistorial(data || []);
     } catch (error) {
       console.error("Error al cargar historial", error);
     } finally {
       setLoadingHistorial(false);
     }
-  }, []);
+  }, [user?.gym_id]);
 
-  // Carga inicial e historial
   useEffect(() => {
     cargarHistorial();
   }, [cargarHistorial]);
 
-  // Si entramos con un DNI desde el perfil, ejecutamos la búsqueda automáticamente
+  // Búsqueda automática si viene del perfil del cliente
   useEffect(() => {
-    if (state?.dni) {
-      handleBuscar();
+    if (state?.dni && user?.gym_id) {
+      handleBuscar(null, state.dni);
     }
-  }, [state]);
+  }, [state, user?.gym_id]);
 
   const mostrarMensaje = (msg) => {
     setMensajeTemporal(msg);
     setTimeout(() => setMensajeTemporal(""), 3000);
   };
 
-  const handleBuscar = async (e) => {
+  const handleBuscar = async (e, dniForzado = null) => {
     if (e) e.preventDefault();
-    const dniLimpio = busqueda.trim();
-    if (!dniLimpio) return;
+    const dniLimpio = (dniForzado || busqueda).toString().trim();
+    if (!dniLimpio || !user?.gym_id) return;
     
     setLoading(true);
     setSocio(null);
     try {
-      const data = await buscarSocioParaAsistencia(dniLimpio);
-      if (data) setSocio(data);
-      else mostrarMensaje("Socio no encontrado");
+      const data = await buscarSocioParaAsistencia(dniLimpio, user.gym_id);
+      if (data) {
+        setSocio(data);
+      } else {
+        mostrarMensaje("Socio no encontrado");
+      }
     } catch (error) {
-      mostrarMensaje("No se encontró el DNI");
+      console.error(error);
+      mostrarMensaje("Error en la búsqueda");
     } finally {
       setLoading(false);
     }
   };
 
-  // Lógica Semáforo (Verde, Amarillo, Rojo)
   const calcularEstado = (s) => {
     // 1. RESTRICCIONES (ROJO)
     if (!s.enabled) {
       return { status: "rojo", text: "Cuenta Inhabilitada", icon: <XCircle size={24}/> };
     }
-    if (!s.plan_id) {
-      return { status: "rojo", text: "Sin Plan Asignado", icon: <XCircle size={24}/> };
+    
+    // Verificamos si tiene plan y si está al día
+    const suscripcion = s.subscriptions?.[0];
+    const hoy = new Date();
+    hoy.setHours(0,0,0,0);
+    const vencimiento = suscripcion?.due_date ? new Date(suscripcion.due_date) : null;
+    
+    if (!s.plan_id || !vencimiento) {
+      return { status: "rojo", text: "Sin Plan o Pago", icon: <XCircle size={24}/> };
+    }
+
+    if (vencimiento < hoy) {
+      return { status: "rojo", text: `Vencido (${vencimiento.toLocaleDateString()})`, icon: <XCircle size={24}/> };
     }
 
     // 2. REINCIDENCIA - YA INGRESÓ (AMARILLO)
@@ -93,40 +108,38 @@ const Asistencia = () => {
   };
 
   const handleRegistrarEntrada = async () => {
-    if (!socio) return;
+    if (!socio || !user?.gym_id) return;
+    
     const estadoInfo = calcularEstado(socio);
     const granted = estadoInfo.status !== "rojo";
-    const msg = `Ingreso manual - ${estadoInfo.text}`;
+    const msg = estadoInfo.text;
 
     try {
-      await registrarAsistenciaManual(socio.id, granted, msg);
+      await registrarAsistenciaManual(socio.id, user.gym_id, granted, msg);
       mostrarMensaje("✅ Asistencia registrada");
       setSocio(null);
       setBusqueda("");
       cargarHistorial();
     } catch (error) {
+      console.error(error);
       mostrarMensaje("❌ Error al registrar");
     }
   };
 
   return (
     <section className={styles.asistenciaLayout}>
-<div className={styles.headerTitle}>
-  {/* Agrupamos los textos en un contenedor para que sigan en columna */}
-  <div className={styles.titleGroup}>
-    <h2 className={styles.sectionTitle}>Control de Acceso</h2>
-    <p>Busca por DNI o escanea el carnet para ticar el ingreso.</p>
-  </div>
-
-  {/* Botón nuevo a la derecha */}
-  <button className={styles.btnQR}>
-    <QrCode size={18} />
-    <span>Generar QR</span>
-  </button>
-</div>
+      <div className={styles.headerTitle}>
+        <div className={styles.titleGroup}>
+          <h2 className={styles.sectionTitle}>Control de Acceso</h2>
+          <p>Busca por DNI o escanea el carnet para ticar el ingreso.</p>
+        </div>
+        <button className={styles.btnQR}>
+          <QrCode size={18} />
+          <span>Generar QR</span>
+        </button>
+      </div>
 
       <div className={styles.mainGrid}>
-        
         {/* PANEL IZQUIERDO: BUSCADOR Y CHECK-IN */}
         <div className={styles.checkinPanel}>
           <div className={styles.searchSection}>
@@ -166,7 +179,7 @@ const Asistencia = () => {
                 
                 <div className={styles.socioInfo}>
                   <div className={styles.avatarLarge}>
-                    {socio.first_name[0]}{socio.last_name[0]}
+                    {socio.first_name?.[0]}{socio.last_name?.[0]}
                   </div>
                   <div className={styles.socioDetails}>
                     <h3>{socio.first_name} {socio.last_name}</h3>

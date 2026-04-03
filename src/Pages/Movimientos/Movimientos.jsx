@@ -8,6 +8,7 @@ import { Activity, Filter, Trash2, ShieldAlert, Calendar, ChevronLeft, ChevronRi
 const Movimientos = () => {
   const { user } = useAuth()
   const role = user?.role || 'CLIENT'
+  // Definimos permisos: Solo Staff administrativo puede auditar
   const isAllowed = role === 'SUPER_ADMIN' || role === 'ADMIN'
 
   const [movimientos, setMovimientos] = useState([])
@@ -23,11 +24,17 @@ const Movimientos = () => {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    if (!isAllowed) return
+    // Si no está permitido o no hay gym_id, no hacemos nada
+    if (!isAllowed || !user?.gym_id) {
+      setLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       setLoading(true)
       try {
-        const data = await obtenerMovimientos()
+        const data = await obtenerMovimientos(user.gym_id);
+        
         const movimientosFormateados = data.map(log => ({
           id: log.id,
           datetime: log.created_at,
@@ -35,8 +42,8 @@ const Movimientos = () => {
           userEmail: log.users ? log.users.email : '-',
           role: log.users ? log.users.role : 'UNKNOWN',
           module: log.module,
-          action: log.action,
-          detail: log.details
+          action: log.action, // Coincide con servicio
+          detail: log.details // Coincide con servicio (details -> detail)
         }))
         setMovimientos(movimientosFormateados)
       } catch (error) {
@@ -45,8 +52,9 @@ const Movimientos = () => {
         setLoading(false)
       }
     }
+
     fetchData()
-  }, [isAllowed])
+  }, [isAllowed, user?.gym_id])
 
   const formatDateTime = (isoString) => {
     if (!isoString) return '-'
@@ -81,12 +89,11 @@ const Movimientos = () => {
   }
 
   const getActionBadgeClass = (action) => {
-    switch (action) {
-      case 'CREACIÓN': return styles.actionCreate;
-      case 'ELIMINACIÓN': return styles.actionDelete;
-      case 'ACTUALIZACIÓN': return styles.actionUpdate;
-      default: return styles.actionDefault;
-    }
+    const act = action?.toUpperCase();
+    if (act?.includes('CREACIÓN')) return styles.actionCreate;
+    if (act?.includes('ELIMINACIÓN') || act?.includes('BORRADO')) return styles.actionDelete;
+    if (act?.includes('ACTUALIZACIÓN') || act?.includes('EDICIÓN')) return styles.actionUpdate;
+    return styles.actionDefault;
   }
 
   const movimientosFiltrados = useMemo(() => {
@@ -119,6 +126,7 @@ const Movimientos = () => {
     setSelectedDate('');
   }
 
+  // UI de acceso denegado
   if (!isAllowed) {
     return (
       <section className={styles.movimientosLayout}>
@@ -167,7 +175,7 @@ const Movimientos = () => {
               <label>Usuario (Rol)</label>
               <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
                 <option value="ALL">Todos los usuarios</option>
-                <option value="ADMIN">Administrador</option>
+                <option value="ADMIN">Administradores</option>
                 <option value="SUPERVISOR">Supervisor</option>
                 <option value="TRAINER">Coach</option>
               </select>
@@ -199,7 +207,6 @@ const Movimientos = () => {
       </div>
 
       <div className={styles.tableCard}>
-        {/* ÁREA DE TABLA CON SCROLL */}
         <div className={styles.tableScrollArea}>
           {loading ? (
              <div className={styles.loaderArea}><Loader text="Sincronizando auditoría..." /></div>
@@ -252,7 +259,6 @@ const Movimientos = () => {
           )}
         </div>
 
-        {/* PAGINADOR FIJO EN LA BASE DE LA CARD */}
         {!loading && movimientosFiltrados.length > 0 && (
           <div className={styles.pagination}>
             <div className={styles.paginationInfo}>

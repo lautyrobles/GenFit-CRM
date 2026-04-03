@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import styles from "./Planes.module.css";
 import Loader from "../../Components/Loader/Loader";
-import { Plus, X, Edit3, Power, PowerOff, CheckCircle, AlertCircle, LayoutDashboard, Eye } from 'lucide-react';
+import { Plus, X, Edit3, Power, PowerOff, CheckCircle, AlertCircle, LayoutDashboard } from 'lucide-react';
 
 import {
   obtenerPlanes,
@@ -9,15 +9,14 @@ import {
   actualizarPlan,
   cambiarEstadoPlan,
 } from "../../assets/services/planesService";
-import { useAuth } from "../../context/AuthContext"; // 👈 Importamos el hook de autenticación
+import { useAuth } from "../../context/AuthContext";
 
 const Planes = () => {
-  const { user } = useAuth(); // 👈 Obtenemos el usuario actual
+  const { user } = useAuth();
 
   // --- LÓGICA DE PERMISOS ---
-  // Normalizamos el rol para asegurarnos que la comparación sea exacta
   const role = (user?.role || "").toUpperCase();
-  const isReadOnly = role === "SUPERVISOR"; // 👈 Definimos si es solo lectura
+  const isReadOnly = role === "SUPERVISOR";
 
   // --- ESTADOS ---
   const [planes, setPlanes] = useState([]);
@@ -32,22 +31,33 @@ const Planes = () => {
     name: "", price: "", days_per_week_limit: "", entries_per_day_limit: 1, description: "", active: true,
   });
 
-  // --- CARGA INICIAL ---
-  const fetchPlanes = async () => {
-    try {
-      setLoading(true);
-      const data = await obtenerPlanes();
-      setPlanes(data || []);
-    } catch (error) {
-      mostrarToast("Error al cargar los planes", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // --- CARGA INICIAL (Actualizado con gym_id) ---
+const fetchPlanes = async () => {
+  if (!user?.gym_id) {
+    console.warn("⚠️ No hay gym_id en el usuario logueado:", user);
+    return;
+  }
+
+  try {
+    setLoading(true);
+    console.log("🔍 Intentando buscar planes para el Gym ID:", user.gym_id);
+    
+    const data = await obtenerPlanes(user.gym_id);
+    
+    console.log("✅ Datos recibidos de la DB:", data);
+    setPlanes(data || []);
+  } catch (error) {
+    console.error("❌ Error capturado en el componente:", error);
+    mostrarToast("Error al cargar los planes", "error");
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchPlanes();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.gym_id]); // Re-ejecutar si el gym_id cambia o se carga
 
   // --- HELPERS ---
   const mostrarToast = (message, type = "success") => {
@@ -73,7 +83,7 @@ const Planes = () => {
 
   // --- HANDLERS UI ---
   const abrirModalCrear = () => {
-    if (isReadOnly) return; // 🛡️ Seguridad extra
+    if (isReadOnly) return;
     limpiarFormulario();
     setMostrarFormulario(true);
   };
@@ -90,10 +100,10 @@ const Planes = () => {
     setNuevoPlan((prev) => ({ ...prev, [name]: finalValue }));
   };
 
-  // --- LOGICA CRUD ---
+  // --- LOGICA CRUD (Actualizado con gym_id) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isReadOnly) return; // 🛡️ Bloqueo de guardado
+    if (isReadOnly) return;
 
     if (!nuevoPlan.name || !nuevoPlan.price) {
       mostrarToast("Nombre y Precio son obligatorios.", "error");
@@ -115,7 +125,8 @@ const Planes = () => {
         await actualizarPlan(planes[editIndex].id, body);
         mostrarToast("Plan actualizado correctamente");
       } else {
-        await crearPlan(body);
+        // 🎯 IMPORTANTE: Pasamos el gym_id al crear para etiquetarlo
+        await crearPlan(body, user.gym_id);
         mostrarToast("Nuevo plan creado con éxito");
       }
 
@@ -129,7 +140,7 @@ const Planes = () => {
   };
 
   const editarPlan = (index) => {
-    if (isReadOnly) return; // 🛡️ Bloqueo de edición
+    if (isReadOnly) return;
     const p = planes[index];
     setNuevoPlan({
       name: p.name, price: p.price, days_per_week_limit: p.days_per_week_limit || "", entries_per_day_limit: p.entries_per_day_limit || 1, description: p.description || "", active: p.active,
@@ -139,7 +150,7 @@ const Planes = () => {
   };
 
   const toggleEstado = async (id, estadoActual) => {
-    if (isReadOnly) return; // 🛡️ Bloqueo de cambio de estado
+    if (isReadOnly) return;
     try {
       const next = !estadoActual;
       await cambiarEstadoPlan(id, next);
@@ -166,7 +177,6 @@ const Planes = () => {
           <p>Define los productos, precios y límites de acceso para tus clientes.</p>
         </div>
         
-        {/* 🛡️ El botón de crear solo se muestra si NO es Supervisor */}
         {!isReadOnly && (
           <button className={styles.btnPrimary} onClick={abrirModalCrear}>
             <Plus size={16}/> Crear Plan
@@ -176,7 +186,6 @@ const Planes = () => {
 
       {mostrarFormulario && !isReadOnly && (
         <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && cerrarModal()}>
-          {/* ... (Contenido del modal igual al original) ... */}
           <div className={styles.modalContent}>
              <div className={styles.modalHeader}>
                <h3>{editIndex !== null ? "Editar Configuración de Plan" : "Nuevo Plan de Suscripción"}</h3>
@@ -269,8 +278,7 @@ const Planes = () => {
                     </ul>
                   </div>
 
-                  {/* 🛡️ El footer con acciones solo se muestra si NO es Supervisor */}
-                  {!isReadOnly ? (
+                  {!isReadOnly && (
                     <div className={styles.cardFooter}>
                       <button className={styles.btnEdit} onClick={() => editarPlan(i)} title="Editar Configuración">
                         <Edit3 size={16} /> Modificar
@@ -281,10 +289,6 @@ const Planes = () => {
                       >
                         {p.active ? <><PowerOff size={16}/> Pausar</> : <><Power size={16}/> Reactivar</>}
                       </button>
-                    </div>
-                  ) : (
-                    <div className={styles.cardFooterReadOnly}>
-                     
                     </div>
                   )}
                 </div>
