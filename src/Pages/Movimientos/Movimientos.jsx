@@ -3,7 +3,7 @@ import styles from './Movimientos.module.css'
 import { useAuth } from '../../context/AuthContext'
 import Loader from '../../Components/Loader/Loader'
 import { obtenerMovimientos } from '../../assets/services/movimientosService'
-import { Activity, Filter, Trash2, ShieldAlert, Calendar } from 'lucide-react'
+import { Activity, Filter, Trash2, ShieldAlert, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const Movimientos = () => {
   const { user } = useAuth()
@@ -13,10 +13,14 @@ const Movimientos = () => {
   const [movimientos, setMovimientos] = useState([])
   const [loading, setLoading] = useState(true)
   
-  // --- NUEVOS ESTADOS DE FILTRO EXACTOS ---
+  // --- FILTROS ---
   const [roleFilter, setRoleFilter] = useState('ALL')
   const [moduleFilter, setModuleFilter] = useState('ALL')
   const [selectedDate, setSelectedDate] = useState('')
+
+  // --- PAGINACIÓN ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     if (!isAllowed) return
@@ -85,33 +89,29 @@ const Movimientos = () => {
     }
   }
 
-  // ===========================
-  // 🔹 Filtrado Exacto
-  // ===========================
   const movimientosFiltrados = useMemo(() => {
-    return movimientos.filter((mov) => {
-      
-      // 1. Filtro por Rol (Incluye SUPER_ADMIN y ADMIN como "Administradores")
+    const filtrados = movimientos.filter((mov) => {
       if (roleFilter !== 'ALL') {
         if (roleFilter === 'ADMIN' && mov.role !== 'ADMIN' && mov.role !== 'SUPER_ADMIN') return false
         if (roleFilter !== 'ADMIN' && mov.role !== roleFilter) return false
       }
-
-      // 2. Filtro por Módulo
       if (moduleFilter !== 'ALL' && mov.module !== moduleFilter) return false
-      
-      // 3. Filtro por Día Exacto (YYYY-MM-DD)
       if (selectedDate) {
         const movDate = new Date(mov.datetime)
-        // Convertimos la fecha del log a formato local YYYY-MM-DD para comparar con el input
         const localDateString = `${movDate.getFullYear()}-${String(movDate.getMonth() + 1).padStart(2, '0')}-${String(movDate.getDate()).padStart(2, '0')}`
-        
         if (localDateString !== selectedDate) return false
       }
-
       return true
     })
+    setCurrentPage(1);
+    return filtrados;
   }, [movimientos, roleFilter, moduleFilter, selectedDate])
+
+  const totalPages = Math.ceil(movimientosFiltrados.length / itemsPerPage);
+  const currentItems = movimientosFiltrados.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleClearFilters = () => {
     setRoleFilter('ALL'); 
@@ -119,14 +119,13 @@ const Movimientos = () => {
     setSelectedDate('');
   }
 
-  // Vista no autorizada
   if (!isAllowed) {
     return (
       <section className={styles.movimientosLayout}>
         <div className={styles.header}>
            <div className={styles.headerText}>
-              <h2>Auditoría de Sistema</h2>
-              <p>Historial de movimientos y control de acceso.</p>
+             <h2>Auditoría de Sistema</h2>
+             <p>Historial de movimientos y control de acceso.</p>
            </div>
         </div>
         <div className={styles.notAllowedBox}>
@@ -140,11 +139,7 @@ const Movimientos = () => {
 
   return (
     <section className={styles.movimientosLayout}>
-      
-      {/* BLOQUE SUPERIOR ESTÁTICO */}
       <div className={styles.topSection}>
-        
-        {/* Header & KPIs */}
         <div className={styles.headerRow}>
           <div className={styles.headerText}>
             <h2>Auditoría y Logs</h2>
@@ -163,15 +158,11 @@ const Movimientos = () => {
           </div>
         </div>
 
-        {/* Panel de Filtros Simplificado */}
         <div className={styles.filtersWrapper}>
           <div className={styles.filtersHeader}>
             <h4 className={styles.filterTitle}><Filter size={16}/> Filtros de Búsqueda</h4>
           </div>
-          
           <div className={styles.filtersGrid}>
-            
-            {/* 1. Rol de Usuario */}
             <div className={styles.filterGroup}>
               <label>Usuario (Rol)</label>
               <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
@@ -181,8 +172,6 @@ const Movimientos = () => {
                 <option value="TRAINER">Coach</option>
               </select>
             </div>
-
-            {/* 2. Módulo */}
             <div className={styles.filterGroup}>
               <label>Módulo del Sistema</label>
               <select value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
@@ -196,20 +185,12 @@ const Movimientos = () => {
                 <option value="Sistema">Sistema</option>
               </select>
             </div>
-
-            {/* 3. Día */}
             <div className={styles.filterGroup}>
               <label>Día Exacto</label>
-              <input 
-                type="date" 
-                value={selectedDate} 
-                onChange={(e) => setSelectedDate(e.target.value)} 
-              />
+              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
             </div>
-            
-            {/* Acción Limpiar */}
             <div className={styles.filterGroupAction}>
-              <button type="button" className={styles.btnClear} onClick={handleClearFilters} title="Limpiar filtros">
+              <button type="button" className={styles.btnClear} onClick={handleClearFilters}>
                 <Trash2 size={16} /> Limpiar
               </button>
             </div>
@@ -217,8 +198,8 @@ const Movimientos = () => {
         </div>
       </div>
 
-      {/* BLOQUE INFERIOR: Tabla con Scroll Interno */}
       <div className={styles.tableCard}>
+        {/* ÁREA DE TABLA CON SCROLL */}
         <div className={styles.tableScrollArea}>
           {loading ? (
              <div className={styles.loaderArea}><Loader text="Sincronizando auditoría..." /></div>
@@ -240,7 +221,7 @@ const Movimientos = () => {
                 </tr>
               </thead>
               <tbody>
-                {movimientosFiltrados.map((mov) => (
+                {currentItems.map((mov) => (
                   <tr key={mov.id}>
                     <td className={styles.dateCell}>
                       <Calendar size={12} className={styles.dateIcon}/>
@@ -252,9 +233,7 @@ const Movimientos = () => {
                         <span className={styles.userEmail}>{mov.userEmail}</span>
                       </div>
                     </td>
-                    <td>
-                      <span className={styles.rolePill}>{getRoleLabel(mov.role)}</span>
-                    </td>
+                    <td><span className={styles.rolePill}>{getRoleLabel(mov.role)}</span></td>
                     <td>
                       <span className={`${styles.moduleBadge} ${getModuleBadgeClass(mov.module)}`}>
                         {mov.module}
@@ -272,9 +251,37 @@ const Movimientos = () => {
             </table>
           )}
         </div>
+
+        {/* PAGINADOR FIJO EN LA BASE DE LA CARD */}
+        {!loading && movimientosFiltrados.length > 0 && (
+          <div className={styles.pagination}>
+            <div className={styles.paginationInfo}>
+              Mostrando <strong>{currentItems.length}</strong> de <strong>{movimientosFiltrados.length}</strong> registros
+            </div>
+            <div className={styles.paginationControls}>
+              <button 
+                disabled={currentPage === 1} 
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                className={styles.pageBtn}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <span className={styles.pageNum}>
+                Página <strong>{currentPage}</strong> de {totalPages}
+              </span>
+              <button 
+                disabled={currentPage === totalPages || totalPages === 0} 
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                className={styles.pageBtn}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   )
 }
 
-export default Movimientos
+export default Movimientos;

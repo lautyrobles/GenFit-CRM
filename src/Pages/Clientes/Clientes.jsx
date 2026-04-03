@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo, useRef } from "react" // 🎯 Añadimos useRef
 import styles from "./Clientes.module.css"
+import { useNavigate, useLocation } from "react-router-dom"
 
 // 📦 Servicios
 import { obtenerClientes, obtenerClientePorDocumento, actualizarCliente } from "../../assets/services/clientesService"
@@ -16,6 +17,12 @@ import CustomersTable from '../../Components/CustomersTable/CustomersTable';
 import { Search, User, Mail, Phone, CreditCard, Calendar, Edit3, ArrowLeft, AlertCircle, Plus, MoreVertical, Trash2, Edit2 } from 'lucide-react'
 
 const Clientes = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // 🎯 REFERENCIA DE CONTROL: Evita que el QR se procese más de una vez
+  const qrProcesado = useRef(false);
+
   const [busqueda, setBusqueda] = useState("")
   const [filtroActivo, setFiltroActivo] = useState("nombre")
   const [cliente, setCliente] = useState(null)
@@ -34,16 +41,41 @@ const Clientes = () => {
   const [nuevaAlerta, setNuevaAlerta] = useState({ name: "", severity: "Baja", observation: "" })
   const [alertaMenuAbierta, setAlertaMenuAbierta] = useState(null); 
   
-  // Modal de Eliminación
   const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false)
   const [alertaParaEliminar, setAlertaParaEliminar] = useState(null)
 
-  // Edición de Cliente
   const [mostrarModalEdicion, setMostrarModalEdicion] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formEdicion, setFormEdicion] = useState({
     dni: "", first_name: "", last_name: "", email: "", phone: "", plan_id: "",
   })
+
+  // 🎯 SOLUCIÓN BLINDADA PARA EL QR
+  useEffect(() => {
+    const incomingClient = location.state?.clienteSeleccionado;
+
+    // Solo procesamos si hay un cliente Y si no lo hemos procesado ya en este montaje
+    if (incomingClient && !qrProcesado.current) {
+      setCliente(incomingClient);
+      
+      // Marcamos como procesado para que el useEffect no vuelva a entrar aquí jamás
+      qrProcesado.current = true;
+
+      // Limpiamos la navegación
+      navigate(location.pathname, { 
+        replace: true, 
+        state: {} 
+      });
+      window.history.replaceState({}, document.title);
+    }
+  }, [location, navigate]);
+
+  // 🎯 FUNCIÓN VOLVER: Ahora es infalible
+const handleVolverAlListado = () => {
+    // En lugar de navegar con React Router, forzamos una recarga limpia del navegador
+    // Esto limpia TODO el estado de navegación de memoria.
+    window.location.href = "/clientes"; 
+  };
 
   useEffect(() => {
     const loadPlanes = async () => {
@@ -102,8 +134,12 @@ const Clientes = () => {
   const abrirModalEdicion = () => {
     if (!cliente) return;
     setFormEdicion({
-      dni: cliente.dni || "", first_name: cliente.first_name || "", last_name: cliente.last_name || "",
-      email: cliente.email || "", phone: cliente.phone || "", plan_id: cliente.plan_id || "",
+      dni: cliente.dni || "", 
+      first_name: cliente.first_name || "", 
+      last_name: cliente.last_name || "",
+      email: cliente.email || "", 
+      phone: cliente.phone || "", 
+      plan_id: cliente.plan_id || "",
     });
     setMostrarModalEdicion(true);
   }
@@ -116,16 +152,11 @@ const Clientes = () => {
       setCliente(actualizado);
       setMostrarModalEdicion(false);
       mostrarNotificacion("✅ Datos actualizados");
-    } catch (err) { console.error(err); } 
-    finally { setSaving(false); }
+    } catch (err) { 
+      console.error(err);
+      mostrarNotificacion("❌ Error al actualizar");
+    } finally { setSaving(false); }
   }
-
-  // --- LÓGICA DE ALERTAS ---
-  const confirmarEliminarAlerta = (id) => {
-    setAlertaParaEliminar(id);
-    setMostrarModalEliminar(true);
-    setAlertaMenuAbierta(null);
-  };
 
   const handleEliminarAlerta = async () => {
     if (!alertaParaEliminar) return;
@@ -142,13 +173,6 @@ const Clientes = () => {
       setMostrarModalEliminar(false);
       setAlertaParaEliminar(null);
     }
-  };
-
-  const abrirEdicionAlerta = (alerta) => {
-    setAlertaEditandoId(alerta.id);
-    setNuevaAlerta({ name: alerta.name, severity: alerta.severity, observation: alerta.observation });
-    setMostrarModalAlerta(true);
-    setAlertaMenuAbierta(null);
   };
 
   const handleGuardarAlerta = async (e) => {
@@ -182,13 +206,9 @@ const Clientes = () => {
     return p ? p.name : "Plan no encontrado";
   }, [cliente, planes]);
 
-  // 👉 LÓGICA SIMPLIFICADA: Solo lee el booleano 'condition'
   const estadoVisual = useMemo(() => {
     if (!cliente) return { texto: "", clase: "" };
-    
-    // CAMBIO ACÁ: cliente.condition -> cliente.enabled
     const estaActivoDB = cliente.enabled === true || cliente.enabled === "true" || cliente.enabled === "TRUE"; 
-    
     return estaActivoDB 
       ? { texto: "Socio Activo", clase: styles.statusActive } 
       : { texto: "Inactivo", clase: styles.statusInactive };
@@ -202,7 +222,7 @@ const Clientes = () => {
         <div className={styles.searchHeader}>
           <h2 className={styles.sectionTitle}>Buscar cliente</h2>
           {cliente && (
-            <button className={styles.btnBack} onClick={() => setCliente(null)}>
+            <button className={styles.btnBack} onClick={handleVolverAlListado}>
               <ArrowLeft size={16} /> Volver al listado
             </button>
           )}
@@ -238,16 +258,14 @@ const Clientes = () => {
 
           {cliente && (
             <div className={styles.dashboardGrid}>
+              {/* Card de Información Principal */}
               <div className={`${styles.card} ${styles.infoCard}`}>
                 <div className={styles.cardHeader}>
                   <div className={styles.userHead}>
-                    <div className={styles.avatarLarge}>{cliente.first_name[0]}{cliente.last_name[0]}</div>
+                    <div className={styles.avatarLarge}>{cliente.first_name?.[0]}{cliente.last_name?.[0]}</div>
                     <div className={styles.userNameBox}>
                       <h3>{cliente.first_name} {cliente.last_name}</h3>
-                      {/* 👉 ACÁ SE PINTA LA ETIQUETA BASADA EN EL BOOLEANO */}
-                      <span className={estadoVisual.clase}>
-                        {estadoVisual.texto}
-                      </span>
+                      <span className={estadoVisual.clase}>{estadoVisual.texto}</span>
                     </div>
                   </div>
                   <button className={styles.btnEdit} onClick={abrirModalEdicion}><Edit3 size={16} /> Editar</button>
@@ -273,30 +291,16 @@ const Clientes = () => {
                     <p className={styles.noAlertsText}>Cargando alertas...</p>
                   ) : alertas.length > 0 ? (
                     alertas.map((alerta) => (
-                      <div
-                        key={alerta.id}
-                        className={`${styles.miniCardAlert} ${styles["severity" + alerta.severity]}`}
-                        title={alerta.observation || "Sin detalles"}
-                      >
+                      <div key={alerta.id} className={`${styles.miniCardAlert} ${styles["severity" + alerta.severity]}`} title={alerta.observation || "Sin detalles"}>
                         <span className={styles.alertName}>{alerta.name}</span>
                         <div className={styles.alertActionsWrapper}>
-                          <button
-                            className={styles.btnOptAlert}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setAlertaMenuAbierta(alertaMenuAbierta === alerta.id ? null : alerta.id);
-                            }}
-                          >
+                          <button className={styles.btnOptAlert} onClick={(e) => { e.stopPropagation(); setAlertaMenuAbierta(alertaMenuAbierta === alerta.id ? null : alerta.id); }}>
                             <MoreVertical size={14} />
                           </button>
                           {alertaMenuAbierta === alerta.id && (
                             <div className={styles.alertDropdown} onClick={(e) => e.stopPropagation()}>
-                              <button onClick={() => abrirEdicionAlerta(alerta)} className={styles.dropItem}>
-                                <Edit2 size={12} /> Editar
-                              </button>
-                              <button onClick={() => confirmarEliminarAlerta(alerta.id)} className={styles.dropItemDelete}>
-                                <Trash2 size={12} /> Eliminar
-                              </button>
+                              <button onClick={() => { setAlertaEditandoId(alerta.id); setNuevaAlerta({ name: alerta.name, severity: alerta.severity, observation: alerta.observation }); setMostrarModalAlerta(true); setAlertaMenuAbierta(null); }} className={styles.dropItem}><Edit2 size={12} /> Editar</button>
+                              <button onClick={() => { setAlertaParaEliminar(alerta.id); setMostrarModalEliminar(true); setAlertaMenuAbierta(null); }} className={styles.dropItemDelete}><Trash2 size={12} /> Eliminar</button>
                             </div>
                           )}
                         </div>
@@ -314,6 +318,19 @@ const Clientes = () => {
               </div>
 
               <div className={`${styles.card} ${styles.pagosCard}`}>
+                <div className={styles.cardHeader}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CreditCard size={18} color="#7c3aed" />
+                    <h3 style={{ margin: 0 }}>Historial de Pagos</h3>
+                  </div>
+                  <button 
+                    className={styles.btnActionTable} 
+                    onClick={() => navigate("/pagos", { state: { abrirNuevoPago: true, clienteData: cliente } })}
+                    title="Registrar nuevo pago"
+                  >
+                    <Plus size={16} /> Realizar Pago
+                  </button>
+                </div>
                 <HistorialPagos pagos={pagos} loading={pagosLoading} />
               </div>
 
@@ -325,7 +342,8 @@ const Clientes = () => {
         </>
       )}
 
-      {/* MODAL ALERTA MÉDICA */}
+      {/* --- MODALES --- */}
+
       {mostrarModalAlerta && (
         <div className={styles.modalOverlay} onClick={() => setMostrarModalAlerta(false)}>
           <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
@@ -343,7 +361,6 @@ const Clientes = () => {
         </div>
       )}
 
-      {/* MODAL ELIMINAR ALERTA MÉDICA */}
       {mostrarModalEliminar && (
         <div className={styles.modalOverlay} onClick={() => setMostrarModalEliminar(false)}>
           <div className={styles.modalContent} style={{maxWidth: '400px'}} onClick={e => e.stopPropagation()}>
@@ -357,20 +374,88 @@ const Clientes = () => {
         </div>
       )}
 
-      {/* MODAL EDICIÓN CLIENTE */}
       {mostrarModalEdicion && (
         <div className={styles.modalOverlay} onClick={() => setMostrarModalEdicion(false)}>
           <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <div className={styles.modalHeader}><h3>Editar Información</h3><button className={styles.modalCloseBtn} onClick={() => setMostrarModalEdicion(false)}>&times;</button></div>
+            <div className={styles.modalHeader}>
+              <h3>Editar Información de Socio</h3>
+              <button className={styles.modalCloseBtn} onClick={() => setMostrarModalEdicion(false)}>&times;</button>
+            </div>
             <form className={styles.modalBody} onSubmit={handleGuardarEdicion}>
-              <div className={styles.row}>
-                <div className={styles.field}><label>Nombre</label><input type="text" value={formEdicion.first_name} onChange={(e) => setFormEdicion({...formEdicion, first_name: e.target.value})} className={styles.mainInput} /></div>
-                <div className={styles.field}><label>Apellido</label><input type="text" value={formEdicion.last_name} onChange={(e) => setFormEdicion({...formEdicion, last_name: e.target.value})} className={styles.mainInput} /></div>
+              <div className={styles.field}>
+                <label>Documento de Identidad (DNI)</label>
+                <input 
+                  type="text" 
+                  value={formEdicion.dni} 
+                  onChange={(e) => setFormEdicion({...formEdicion, dni: e.target.value})} 
+                  className={styles.mainInput} 
+                  required
+                />
               </div>
-              <div className={styles.field}><label>Email</label><input type="email" value={formEdicion.email} onChange={(e) => setFormEdicion({...formEdicion, email: e.target.value})} className={styles.mainInput} /></div>
-              <div className={styles.field}><label>Teléfono</label><input type="text" value={formEdicion.phone} onChange={(e) => setFormEdicion({...formEdicion, phone: e.target.value})} className={styles.mainInput} /></div>
-              <div className={styles.field}><label>Plan</label><select value={formEdicion.plan_id} onChange={(e) => setFormEdicion({...formEdicion, plan_id: e.target.value})} className={styles.mainInput}>{planes.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-              <div className={styles.modalActions}><button type="submit" className={styles.btnSave} disabled={saving}>Guardar Cambios</button></div>
+
+              <div className={styles.row}>
+                <div className={styles.field}>
+                  <label>Nombre</label>
+                  <input 
+                    type="text" 
+                    value={formEdicion.first_name} 
+                    onChange={(e) => setFormEdicion({...formEdicion, first_name: e.target.value})} 
+                    className={styles.mainInput} 
+                    required
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label>Apellido</label>
+                  <input 
+                    type="text" 
+                    value={formEdicion.last_name} 
+                    onChange={(e) => setFormEdicion({...formEdicion, last_name: e.target.value})} 
+                    className={styles.mainInput} 
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className={styles.field}>
+                <label>Correo Electrónico</label>
+                <input 
+                  type="email" 
+                  value={formEdicion.email} 
+                  onChange={(e) => setFormEdicion({...formEdicion, email: e.target.value})} 
+                  className={styles.mainInput} 
+                  required
+                />
+              </div>
+
+              <div className={styles.field}>
+                <label>Teléfono de Contacto</label>
+                <input 
+                  type="text" 
+                  value={formEdicion.phone} 
+                  onChange={(e) => setFormEdicion({...formEdicion, phone: e.target.value})} 
+                  className={styles.mainInput} 
+                />
+              </div>
+
+              <div className={styles.field}>
+                <label>Plan de Membresía</label>
+                <select 
+                  value={formEdicion.plan_id} 
+                  onChange={(e) => setFormEdicion({...formEdicion, plan_id: e.target.value})} 
+                  className={styles.mainInput}
+                  required
+                >
+                  <option value="">Seleccionar un plan...</option>
+                  {planes.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.modalActions}>
+                <button type="button" className={styles.btnCancel} onClick={() => setMostrarModalEdicion(false)}>Cancelar</button>
+                <button type="submit" className={styles.btnSave} disabled={saving}>{saving ? "Guardando..." : "Guardar Cambios"}</button>
+              </div>
             </form>
           </div>
         </div>

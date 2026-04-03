@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import styles from "./Pagos.module.css";
 import { useAuth } from "../../context/AuthContext";
 import { Plus, CheckCircle, AlertCircle } from 'lucide-react';
+import { useLocation, useNavigate } from "react-router-dom";
 
 // --- COMPONENTES ATÓMICOS ---
 import KpiSection from "./PagosComponents/KpiSection";
@@ -14,6 +15,8 @@ import { obtenerPagos } from "../../assets/services/paymentsService";
 
 const Pagos = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const role = user?.role || "USER";
   const canRegisterPayments = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR"].includes(role);
 
@@ -26,6 +29,7 @@ const Pagos = () => {
   // Estados de Flujo de Modales
   const [step, setStep] = useState("IDLE"); // IDLE, FORM, CONFIRM
   const [datosTemporales, setDatosTemporales] = useState(null);
+  const [socioPreseleccionado, setSocioPreseleccionado] = useState(null);
 
   const mostrarToast = (msg, tipo = "error") => {
     if (tipo === "error") { setError(msg); setSuccess(""); } 
@@ -46,7 +50,6 @@ const Pagos = () => {
         status: p.status,
         clientName: p.users ? `${p.users.first_name} ${p.users.last_name}` : 'Cliente Eliminado',
         clientDni: p.users?.dni || '-',
-        // 👇 AQUÍ ESTÁ EL CAMBIO: Extraemos el nombre real del plan
         planName: p.users?.plans?.name || 'Sin Plan' 
       }));
       
@@ -57,6 +60,17 @@ const Pagos = () => {
       setLoading(false);
     }
   }, []);
+
+  // 🎯 EFECTO PARA DETECTAR REDIRECCIÓN DESDE CLIENTES
+  useEffect(() => {
+    if (location.state?.abrirNuevoPago && location.state?.clienteData) {
+      setSocioPreseleccionado(location.state.clienteData);
+      setStep("FORM");
+      
+      // Limpiamos el state de la navegación para que no se abra solo al recargar
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   useEffect(() => { cargarHistorial(); }, [cargarHistorial]);
 
@@ -77,7 +91,10 @@ const Pagos = () => {
             <p className={styles.subtitle}>Gestión de ingresos y membresías.</p>
           </div>
           {canRegisterPayments && (
-            <button className={styles.btnPrimary} onClick={() => setStep("FORM")}>
+            <button className={styles.btnPrimary} onClick={() => {
+                setSocioPreseleccionado(null); // Reset por si viene de una carga manual anterior
+                setStep("FORM");
+            }}>
               <Plus size={16}/> Nuevo Cobro
             </button>
           )}
@@ -91,7 +108,11 @@ const Pagos = () => {
       {/* --- MODAL PASO 1: Formulario --- */}
       {step === "FORM" && (
         <ModalNuevoPago 
-          onClose={() => setStep("IDLE")} 
+          onClose={() => {
+              setStep("IDLE");
+              setSocioPreseleccionado(null);
+          }} 
+          socioInicial={socioPreseleccionado} // 👈 Pasamos el socio si existe
           onContinue={(datos) => {
             setDatosTemporales(datos);
             setStep("CONFIRM");
@@ -108,6 +129,7 @@ const Pagos = () => {
           onSuccess={() => {
             setStep("IDLE");
             setDatosTemporales(null);
+            setSocioPreseleccionado(null);
             cargarHistorial();
             mostrarToast("¡Transacción finalizada!", "success");
           }}

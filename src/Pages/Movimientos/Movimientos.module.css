@@ -176,21 +176,38 @@
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
   border: 1px solid #f1f5f9;
   display: flex;
-  flex-direction: column;
-  flex: 1; /* Ocupa el espacio inferior */
-  min-height: 0; /* Permite el scroll interno */
-  overflow: hidden; /* Mantiene los bordes de la card limpios */
+  flex-direction: column; /* Alinea tabla y paginador uno arriba del otro */
+  flex: 1; 
+  min-height: 0;
+  overflow: hidden;
 }
 
 .tableScrollArea {
-  flex: 1;
+  flex: 1; /* Esto hace que la tabla ocupe todo el espacio sobrante */
+  overflow-x: auto;
   overflow-y: auto;
+}
+
+.tableScrollArea::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.tableScrollArea::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+  border: 2px solid #f8fafc;
+}
+
+.tableScrollArea::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
 }
 
 .modernTable {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
+  min-width: 1000px; /* Asegura que la tabla no se colapse y active el scroll x */
 }
 
 .modernTable th {
@@ -217,6 +234,62 @@
 }
 
 .modernTable tr:hover td { background-color: #fcfcfd; }
+
+/* --- PAGINACIÓN FIJA --- */
+.pagination {
+  flex-shrink: 0; /* Evita que el paginador se achique */
+  padding: 16px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9; /* Línea divisoria clara */
+  z-index: 20; /* Por encima del scroll */
+}
+
+.paginationInfo {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.paginationControls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Estilo de los botones del paginador */
+.pageBtn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #7c3aed;
+  border-color: #7c3aed;
+  transform: translateY(-1px);
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pageNum {
+  font-size: 0.9rem;
+  color: #1e293b;
+  font-weight: 500;
+}
 
 /* --- ESTILOS DE CELDAS --- */
 .dateCell {
@@ -337,4 +410,13 @@
   background-color: #fff7ed; /* Naranja muy suave */
   color: #ea580c;            /* Naranja oscuro */
   border: 1px solid #ffedd5;
+}
+
+@media (max-width: 640px) {
+  .pagination {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    text-align: center;
+  }
 }

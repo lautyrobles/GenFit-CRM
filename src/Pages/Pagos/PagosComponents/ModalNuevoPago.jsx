@@ -1,16 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Search } from 'lucide-react';
 import { obtenerClientePorDocumento } from '../../../assets/services/clientesService';
 import styles from '../Pagos.module.css';
 
-const ModalNuevoPago = ({ onClose, onContinue }) => {
+const ModalNuevoPago = ({ onClose, onContinue, socioInicial }) => {
   const [loading, setLoading] = useState(false);
   const [nuevoPago, setNuevoPago] = useState({
-    clienteId: null, clienteDocumento: "", clienteNombre: "",
-    planNombre: "", periodo: "", montoFinal: "",
+    clienteId: null,
+    clienteDocumento: "",
+    clienteNombre: "",
+    planNombre: "",
+    periodo: new Date().toISOString().slice(0, 7), // Precarga mes actual (YYYY-MM)
+    montoFinal: "",
     fechaPago: new Date().toISOString().split("T")[0],
-    metodoPago: "EFECTIVO", comprobante: ""
+    metodoPago: "EFECTIVO",
+    comprobante: ""
   });
+
+  // 🎯 EFECTO: Si venimos desde el perfil del cliente, autocompletamos todo
+  useEffect(() => {
+    if (socioInicial) {
+      setNuevoPago(prev => ({
+        ...prev,
+        clienteId: socioInicial.id,
+        clienteDocumento: socioInicial.dni || "",
+        clienteNombre: `${socioInicial.first_name} ${socioInicial.last_name}`,
+        // Intentamos sacar el precio y nombre del plan si vienen en el objeto
+        planNombre: socioInicial.plans?.name || socioInicial.plan_name || "Plan Estándar",
+        montoFinal: socioInicial.plans?.price || socioInicial.plan_price || ""
+      }));
+    }
+  }, [socioInicial]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -46,46 +66,110 @@ const ModalNuevoPago = ({ onClose, onContinue }) => {
     <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.largeModalCard}>
         <div className={styles.modalHeaderFlex}>
-          <div><h3 className={styles.modalTitle}>Registrar Cobro</h3></div>
+          <div>
+            <h3 className={styles.modalTitle}>Registrar Cobro</h3>
+            <p className={styles.modalSubtitle}>Ingresa los detalles de la transacción.</p>
+          </div>
           <button className={styles.closeIconButton} onClick={onClose}><X size={20} /></button>
         </div>
+
         <form onSubmit={handleSubmit}>
           <div className={styles.formSplit}>
+            {/* Columna Izquierda: Identificación */}
             <div className={styles.formColumn}>
-              <h4 className={styles.columnTitle}>Socio</h4>
+              <h4 className={styles.columnTitle}>Información del Socio</h4>
+              
               <div className={styles.formGroup}>
-                <label>Documento</label>
+                <label>Documento / DNI</label>
                 <div className={styles.inputWithAction}>
-                  <input type="text" name="clienteDocumento" value={nuevoPago.clienteDocumento} onChange={handleChange} placeholder="Ej: 30123456" autoFocus />
-                  <button type="button" onClick={buscarCliente} disabled={loading}>{loading ? "..." : <Search size={16}/>}</button>
+                  <input 
+                    type="text" 
+                    name="clienteDocumento" 
+                    value={nuevoPago.clienteDocumento} 
+                    onChange={handleChange} 
+                    placeholder="Ej: 30123456" 
+                    autoFocus 
+                  />
+                  <button type="button" onClick={buscarCliente} disabled={loading}>
+                    {loading ? "..." : <Search size={16}/>}
+                  </button>
                 </div>
               </div>
+
               <div className={styles.rowTwo}>
-                <div className={styles.formGroup}><label>Nombre</label><input type="text" value={nuevoPago.clienteNombre} readOnly className={styles.readOnlyInput} /></div>
-                <div className={styles.formGroup}><label>Plan</label><input type="text" value={nuevoPago.planNombre} readOnly className={styles.readOnlyInput} /></div>
+                <div className={styles.formGroup}>
+                  <label>Nombre Completo</label>
+                  <input type="text" value={nuevoPago.clienteNombre} readOnly className={styles.readOnlyInput} placeholder="Socio no identificado" />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Plan Actual</label>
+                  <input type="text" value={nuevoPago.planNombre} readOnly className={styles.readOnlyInput} placeholder="-" />
+                </div>
               </div>
             </div>
+
+            {/* Columna Derecha: Pago */}
             <div className={styles.formColumn}>
-              <h4 className={styles.columnTitle}>Condiciones</h4>
+              <h4 className={styles.columnTitle}>Detalles del Pago</h4>
+              
               <div className={styles.rowTwo}>
-                <div className={styles.formGroup}><label>Monto</label><input type="number" name="montoFinal" value={nuevoPago.montoFinal} onChange={handleChange} className={styles.amountInput} /></div>
-                <div className={styles.formGroup}><label>Fecha</label><input type="date" name="fechaPago" value={nuevoPago.fechaPago} onChange={handleChange} /></div>
+                <div className={styles.formGroup}>
+                  <label>Monto a Cobrar</label>
+                  <input 
+                    type="number" 
+                    name="montoFinal" 
+                    value={nuevoPago.montoFinal} 
+                    onChange={handleChange} 
+                    className={styles.amountInput} 
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Fecha de Cobro</label>
+                  <input 
+                    type="date" 
+                    name="fechaPago" 
+                    value={nuevoPago.fechaPago} 
+                    onChange={handleChange} 
+                    required
+                  />
+                </div>
               </div>
+
               <div className={styles.rowTwo}>
-                <div className={styles.formGroup}><label>Medio</label>
+                <div className={styles.formGroup}>
+                  <label>Medio de Pago</label>
                   <select name="metodoPago" value={nuevoPago.metodoPago} onChange={handleChange}>
-                    <option value="EFECTIVO">Efectivo</option>
-                    <option value="TRANSFERENCIA">Transferencia</option>
-                    <option value="MERCADO_PAGO">Mercado Pago</option>
+                    <option value="EFECTIVO">💵 Efectivo</option>
+                    <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                    <option value="MERCADO_PAGO">🔵 Mercado Pago</option>
+                    <option value="DEBITO">💳 Débito / Crédito</option>
                   </select>
                 </div>
-                <div className={styles.formGroup}><label>Período</label><input type="month" name="periodo" value={nuevoPago.periodo} onChange={handleChange} /></div>
+                <div className={styles.formGroup}>
+                  <label>Período (Mes)</label>
+                  <input 
+                    type="month" 
+                    name="periodo" 
+                    value={nuevoPago.periodo} 
+                    onChange={handleChange} 
+                    required
+                  />
+                </div>
               </div>
             </div>
           </div>
+
           <div className={styles.formFooter}>
             <button type="button" onClick={onClose} className={styles.btnCancelText}>Cancelar</button>
-            <button type="submit" className={styles.btnSubmit}>Continuar</button>
+            <button 
+              type="submit" 
+              className={styles.btnSubmit} 
+              disabled={!nuevoPago.clienteId || !nuevoPago.montoFinal}
+            >
+              Continuar a Confirmación
+            </button>
           </div>
         </form>
       </div>
