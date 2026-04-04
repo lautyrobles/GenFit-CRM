@@ -17,16 +17,8 @@ const AccessNotifier = () => {
 
   const irAlPerfil = () => {
     if (!modalData) return;
-    
-    // Cerramos el modal
     setIsModalOpen(false);
-    
-    // Redireccionamos pasando el ID del usuario en el state
-    navigate('/clientes', { 
-      state: { 
-        autoOpenUserId: modalData.user_id // 👈 Pasamos el ID para que Clientes lo use
-      } 
-    });
+    navigate('/clientes', { state: { autoOpenUserId: modalData.user_id } });
   };
 
   const abrirDetalleUsuario = async (userId, estadoCalculado) => {
@@ -34,16 +26,29 @@ const AccessNotifier = () => {
     setIsModalOpen(true);
     
     try {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('first_name, last_name, dni')
-        .eq('id', userId)
-        .single();
+      // 👉 BÚSQUEDA A PRUEBA DE BALAS: Busca en Clientes, si no está, busca en Users (Staff)
+      let nombre = "Cliente no encontrado";
+      let userDni = "No registrado";
 
+      const { data: cliData } = await supabase.from('clientes').select('nombre, apellido, dni').eq('id', userId).maybeSingle();
+      
+      if (cliData) {
+        nombre = `${cliData.nombre || ''} ${cliData.apellido || ''}`.trim();
+        userDni = cliData.dni;
+      } else {
+        const { data: usrData } = await supabase.from('users').select('first_name, last_name, dni').eq('id', userId).maybeSingle();
+        if (usrData) {
+          nombre = `${usrData.first_name || ''} ${usrData.last_name || ''}`.trim();
+          userDni = usrData.dni;
+        }
+      }
+
+      // 👉 MULTI-TENANT: Buscamos alertas y asistencias solo de SU gimnasio
       const { data: alertsData } = await supabase
         .from('medical_alerts')
         .select('name, observation, severity')
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .eq('gym_id', user.gym_id); 
 
       const haceUnaSemana = new Date();
       haceUnaSemana.setDate(haceUnaSemana.getDate() - 7);
@@ -52,11 +57,12 @@ const AccessNotifier = () => {
         .from('access_logs')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
+        .eq('gym_id', user.gym_id)
         .gte('check_in_time', haceUnaSemana.toISOString());
 
       setModalData({
         user_id: userId,
-        user: userData || {},
+        user: { fullName: nombre, dni: userDni },
         alertas: alertsData || [],
         asistenciasSemanales: count || 0,
         ...estadoCalculado
@@ -70,31 +76,41 @@ const AccessNotifier = () => {
   };
 
   useEffect(() => {
-    if (!user) return;
+    // 👉 Validamos que el administrador tenga su gym_id listo antes de conectar
+    if (!user?.gym_id) return;
 
     const canalAsistencias = supabase
-      .channel('ingresos_tiempo_real')
+      .channel(`ingresos_gym_${user.gym_id}`) // Canal único para evitar cruces
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'access_logs' },
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'access_logs',
+          filter: `gym_id=eq.${user.gym_id}` // 👈 CLAVE: Solo escuchamos los ingresos de este gimnasio
+        },
         async (payload) => {
           const nuevoIngreso = payload.new;
 
-          const { data: userData } = await supabase
-            .from('users')
-            .select('first_name, last_name')
-            .eq('id', nuevoIngreso.user_id)
-            .single();
-
-          const nombreCliente = userData ? `${userData.first_name} ${userData.last_name}` : 'Un cliente';
+          // 👉 Búsqueda del nombre para la notificación
+          let nombreCliente = "Un cliente";
+          const { data: cliData } = await supabase.from('clientes').select('nombre, apellido').eq('id', nuevoIngreso.user_id).maybeSingle();
+          
+          if (cliData) {
+            nombreCliente = `${cliData.nombre || ''} ${cliData.apellido || ''}`.trim();
+          } else {
+            const { data: usrData } = await supabase.from('users').select('first_name, last_name').eq('id', nuevoIngreso.user_id).maybeSingle();
+            if (usrData) nombreCliente = `${usrData.first_name || ''} ${usrData.last_name || ''}`.trim();
+          }
 
           const { data: subData } = await supabase
             .from('subscriptions')
             .select('due_date')
             .eq('user_id', nuevoIngreso.user_id)
+            .eq('gym_id', user.gym_id)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single();
+            .maybeSingle();
 
           let estadoCuota = 'SIN PLAN';
           let diasRestantes = 0;
@@ -185,79 +201,79 @@ const AccessNotifier = () => {
               <button className={styles.modalCloseBtn} onClick={() => { setIsModalOpen(false); setModalData(null); }}>×</button>
             </div>
 
-<div className={styles.modalBody}>
-  {loadingData || !modalData ? (
-    <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
-      Cargando datos del cliente...
-    </div>
-  ) : (
-    <>
-      {/* --- Información General --- */}
-      <div className={styles.infoRow}>
-        <span className={styles.infoLabel}><FiUser /> Nombre Completo</span>
-        <span className={styles.infoValue}>{modalData.user.first_name} {modalData.user.last_name}</span>
-      </div>
+            <div className={styles.modalBody}>
+              {loadingData || !modalData ? (
+                <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                  Cargando datos del cliente...
+                </div>
+              ) : (
+                <>
+                  {/* --- Información General --- */}
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}><FiUser /> Nombre Completo</span>
+                    <span className={styles.infoValue}>{modalData.user.fullName}</span>
+                  </div>
 
-      <div className={styles.infoRow}>
-        <span className={styles.infoLabel}><FiHash /> DNI</span>
-        <span className={styles.infoValue}>{modalData.user.dni || 'No registrado'}</span>
-      </div>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}><FiHash /> DNI</span>
+                    <span className={styles.infoValue}>{modalData.user.dni || 'No registrado'}</span>
+                  </div>
 
-      <div className={styles.infoRow}>
-        <span className={styles.infoLabel}><FiCreditCard /> Estado de Cuota</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span className={`${styles.badgeStatus} ${modalData.badgeClass}`}>
-            {modalData.estadoCuota}
-          </span>
-          <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>
-            {modalData.diasRestantes >= 0 
-              ? `(Quedan ${modalData.diasRestantes} días)` 
-              : `(Hace ${Math.abs(modalData.diasRestantes)} días)`}
-          </span>
-        </div>
-      </div>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}><FiCreditCard /> Estado de Cuota</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span className={`${styles.badgeStatus} ${modalData.badgeClass}`}>
+                        {modalData.estadoCuota}
+                      </span>
+                      <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>
+                        {modalData.diasRestantes >= 0 
+                          ? `(Quedan ${modalData.diasRestantes} días)` 
+                          : `(Hace ${Math.abs(modalData.diasRestantes)} días)`}
+                      </span>
+                    </div>
+                  </div>
 
-      <div className={styles.infoRow}>
-        <span className={styles.infoLabel}><FiActivity /> Asistencia (Últ. 7 días)</span>
-        <span className={styles.infoValue}>{modalData.asistenciasSemanales} días</span>
-      </div>
+                  <div className={styles.infoRow}>
+                    <span className={styles.infoLabel}><FiActivity /> Asistencia (Últ. 7 días)</span>
+                    <span className={styles.infoValue}>{modalData.asistenciasSemanales} días</span>
+                  </div>
 
-      {/* --- Alertas Médicas --- */}
-      <div className={styles.alertsSection}>
-        <h4 className={styles.alertsTitle}>
-          <FiAlertTriangle color="#d97706" /> Alertas Médicas
-        </h4>
-        {modalData.alertas.length === 0 ? (
-          <div className={styles.noAlerts}>
-            <FiCheckCircle size={20} />
-            <span>El usuario no presenta alertas médicas.</span>
-          </div>
-        ) : (
-          modalData.alertas.map((alerta, index) => (
-            <div key={index} className={`${styles.alertBox} ${alerta.severity === 'Alta' ? styles.alertBoxHigh : ''}`}>
-              <FiAlertTriangle className={alerta.severity === 'Alta' ? styles.alertIconHigh : styles.alertIconNormal} />
-              <div className={styles.alertContent}>
-                <p className={alerta.severity === 'Alta' ? styles.alertNameHigh : styles.alertNameNormal}>
-                  {alerta.name}
-                </p>
-                <p className={styles.alertObs}>{alerta.observation}</p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+                  {/* --- Alertas Médicas --- */}
+                  <div className={styles.alertsSection}>
+                    <h4 className={styles.alertsTitle}>
+                      <FiAlertTriangle color="#d97706" /> Alertas Médicas
+                    </h4>
+                    {modalData.alertas.length === 0 ? (
+                      <div className={styles.noAlerts}>
+                        <FiCheckCircle size={20} />
+                        <span>El usuario no presenta alertas médicas.</span>
+                      </div>
+                    ) : (
+                      modalData.alertas.map((alerta, index) => (
+                        <div key={index} className={`${styles.alertBox} ${alerta.severity === 'Alta' ? styles.alertBoxHigh : ''}`}>
+                          <FiAlertTriangle className={alerta.severity === 'Alta' ? styles.alertIconHigh : styles.alertIconNormal} />
+                          <div className={styles.alertContent}>
+                            <p className={alerta.severity === 'Alta' ? styles.alertNameHigh : styles.alertNameNormal}>
+                              {alerta.name}
+                            </p>
+                            <p className={styles.alertObs}>{alerta.observation}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
 
-      {/* --- Botón de Redirección (Ver Perfil Completo) --- */}
-      <div style={{ marginTop: '10px' }}>
-        <button 
-          className={styles.btnFullProfile} 
-          onClick={irAlPerfil}
-        >
-          <FiEye /> Ir al Perfil
-        </button>
-      </div>
-    </>
-  )}
+                  {/* --- Botón de Redirección (Ver Perfil Completo) --- */}
+                  <div style={{ marginTop: '10px' }}>
+                    <button 
+                      className={styles.btnFullProfile} 
+                      onClick={irAlPerfil}
+                    >
+                      <FiEye /> Ir al Perfil
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
