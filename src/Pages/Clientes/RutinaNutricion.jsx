@@ -22,30 +22,29 @@ const RutinaNutricion = ({ cliente }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-useEffect(() => {
-  const cargarDatos = async () => {
-    if (!user?.gym_id) return;
-    setLoading(true);
-    try {
-      if (cliente) {
-        // Usamos el service
-        const data = await obtenerRutinaPorUsuario(cliente.id);
-        setRutinaIndividual(data);
-      } else {
-        // Usamos el service (que ya corregimos con .order('id'))
-        const data = await obtenerTodasLasPendientes(user.gym_id);
-        setPendientes(data || []);
+  useEffect(() => {
+    const cargarDatos = async () => {
+      if (!user?.gym_id) return;
+      setLoading(true);
+      try {
+        if (cliente) {
+          // Usamos el service
+          const data = await obtenerRutinaPorUsuario(cliente.id);
+          setRutinaIndividual(data);
+        } else {
+          // Usamos el service
+          const data = await obtenerTodasLasPendientes(user.gym_id);
+          setPendientes(data || []);
+        }
+      } catch (err) {
+        console.error("Error cargando rutinas:", err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Error cargando rutinas:", err);
-      // Opcional: mostrar un mensaje al usuario en lugar de solo consola
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  cargarDatos();
-}, [cliente, user?.gym_id]);
+    cargarDatos();
+  }, [cliente, user?.gym_id]);
 
   const handleEliminarRutina = async () => {
     try {
@@ -77,11 +76,15 @@ useEffect(() => {
       grupos: (d.muscle_blocks || []).sort((a, b) => a.order_index - b.order_index).map(b => ({
         label: b.muscle_name,
         exercises: (b.exercises || []).map(ex => {
+          // 👉 CORREGIDO: Leemos rest_time directo de la DB (o vacío si no hay)
           let reps = ex.reps || "";
-          let rest = "";
+          let rest = ex.rest_time || ""; 
+
+          // Fallback temporal por si quedó alguna rutina vieja guardada con el "| Descanso:"
           if (reps.includes("| Descanso:")) {
             [reps, rest] = reps.split("| Descanso:").map(s => s.trim());
           }
+
           return { name: ex.name, sets: ex.sets, reps, rest };
         })
       }))
@@ -91,7 +94,6 @@ useEffect(() => {
     setShowModal(true);
   };
 
-  // ... (Funciones auxiliares updateExercise, addExercise, removeExercise se mantienen igual)
   const updateExercise = (dayIdx, groupIdx, exIdx, field, value) => {
     const newData = [...editingData];
     newData[dayIdx].grupos[groupIdx].exercises[exIdx][field] = value;
@@ -118,15 +120,15 @@ useEffect(() => {
     try {
       const userId = selectedRoutine.user_id;
       
-      // 1. Limpiamos la rutina vieja para insertar la nueva versión validada
+      // 1. Limpiamos la rutina vieja
       await supabase.from('routines').delete().eq('user_id', userId);
 
-      // 2. Insertamos la cabecera con is_active: true y el GYM_ID
+      // 2. Insertamos la cabecera validada
       const { data: routineData, error: routineError } = await supabase
         .from('routines')
         .insert({ 
           user_id: userId, 
-          gym_id: user.gym_id, // 👈 Vínculo multi-tenant
+          gym_id: user.gym_id,
           name: `Plan Entrenamiento (Validado)`, 
           is_active: true 
         })
@@ -135,7 +137,7 @@ useEffect(() => {
       if (routineError) throw routineError;
       const routineId = routineData.id;
 
-      // 3. Iteración de Días, Bloques y Ejercicios (Se mantiene tu lógica funcional)
+      // 3. Iteración de Días, Bloques y Ejercicios
       for (let dIdx = 0; dIdx < editingData.length; dIdx++) {
         const day = editingData[dIdx];
         const { data: dayData } = await supabase.from('routine_days').insert({ routine_id: routineId, day_name: day.dia, order_index: dIdx }).select().single();
@@ -152,7 +154,8 @@ useEffect(() => {
               block_id: blockId,
               name: ex.name,
               sets: String(ex.sets),
-              reps: ex.rest ? `${ex.reps} | Descanso: ${ex.rest}` : ex.reps,
+              reps: String(ex.reps),       // 👉 CORREGIDO: Solo enviamos el número de repeticiones
+              rest_time: String(ex.rest),  // 👉 CORREGIDO: Guardamos el descanso en su columna oficial
               video_url: null
             }));
 
@@ -184,7 +187,6 @@ useEffect(() => {
     }
   };
 
-  // ... (renderModal y renderDeleteModal se mantienen igual con tus estilos)
   const renderModal = () => (
     <div className={localStyles.modalOverlay} onClick={() => setShowModal(false)}>
       <div className={localStyles.modalContent} onClick={e => e.stopPropagation()}>
