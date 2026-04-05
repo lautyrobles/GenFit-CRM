@@ -95,7 +95,6 @@ const AccessNotifier = () => {
 
           const nombreCliente = usrData ? `${usrData.first_name} ${usrData.last_name}` : "Un cliente";
 
-          // Buscamos la suscripción recién actualizada
           const { data: subData } = await supabase
             .from('subscriptions')
             .select('due_date')
@@ -110,13 +109,12 @@ const AccessNotifier = () => {
           let accesoValido = nuevoIngreso.access_granted !== false; 
 
           if (subData && subData.due_date) {
-            // --- 🎯 LÓGICA DE FECHAS NORMALIZADA (ANTI 60 DÍAS) ---
+            // --- 🎯 LÓGICA DE FECHAS SINCRONIZADA ---
             const hoyStr = new Date().toISOString().split('T')[0];
-            const hoy = new Date(hoyStr + "T12:00:00");
-            const vencimiento = new Date(subData.due_date + "T12:00:00");
+            const hoy = new Date(hoyStr + "T12:00:00").getTime();
+            const vencimiento = new Date(subData.due_date + "T12:00:00").getTime();
 
-            const diffTime = vencimiento.getTime() - hoy.getTime();
-            // Math.round para evitar cualquier decimal molesto
+            const diffTime = vencimiento - hoy;
             const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
             diasRestantes = diffDays;
 

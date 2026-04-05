@@ -77,19 +77,19 @@ const Asistencia = () => {
     }
     
     const suscripcion = s.subscriptions?.[0];
-    const hoy = new Date();
-    hoy.setHours(0,0,0,0);
-    const vencimiento = suscripcion?.due_date ? new Date(suscripcion.due_date) : null;
-    
-    if (!vencimiento) {
+    if (!suscripcion || !suscripcion.due_date) {
       return { status: "rojo", text: "Sin Plan o Pago", icon: <XCircle size={24}/> };
     }
 
-    // --- 🎯 LÓGICA DE DÍAS Y GRACIA ---
+    // --- 🎯 CÁLCULO DE DÍAS Y GRACIA SINCRONIZADO ---
+    const hoyStr = new Date().toISOString().split('T')[0];
+    const hoy = new Date(hoyStr + "T12:00:00").getTime();
+    const vencimiento = new Date(suscripcion.due_date + "T12:00:00").getTime();
+    
     const diffTime = vencimiento - hoy;
-    const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diasRestantes = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-    // 1. REINCIDENCIA (AMARILLO) - Prioridad visual si ya entró
+    // 1. REINCIDENCIA (AMARILLO)
     const yaIngresoHoy = historial.find(log => log.user_id === s.id && log.access_granted);
     if (yaIngresoHoy) {
       const horaIngreso = new Date(yaIngresoHoy.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -109,7 +109,7 @@ const Asistencia = () => {
       };
     }
 
-    // 3. PERIODO DE GRACIA (AZUL/INFO) - Hasta 5 días después del vencimiento
+    // 3. PERIODO DE GRACIA (AZUL/INFO)
     if (diasRestantes < 0 && diasRestantes >= -5) {
       return { 
         status: "azul", 
@@ -131,7 +131,6 @@ const Asistencia = () => {
     if (!socio || !user?.gym_id) return;
     
     const estadoInfo = calcularEstado(socio);
-    // Permitimos ingreso si es verde, amarillo o azul (gracia)
     const granted = estadoInfo.status !== "rojo";
     const msg = estadoInfo.text;
 

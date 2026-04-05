@@ -20,14 +20,15 @@ export const obtenerPagos = async (gymId) => {
 };
 
 export const registrarPago = async (pagoData, gymId) => {
+  let paymentIdGenerado = null; // Guardamos el ID del pago por si hay que borrarlo
+
   try {
     const userIdFinal = pagoData.clienteId || pagoData.user_id;
     const monto = pagoData.montoFinal || pagoData.amount;
-    const hoyISO = new Date().toISOString().split('T')[0];
     
     if (!userIdFinal || !gymId) throw new Error("Datos insuficientes.");
 
-    // 1. Pago
+    // --- PASO 1: REGISTRO DEL PAGO ---
     const { data: paymentData, error: pErr } = await supabase
       .from('payments')
       .insert([{
@@ -37,53 +38,71 @@ export const registrarPago = async (pagoData, gymId) => {
           gym_id: gymId
       }]).select().single();
 
-    if (pErr) throw pErr;
+    if (pErr) throw new Error(`Error registrando el pago: ${pErr.message}`);
+    
+    // Guardamos el ID del pago exitoso
+    paymentIdGenerado = paymentData.id;
 
-    // 2. Suscripción
+    // --- PASO 2: SUSCRIPCIÓN ---
     const { data: sub } = await supabase
       .from('subscriptions')
       .select('id, due_date')
       .eq('user_id', userIdFinal)
       .maybeSingle();
 
-    // 🎯 LÓGICA DE HIERRO:
-    let puntoDePartida = hoyISO;
+    const hoyStr = new Date().toISOString().split('T')[0];
+    const hoy = new Date(hoyStr + "T12:00:00");
+    let fechaBase = new Date(hoy);
 
-    // SI TIENE SUSCRIPCIÓN Y NO ESTÁ VENCIDA: sumamos desde su vencimiento actual
-    if (sub?.due_date && sub.due_date > hoyISO) {
-        puntoDePartida = sub.due_date;
+    if (sub && sub.due_date) {
+      const vencimientoAnterior = new Date(sub.due_date + "T12:00:00");
+      const limiteGracia = new Date(vencimientoAnterior);
+      limiteGracia.setDate(limiteGracia.getDate() + 5);
+
+      if (hoy <= limiteGracia) {
+        fechaBase = new Date(vencimientoAnterior);
+      }
     }
 
-    // Calculamos el vencimiento (Punto de partida + 30 días exactos)
-    const calculo = new Date(puntoDePartida + "T12:00:00");
-    calculo.setDate(calculo.getDate() + 30);
-    const nuevaFechaISO = calculo.toISOString().split('T')[0];
+    fechaBase.setDate(fechaBase.getDate() + 30);
+    const nuevaFechaISO = fechaBase.toISOString().split('T')[0];
 
-    // Delay RLS
+    // Delay de seguridad RLS
     if (!sub) await new Promise(r => setTimeout(r, 1000));
 
+    // Upsert Suscripción
     if (sub?.id) {
         const { error: uErr } = await supabase.from('subscriptions')
           .update({ due_date: nuevaFechaISO, active: true, gym_id: gymId })
           .eq('id', sub.id);
-        if (uErr) throw uErr;
+        if (uErr) throw new Error(`Fallo actualizando suscripción: ${uErr.message}`);
     } else {
         const { error: iErr } = await supabase.from('subscriptions')
           .insert([{
               user_id: userIdFinal, 
               plan_id: pagoData.plan_id || null, 
-              start_date: hoyISO, 
+              start_date: hoyStr, 
               due_date: nuevaFechaISO, 
               active: true, 
               gym_id: gymId
           }]);
-        if (iErr) throw iErr;
+        if (iErr) throw new Error(`Fallo creando suscripción: ${iErr.message}`);
     }
 
+    // --- PASO 3: HABILITAR USUARIO ---
     await supabase.from('users').update({ enabled: true }).eq('id', userIdFinal);
+    
     return paymentData;
 
   } catch (error) {
-    throw error;
+    // ⚠️ EL ROLLBACK (La magia ocurre aquí) ⚠️
+    // Si la función falló en cualquier punto DESPUÉS de crear el pago, lo borramos.
+    if (paymentIdGenerado) {
+      console.warn(`🔄 Haciendo Rollback: Borrando pago huérfano ID ${paymentIdGenerado}`);
+      await supabase.from('payments').delete().eq('id', paymentIdGenerado);
+    }
+    
+    console.error("❌ Error en registrarPago:", error.message);
+    throw error; // Lanzamos el error final al modal
   }
 };
