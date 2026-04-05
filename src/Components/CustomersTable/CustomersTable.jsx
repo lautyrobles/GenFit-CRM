@@ -120,7 +120,8 @@ const CustomersTable = ({ onSelectCliente }) => {
   };
 
   const resolverEstadoCuota = (u) => {
-    const estaActivoDB = u.enabled === true || u.condition === "true" || u.condition === "TRUE"; 
+    const estaActivoDB = u.enabled === true || u.enabled === "true" || u.enabled === "TRUE"; 
+    
     return estaActivoDB 
       ? { texto: "Activo", clase: styles.active } 
       : { texto: "Inactivo", clase: styles.inactive };
