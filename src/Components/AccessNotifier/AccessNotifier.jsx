@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiEye, FiUser, FiActivity, FiAlertTriangle, FiHash, FiCheckCircle, FiCreditCard } from 'react-icons/fi';
 
 const AccessNotifier = () => {
-  const { user } = useAuth();
+  const { user, selectedGymId } = useAuth();
   
   const [modalData, setModalData] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,29 +26,25 @@ const AccessNotifier = () => {
     setIsModalOpen(true);
     
     try {
-      // 👉 BÚSQUEDA A PRUEBA DE BALAS: Busca en Clientes, si no está, busca en Users (Staff)
       let nombre = "Cliente no encontrado";
       let userDni = "No registrado";
 
-      const { data: cliData } = await supabase.from('clientes').select('nombre, apellido, dni').eq('id', userId).maybeSingle();
-      
-      if (cliData) {
-        nombre = `${cliData.nombre || ''} ${cliData.apellido || ''}`.trim();
-        userDni = cliData.dni;
-      } else {
-        const { data: usrData } = await supabase.from('users').select('first_name, last_name, dni').eq('id', userId).maybeSingle();
-        if (usrData) {
-          nombre = `${usrData.first_name || ''} ${usrData.last_name || ''}`.trim();
-          userDni = usrData.dni;
-        }
+      const { data: usrData } = await supabase
+        .from('users')
+        .select('first_name, last_name, dni')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (usrData) {
+        nombre = `${usrData.first_name || ''} ${usrData.last_name || ''}`.trim();
+        userDni = usrData.dni;
       }
 
-      // 👉 MULTI-TENANT: Buscamos alertas y asistencias solo de SU gimnasio
       const { data: alertsData } = await supabase
         .from('medical_alerts')
         .select('name, observation, severity')
         .eq('user_id', userId)
-        .eq('gym_id', user.gym_id); 
+        .eq('gym_id', selectedGymId); 
 
       const haceUnaSemana = new Date();
       haceUnaSemana.setDate(haceUnaSemana.getDate() - 7);
@@ -57,7 +53,7 @@ const AccessNotifier = () => {
         .from('access_logs')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
-        .eq('gym_id', user.gym_id)
+        .eq('gym_id', selectedGymId)
         .gte('check_in_time', haceUnaSemana.toISOString());
 
       setModalData({
@@ -76,40 +72,35 @@ const AccessNotifier = () => {
   };
 
   useEffect(() => {
-    // 👉 Validamos que el administrador tenga su gym_id listo antes de conectar
-    if (!user?.gym_id) return;
+    if (!selectedGymId) return;
 
     const canalAsistencias = supabase
-      .channel(`ingresos_gym_${user.gym_id}`) // Canal único para evitar cruces
+      .channel(`ingresos_gym_${selectedGymId}`) 
       .on(
         'postgres_changes',
         { 
           event: 'INSERT', 
           schema: 'public', 
           table: 'access_logs',
-          filter: `gym_id=eq.${user.gym_id}` // 👈 CLAVE: Solo escuchamos los ingresos de este gimnasio
+          filter: `gym_id=eq.${selectedGymId}` 
         },
         async (payload) => {
           const nuevoIngreso = payload.new;
 
-          // 👉 Búsqueda del nombre para la notificación
-          let nombreCliente = "Un cliente";
-          const { data: cliData } = await supabase.from('clientes').select('nombre, apellido').eq('id', nuevoIngreso.user_id).maybeSingle();
-          
-          if (cliData) {
-            nombreCliente = `${cliData.nombre || ''} ${cliData.apellido || ''}`.trim();
-          } else {
-            const { data: usrData } = await supabase.from('users').select('first_name, last_name').eq('id', nuevoIngreso.user_id).maybeSingle();
-            if (usrData) nombreCliente = `${usrData.first_name || ''} ${usrData.last_name || ''}`.trim();
-          }
+          const { data: usrData } = await supabase
+            .from('users')
+            .select('first_name, last_name')
+            .eq('id', nuevoIngreso.user_id)
+            .maybeSingle();
 
+          const nombreCliente = usrData ? `${usrData.first_name} ${usrData.last_name}` : "Un cliente";
+
+          // Buscamos la suscripción recién actualizada
           const { data: subData } = await supabase
             .from('subscriptions')
             .select('due_date')
             .eq('user_id', nuevoIngreso.user_id)
-            .eq('gym_id', user.gym_id)
-            .order('created_at', { ascending: false })
-            .limit(1)
+            .eq('gym_id', selectedGymId)
             .maybeSingle();
 
           let estadoCuota = 'SIN PLAN';
@@ -119,13 +110,14 @@ const AccessNotifier = () => {
           let accesoValido = nuevoIngreso.access_granted !== false; 
 
           if (subData && subData.due_date) {
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
-            const vencimiento = new Date(subData.due_date);
-            vencimiento.setHours(0, 0, 0, 0);
+            // --- 🎯 LÓGICA DE FECHAS NORMALIZADA (ANTI 60 DÍAS) ---
+            const hoyStr = new Date().toISOString().split('T')[0];
+            const hoy = new Date(hoyStr + "T12:00:00");
+            const vencimiento = new Date(subData.due_date + "T12:00:00");
 
             const diffTime = vencimiento.getTime() - hoy.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
+            // Math.round para evitar cualquier decimal molesto
+            const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
             diasRestantes = diffDays;
 
             if (diffDays >= 0) {
@@ -135,7 +127,7 @@ const AccessNotifier = () => {
             } else if (diffDays >= -5) {
               estadoCuota = 'RETRASO';
               badgeClass = styles.statusWarning;
-              mensajeCuota = `Cuota atrasada por ${Math.abs(diffDays)} días.`;
+              mensajeCuota = `En periodo de gracia (${Math.abs(diffDays)} días).`;
               accesoValido = true;
             } else {
               estadoCuota = 'NO ACTIVO';
@@ -186,7 +178,7 @@ const AccessNotifier = () => {
       .subscribe();
 
     return () => supabase.removeChannel(canalAsistencias);
-  }, [user]);
+  }, [selectedGymId]);
 
   return (
     <>
@@ -208,7 +200,6 @@ const AccessNotifier = () => {
                 </div>
               ) : (
                 <>
-                  {/* --- Información General --- */}
                   <div className={styles.infoRow}>
                     <span className={styles.infoLabel}><FiUser /> Nombre Completo</span>
                     <span className={styles.infoValue}>{modalData.user.fullName}</span>
@@ -228,7 +219,7 @@ const AccessNotifier = () => {
                       <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold' }}>
                         {modalData.diasRestantes >= 0 
                           ? `(Quedan ${modalData.diasRestantes} días)` 
-                          : `(Hace ${Math.abs(modalData.diasRestantes)} días)`}
+                          : `(Vencido hace ${Math.abs(modalData.diasRestantes)} días)`}
                       </span>
                     </div>
                   </div>
@@ -238,7 +229,6 @@ const AccessNotifier = () => {
                     <span className={styles.infoValue}>{modalData.asistenciasSemanales} días</span>
                   </div>
 
-                  {/* --- Alertas Médicas --- */}
                   <div className={styles.alertsSection}>
                     <h4 className={styles.alertsTitle}>
                       <FiAlertTriangle color="#d97706" /> Alertas Médicas
@@ -263,7 +253,6 @@ const AccessNotifier = () => {
                     )}
                   </div>
 
-                  {/* --- Botón de Redirección (Ver Perfil Completo) --- */}
                   <div style={{ marginTop: '10px' }}>
                     <button 
                       className={styles.btnFullProfile} 

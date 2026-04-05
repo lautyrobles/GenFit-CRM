@@ -1,5 +1,6 @@
+// src/App.jsx
 import React, { useState } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom' // 👈 Añadimos Navigate para protección
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import styles from './App.module.css'
 
 import Sidebar from './Components/Sidebar/Sidebar'
@@ -15,7 +16,7 @@ import Movimientos from './Pages/Movimientos/Movimientos'
 import RutinaNutricion from './Pages/Clientes/RutinaNutricion'
 import Asistencia from './Pages/Asistencia/Asistencia' 
 import CierreCaja from './Pages/CierreCaja/CierreCaja';
-import GestionGimnasios from './Components/GestionGimnasios'; // 👈 IMPORTANTE: Verifica que la ruta del archivo sea correcta
+import GestionGimnasios from './Components/GestionGimnasios'; 
 import { useAuth } from './context/AuthContext'
 import AccessNotifier from './Components/AccessNotifier/AccessNotifier'
 
@@ -29,6 +30,9 @@ const App = () => {
 
   // Normalizamos el rol para validaciones de ruta
   const role = user?.role?.replace("ROLE_", "").toUpperCase() || "";
+
+  // Helper para validar si es Admin o SuperAdmin
+  const isAdminOrHigher = role === 'ADMIN' || role === 'SUPER_ADMIN';
 
   return (
     <Router>
@@ -52,17 +56,27 @@ const App = () => {
               <Header onOpenSidebar={toggleSidebar} />
 
               <Routes>
+                {/* Rutas Generales */}
                 <Route path="/" element={<Inicio />} />
                 <Route path="/clientes" element={<Clientes />} />
                 <Route path="/pagos" element={<Pagos />} />
                 <Route path="/planes" element={<Planes />} />
-                <Route path="/configuracion" element={<Configuracion />} />
                 <Route path="/soporte" element={<Soporte />} />
-                <Route path="/movimientos" element={<Movimientos />} />
                 <Route path="/cierre-caja" element={<CierreCaja />} />
                 <Route path="/rutinas" element={<RutinaNutricion />} />
                 <Route path="/asistencia" element={<Asistencia />} />
                 
+                {/* 🔒 RUTAS PROTEGIDAS (Solo Admin o SuperAdmin) */}
+                <Route 
+                  path="/configuracion" 
+                  element={isAdminOrHigher ? <Configuracion /> : <Navigate to="/" />} 
+                />
+                
+                <Route 
+                  path="/movimientos" 
+                  element={isAdminOrHigher ? <Movimientos /> : <Navigate to="/" />} 
+                />
+
                 {/* 👑 RUTA EXCLUSIVA PARA SUPERADMIN */}
                 <Route 
                   path="/gestion-gimnasios" 

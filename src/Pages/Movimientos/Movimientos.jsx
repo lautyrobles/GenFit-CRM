@@ -6,9 +6,13 @@ import { obtenerMovimientos } from '../../assets/services/movimientosService'
 import { Activity, Filter, Trash2, ShieldAlert, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const Movimientos = () => {
-  const { user } = useAuth()
-  const role = user?.role || 'CLIENT'
-  // Definimos permisos: Solo Staff administrativo puede auditar
+  // 🎯 Extraemos selectedGymId para el "Modo Dios" del SuperAdmin
+  const { user, selectedGymId } = useAuth()
+  
+  // Normalizamos el rol para consistencia
+  const role = user?.role?.replace("ROLE_", "").toUpperCase() || "";
+  
+  // 🛡️ Solo Admin y SuperAdmin pueden ver esta página (Refuerzo de seguridad interna)
   const isAllowed = role === 'SUPER_ADMIN' || role === 'ADMIN'
 
   const [movimientos, setMovimientos] = useState([])
@@ -24,8 +28,8 @@ const Movimientos = () => {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    // Si no está permitido o no hay gym_id, no hacemos nada
-    if (!isAllowed || !user?.gym_id) {
+    // Si no tiene permisos o no hay un gimnasio seleccionado, no cargamos nada
+    if (!isAllowed || !selectedGymId) {
       setLoading(false);
       return;
     }
@@ -33,28 +37,29 @@ const Movimientos = () => {
     const fetchData = async () => {
       setLoading(true)
       try {
-        const data = await obtenerMovimientos(user.gym_id);
+        // 🎯 Usamos selectedGymId que viene del selector del Header
+        const data = await obtenerMovimientos(selectedGymId);
         
         const movimientosFormateados = data.map(log => ({
           id: log.id,
           datetime: log.created_at,
           userName: log.users ? `${log.users.first_name} ${log.users.last_name}` : 'Usuario eliminado',
           userEmail: log.users ? log.users.email : '-',
-          role: log.users ? log.users.role : 'UNKNOWN',
+          role: log.users ? log.users.role?.replace("ROLE_", "").toUpperCase() : 'UNKNOWN',
           module: log.module,
-          action: log.action, // Coincide con servicio
-          detail: log.details // Coincide con servicio (details -> detail)
+          action: log.action, 
+          detail: log.details 
         }))
         setMovimientos(movimientosFormateados)
       } catch (error) {
-        console.error("Error cargando logs:", error)
+        console.error("❌ Error cargando logs de auditoría:", error)
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [isAllowed, user?.gym_id])
+  }, [isAllowed, selectedGymId]) // 🔄 Se refresca al cambiar de gimnasio en el Header
 
   const formatDateTime = (isoString) => {
     if (!isoString) return '-'
@@ -66,11 +71,13 @@ const Movimientos = () => {
   }
 
   const getRoleLabel = (r) => {
-    switch (r) {
+    const cleanRole = r?.replace("ROLE_", "").toUpperCase();
+    switch (cleanRole) {
       case 'SUPER_ADMIN': return 'Super Admin'
       case 'ADMIN': return 'Administrador'
       case 'SUPERVISOR': return 'Supervisor'
       case 'TRAINER': return 'Coach'
+      case 'STAFF': return 'Staff'
       case 'CLIENT': return 'Cliente'
       default: return r
     }
@@ -82,25 +89,27 @@ const Movimientos = () => {
       case 'Pagos': return styles.badgePagos
       case 'Planes': return styles.badgePlanes
       case 'Rutinas': return styles.badgeRutinas
-      case 'Nutrición': return styles.badgeNutricion
-      case 'Permisos': return styles.badgePermisos
+      case 'Configuración': return styles.badgePermisos
+      case 'Sistema': return styles.badgeDefault
       default: return styles.badgeDefault
     }
   }
 
   const getActionBadgeClass = (action) => {
     const act = action?.toUpperCase();
-    if (act?.includes('CREACIÓN')) return styles.actionCreate;
+    if (act?.includes('CREACIÓN') || act?.includes('ALTA')) return styles.actionCreate;
     if (act?.includes('ELIMINACIÓN') || act?.includes('BORRADO')) return styles.actionDelete;
     if (act?.includes('ACTUALIZACIÓN') || act?.includes('EDICIÓN')) return styles.actionUpdate;
+    if (act?.includes('LOGIN')) return styles.actionLogin; // Opcional si tienes este estilo
     return styles.actionDefault;
   }
 
   const movimientosFiltrados = useMemo(() => {
     const filtrados = movimientos.filter((mov) => {
       if (roleFilter !== 'ALL') {
-        if (roleFilter === 'ADMIN' && mov.role !== 'ADMIN' && mov.role !== 'SUPER_ADMIN') return false
-        if (roleFilter !== 'ADMIN' && mov.role !== roleFilter) return false
+        const movRole = mov.role?.replace("ROLE_", "").toUpperCase();
+        if (roleFilter === 'ADMIN' && movRole !== 'ADMIN' && movRole !== 'SUPER_ADMIN') return false
+        if (roleFilter !== 'ADMIN' && movRole !== roleFilter) return false
       }
       if (moduleFilter !== 'ALL' && mov.module !== moduleFilter) return false
       if (selectedDate) {
@@ -110,9 +119,13 @@ const Movimientos = () => {
       }
       return true
     })
-    setCurrentPage(1);
     return filtrados;
   }, [movimientos, roleFilter, moduleFilter, selectedDate])
+
+  // Reset de página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [roleFilter, moduleFilter, selectedDate, selectedGymId]);
 
   const totalPages = Math.ceil(movimientosFiltrados.length / itemsPerPage);
   const currentItems = movimientosFiltrados.slice(
