@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search } from 'lucide-react';
 import { obtenerClientePorDocumento } from '../../../assets/services/clientesService';
-import { useAuth } from '../../../context/AuthContext'; // 👈 Importante para el filtro
+import { useAuth } from '../../../context/AuthContext'; 
 import styles from '../Pagos.module.css';
 
 const ModalNuevoPago = ({ onClose, onContinue, socioInicial }) => {
-  const { user } = useAuth(); // 👈 Obtenemos el gym_id
+  const { user } = useAuth(); 
   const [loading, setLoading] = useState(false);
   const [nuevoPago, setNuevoPago] = useState({
     clienteId: null,
+    plan_id: null, // 👈 Agregado para cumplir con la base de datos
     clienteDocumento: "",
     clienteNombre: "",
     planNombre: "",
@@ -24,6 +25,7 @@ const ModalNuevoPago = ({ onClose, onContinue, socioInicial }) => {
       setNuevoPago(prev => ({
         ...prev,
         clienteId: socioInicial.id,
+        plan_id: socioInicial.plan_id || socioInicial.plans?.id || null, // 👈 Capturamos el ID del plan del socio inicial
         clienteDocumento: socioInicial.dni || "",
         clienteNombre: `${socioInicial.first_name} ${socioInicial.last_name}`,
         planNombre: socioInicial.plans?.name || socioInicial.plan_name || "Plan Estándar",
@@ -43,12 +45,12 @@ const ModalNuevoPago = ({ onClose, onContinue, socioInicial }) => {
     
     setLoading(true);
     try {
-      // 🎯 Buscamos solo socios que pertenezcan a este gimnasio
       const cliente = await obtenerClientePorDocumento(dni, user.gym_id);
       if (cliente) {
         setNuevoPago(prev => ({
           ...prev,
           clienteId: cliente.id,
+          plan_id: cliente.plan_id || cliente.plans?.id || null, // 👈 Capturamos el ID del plan al buscar por DNI
           clienteNombre: `${cliente.first_name} ${cliente.last_name}`,
           planNombre: cliente.plans?.name || "Sin Plan",
           montoFinal: cliente.plans?.price || ""
