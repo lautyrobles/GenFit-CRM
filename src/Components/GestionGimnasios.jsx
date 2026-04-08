@@ -7,13 +7,13 @@ import {
   actualizarSuperAdmin,
   toggleStatusSuperAdmin 
 } from '../assets/services/superAdminService';
-import { registerUser } from '../assets/services/authService';
+import { crearUsuarioStaff } from '../assets/services/authService';
 import Loader from '../Components/Loader/Loader';
 import { Building2, ShieldCheck, UserPlus, Globe, ShieldAlert, Trash2, Edit2, Power, PowerOff, Key } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const GestionGimnasios = () => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, logout } = useAuth();
   const [gyms, setGyms] = useState([]);
   const [superAdmins, setSuperAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +58,7 @@ const GestionGimnasios = () => {
       adminNombre: sa.first_name,
       adminApellido: sa.last_name,
       adminEmail: sa.email,
-      adminPassword: '', // Se deja vacío para que solo cambie si se escribe algo nuevo
+      adminPassword: '', 
       adminDni: sa.dni || ''
     });
     setShowModal(true);
@@ -91,11 +91,14 @@ const GestionGimnasios = () => {
           last_name: formData.adminApellido,
           dni: formData.adminDni,
           username: formData.adminEmail,
-          email: formData.adminEmail,
-          password: formData.adminPassword // Se envía (puede ir vacío)
+          email: formData.adminEmail
         });
         alert("Perfil actualizado correctamente");
+        setShowModal(false);
+        resetForm();
+        cargarDatos();
       } else {
+        // Modo Creación: SuperAdmin o Franquicia + Admin
         let targetGymId = null;
         const targetRole = esNuevoSuperAdmin ? 'SUPER_ADMIN' : 'ADMIN';
 
@@ -104,22 +107,30 @@ const GestionGimnasios = () => {
           targetGymId = gym.id;
         }
 
-        await registerUser(
-          formData.adminNombre,
-          formData.adminApellido,
-          formData.adminEmail,
-          formData.adminEmail,
-          formData.adminPassword,
-          targetRole,
-          formData.adminDni,
-          targetGymId 
+        await crearUsuarioStaff(
+          {
+            email: formData.adminEmail,
+            password: formData.adminPassword,
+            first_name: formData.adminNombre,
+            last_name: formData.adminApellido,
+            dni: formData.adminDni,
+            role: targetRole,
+            gym_id: targetGymId
+          },
+          currentUser.id,
+          currentUser.role,
+          currentUser.gym_id
         );
-        alert(esNuevoSuperAdmin ? "👑 SuperAdmin creado" : "🚀 Franquicia configurada");
-      }
 
-      setShowModal(false);
-      resetForm();
-      cargarDatos();
+        alert(
+          esNuevoSuperAdmin 
+            ? "👑 SuperAdmin creado. Por seguridad el motor de Supabase cerrará tu sesión, vuelve a ingresar." 
+            : "🚀 Franquicia configurada. Por seguridad el motor de Supabase cerrará tu sesión, vuelve a ingresar."
+        );
+        
+        // Forzamos deslogueo por la limitación de Supabase signUp en el frontend
+        await logout(); 
+      }
     } catch (err) {
       alert("Error: " + err.message);
     } finally {
@@ -255,21 +266,21 @@ const GestionGimnasios = () => {
                 <input name="adminEmail" value={formData.adminEmail} type="email" required onChange={handleChange} />
               </div>
               
-              <div className={styles.formGroup}>
-                  <label>
-                    {editMode ? "Nueva Contraseña (dejar vacío para mantener)" : "Contraseña de Acceso"}
-                  </label>
-                  <div style={{position: 'relative'}}>
-                    <input 
-                      name="adminPassword" 
-                      type="password" 
-                      required={!editMode} 
-                      value={formData.adminPassword}
-                      onChange={handleChange} 
-                      placeholder={editMode ? "Cambiar contraseña..." : "Mínimo 6 caracteres"} 
-                    />
-                  </div>
-              </div>
+              {!editMode && (
+                <div className={styles.formGroup}>
+                    <label>Contraseña de Acceso</label>
+                    <div style={{position: 'relative'}}>
+                      <input 
+                        name="adminPassword" 
+                        type="password" 
+                        required 
+                        value={formData.adminPassword}
+                        onChange={handleChange} 
+                        placeholder="Mínimo 6 caracteres" 
+                      />
+                    </div>
+                </div>
+              )}
               
               <div className={styles.formGroup}>
                 <label>DNI / Documento</label>

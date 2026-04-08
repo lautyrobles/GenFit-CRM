@@ -43,32 +43,45 @@ export const login = async (email, password) => {
 };
 
 /* ===================================================
-    🆕 REGISTER USER (Admin creando Staff o Clientes)
+    🛠️ CREACIÓN DE STAFF UNIVERSAL (Jerarquía Multi-Tenant)
    =================================================== */
-export const registerUser = async (name, lastName, email, username, password, role, dni, gymId) => {
+export const crearUsuarioStaff = async (datosNuevoUsuario, creadorId, creadorRol, creadorGymId) => {
   try {
-    // 1. Crear en Supabase Auth
+    // 1. Registro en Supabase Auth con contraseña inicial
     const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
+      email: datosNuevoUsuario.email,
+      password: datosNuevoUsuario.password, 
     });
 
-    if (authError) throw authError;
+    if (authError) throw new Error(`Error Auth: ${authError.message}`);
 
-    // 2. Crear en tabla pública 'users' inyectando el gymId
+    // 2. Lógica de asignación de Gimnasio según la jerarquía
+    let gymIdAsignado = null;
+
+    if (datosNuevoUsuario.role === 'SUPER_ADMIN') {
+      // Los SuperAdmins no tienen un gimnasio fijo, son globales
+      gymIdAsignado = null;
+    } else if (creadorRol === 'SUPER_ADMIN' && datosNuevoUsuario.role === 'ADMIN') {
+      // Un SuperAdmin crea un Admin y le asigna una sucursal específica
+      if (!datosNuevoUsuario.gym_id) throw new Error("Debes seleccionar un gimnasio para este Administrador.");
+      gymIdAsignado = datosNuevoUsuario.gym_id;
+    } else if (creadorRol === 'ADMIN' && datosNuevoUsuario.role === 'SUPERVISOR') {
+      // Un Admin crea un Supervisor y hereda automáticamente su propio gym_id
+      gymIdAsignado = creadorGymId;
+    } else {
+      throw new Error("No tienes permisos para crear este tipo de usuario.");
+    }
+
+    // 3. Guardamos en tu tabla 'users'
     const nuevoPerfil = {
       id: authData.user.id,
-      email,
-      username: username || dni,
-      first_name: name,
-      last_name: lastName,
-      role: role || 'CLIENT',
-      dni: dni,
-      // Nota: No es recomendable guardar la contraseña en texto plano en la tabla pública, 
-      // pero se incluye si tu esquema de DB lo requiere como NOT NULL.
-      password: password, 
-      enabled: true,
-      gym_id: gymId 
+      first_name: datosNuevoUsuario.first_name,
+      last_name: datosNuevoUsuario.last_name,
+      email: datosNuevoUsuario.email,
+      dni: datosNuevoUsuario.dni || null,
+      role: datosNuevoUsuario.role,
+      gym_id: gymIdAsignado,
+      enabled: true
     };
 
     const { data, error: dbError } = await supabase
@@ -77,12 +90,12 @@ export const registerUser = async (name, lastName, email, username, password, ro
       .select()
       .single();
 
-    if (dbError) throw dbError;
-    return data;
+    if (dbError) throw new Error(`Error en Base de Datos: ${dbError.message}`);
 
-  } catch (e) {
-    console.error("❌ Error register:", e.message);
-    throw e;
+    return data;
+  } catch (error) {
+    console.error("❌ Error en crearUsuarioStaff:", error);
+    throw error;
   }
 };
 
@@ -144,8 +157,6 @@ export const toggleUserStatus = async (id, enabled) => {
 
 export const deleteUser = async (id) => {
   try {
-    // Nota: Esto elimina el perfil público. 
-    // Para eliminar de Auth (email/pass) se requiere llamar a una función Edge o Admin API.
     const { error } = await supabase
       .from('users')
       .delete()
@@ -167,50 +178,12 @@ export const logout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     
-    // Limpieza de datos persistentes si los hubiera
     localStorage.removeItem("fitseoUser"); 
-    
-    // Redirección manual si el router no lo maneja automáticamente
     window.location.href = "/login"; 
     
     return true;
   } catch (error) {
     console.error("❌ Error al cerrar sesión:", error.message);
     return false;
-  }
-};
-
-export const crearAdministradorNuevoGym = async (adminData, gymId) => {
-  try {
-    // 1. Registro en Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: adminData.email,
-      password: adminData.password,
-    });
-
-    if (authError) throw authError;
-
-    // 2. Creación del perfil en la tabla pública con el ROL y el GYM_ID del nuevo negocio
-    const { data, error: dbError } = await supabase
-      .from('users')
-      .insert([{
-        id: authData.user.id,
-        first_name: adminData.nombre,
-        last_name: adminData.apellido,
-        email: adminData.email,
-        username: adminData.username,
-        dni: adminData.dni,
-        role: 'ADMIN', // El dueño es ADMIN de su parcela
-        gym_id: gymId,  // 🎯 Aquí se define su "Base de Datos dedicada"
-        enabled: true
-      }])
-      .select()
-      .single();
-
-    if (dbError) throw dbError;
-    return data;
-  } catch (error) {
-    console.error("❌ Error creando administrador global:", error.message);
-    throw error;
   }
 };

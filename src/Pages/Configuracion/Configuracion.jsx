@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import styles from "./Configuracion.module.css";
 import Loader from "../../Components/Loader/Loader";
 import {
-  registerUser,
+  crearUsuarioStaff, // 👈 Cambiado: usamos la función universal
   getUsers,
   updateUser,
   deleteUser,
@@ -26,7 +26,7 @@ const Configuracion = () => {
   };
 
   const currentUserRole = normalizeRole(user?.role) || "";
-  const isSuperAdmin = currentUserRole === "SUPERADMIN";
+  const isSuperAdmin = currentUserRole === "SUPERADMIN" || currentUserRole === "SUPER_ADMIN";
 
   // --- Estados ---
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -56,7 +56,7 @@ const Configuracion = () => {
 
   const mapRoleToTipo = (roleRaw) => {
     const role = normalizeRole(roleRaw);
-    if (role === "SUPERADMIN") return "Superadministrador";
+    if (role === "SUPERADMIN" || role === "SUPER_ADMIN") return "Superadministrador";
     if (role === "ADMIN") return "Administrador";
     if (role === "SUPERVISOR") return "Supervisor";
     return "Staff";
@@ -70,7 +70,7 @@ const Configuracion = () => {
   };
 
   const getAllowedTipos = () => {
-    if (currentUserRole === "SUPERADMIN") return ["Superadministrador", "Administrador", "Supervisor"];
+    if (isSuperAdmin) return ["Superadministrador", "Administrador", "Supervisor"];
     if (currentUserRole === "ADMIN") return ["Supervisor", "Staff"];
     return [];
   };
@@ -78,21 +78,20 @@ const Configuracion = () => {
   const allowedTipos = getAllowedTipos();
   const canCreateProfiles = allowedTipos.length > 0;
 
-  // --- Cargar Staff (Sincronizado con el Selector Global) ---
+  // --- Cargar Staff ---
   useEffect(() => {
     const cargar = async () => {
-      // 🛡️ Si no hay un gimnasio seleccionado (y no es carga inicial), salimos
       if (!selectedGymId) return;
 
       try {
         setLoading(true);
-        // 🎯 Usamos selectedGymId en lugar de user.gym_id para permitir el "Modo Dios"
         const data = await getUsers(selectedGymId);
         
         const staffUsers = data.filter(u => {
           const r = normalizeRole(u.role);
-          // Los SuperAdmins no se gestionan desde aquí, sino desde Gestión de Gimnasios
-          return ["ADMIN", "SUPERVISOR", "STAFF", "ENCARGADO"].includes(r);
+          // Los SuperAdmins a menudo se gestionan desde Gestión de Gimnasios, 
+          // pero permitimos verlos si el rol coincide.
+          return ["ADMIN", "SUPERVISOR", "STAFF", "ENCARGADO", "SUPER_ADMIN", "SUPERADMIN"].includes(r);
         });
 
         setUsuarios(staffUsers.map(u => ({ ...u, normalizedRole: normalizeRole(u.role) })));
@@ -103,7 +102,7 @@ const Configuracion = () => {
       }
     };
     cargar();
-  }, [selectedGymId]); // 🔄 Se vuelve a ejecutar cuando cambias de gimnasio en el Header
+  }, [selectedGymId]);
 
   // --- Handlers ---
   const handleChange = (e) => {
@@ -152,23 +151,30 @@ const Configuracion = () => {
 
         await registrarMovimiento(user.id, "Configuración", "ACTUALIZACIÓN", `Modificó al operador ${nuevoUsuario.nombre}`, selectedGymId);
         mostrarToast("Cambios guardados con éxito");
+        cerrarModal();
       } else {
-        const created = await registerUser(
-            nuevoUsuario.nombre, 
-            nuevoUsuario.apellido, 
-            nuevoUsuario.email,
-            nuevoUsuario.nombreUsuario, 
-            nuevoUsuario.password, 
-            apiRole, 
-            nuevoUsuario.dni, 
-            selectedGymId // 🎯 Se registra en el gimnasio actualmente seleccionado
+        // 🎯 Usamos la nueva función centralizada
+        await crearUsuarioStaff(
+            {
+              email: nuevoUsuario.email,
+              password: nuevoUsuario.password,
+              first_name: nuevoUsuario.nombre,
+              last_name: nuevoUsuario.apellido,
+              dni: nuevoUsuario.dni,
+              role: apiRole,
+              gym_id: selectedGymId // El gym donde se registra
+            },
+            user.id,
+            user.role,
+            user.gym_id
         );
 
-        setUsuarios(prev => [{ ...created, normalizedRole: normalizeRole(apiRole) }, ...prev]);
         await registrarMovimiento(user.id, "Configuración", "ALTA", `Registró al nuevo operador: ${nuevoUsuario.nombre}`, selectedGymId);
-        mostrarToast("Operador registrado");
+        
+        // Alerta obligatoria por el comportamiento de signUp en Supabase Auth (Frontend)
+        alert("Operador registrado con éxito. Por seguridad del motor de autenticación, tu sesión se reiniciará.");
+        await logout(); // Esto limpia el localStorage y redirige al login
       }
-      cerrarModal();
     } catch (err) {
       mostrarToast(err.message || "Error al procesar", "error");
     } finally {
@@ -266,7 +272,7 @@ const Configuracion = () => {
                 {usuariosPagina.map((u) => {
                   const targetRole = normalizeRole(u.role);
                   const isMe = u.id === user?.id;
-                  const canEdit = currentUserRole === "SUPER_ADMIN" || (currentUserRole === "ADMIN" && (isMe || targetRole === "SUPERVISOR" || targetRole === "STAFF"));
+                  const canEdit = isSuperAdmin || (currentUserRole === "ADMIN" && (isMe || targetRole === "SUPERVISOR" || targetRole === "STAFF"));
 
                   return (
                     <tr key={u.id} className={!u.enabled ? styles.rowDisabled : ""}>
@@ -311,7 +317,7 @@ const Configuracion = () => {
                                   {u.enabled ? <PowerOff size={16}/> : <Power size={16}/>}
                                 </button>
                               )}
-                              {!isMe && currentUserRole === "SUPER_ADMIN" && (
+                              {!isMe && isSuperAdmin && (
                                 <button className={`${styles.btnAction} ${styles.btnDelete}`} onClick={() => handleDelete(u.id)} title="Borrar"><Trash2 size={16} /></button>
                               )}
                             </>
@@ -325,25 +331,26 @@ const Configuracion = () => {
             </table>
           )}
         </div>
-{usuarios.length > itemsPerPage && (
-  <div className={styles.paginador}>
-    <button 
-      onClick={() => setCurrentPage(prev => prev - 1)} 
-      disabled={currentPage === 1}
-    >
-      Anterior
-    </button>
-    <span className={styles.paginaInfo}>
-      Página <strong>{currentPage}</strong> de {totalPaginas}
-    </span>
-    <button 
-      onClick={() => setCurrentPage(prev => prev + 1)} 
-      disabled={currentPage === totalPaginas}
-    >
-      Siguiente
-    </button>
-  </div>
-)}
+        
+        {usuarios.length > itemsPerPage && (
+          <div className={styles.paginador}>
+            <button 
+              onClick={() => setCurrentPage(prev => prev - 1)} 
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </button>
+            <span className={styles.paginaInfo}>
+              Página <strong>{currentPage}</strong> de {totalPaginas}
+            </span>
+            <button 
+              onClick={() => setCurrentPage(prev => prev + 1)} 
+              disabled={currentPage === totalPaginas}
+            >
+              Siguiente
+            </button>
+          </div>
+        )}
       </div>
 
       {mostrarFormulario && (
@@ -403,7 +410,7 @@ const Configuracion = () => {
               </div>
               <div className={styles.formFooter}>
                 <button type="button" className={styles.btnCancelText} onClick={cerrarModal}>Cancelar</button>
-                <button type="submit" className={styles.btnSubmit} disabled={saving}>{saving ? "Procesando..." : "Guardar Operador"}</button>
+                <button type="submit" className={styles.btnSubmit} disabled={saving}>{saving ? "Procesando..." : (editUser ? "Guardar Cambios" : "Guardar Operador")}</button>
               </div>
             </form>
           </div>

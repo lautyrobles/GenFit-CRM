@@ -1,4 +1,3 @@
-// src/assets/services/superAdminService.js
 import { supabase } from "./supabaseClient";
 
 /**
@@ -40,7 +39,6 @@ export const obtenerTodosLosGimnasios = async () => {
       .order('name', { ascending: true });
 
     if (error) {
-      // Si aquí recibes un 500, recordá revisar la política de RLS (recursión)
       console.error("❌ Error Supabase al listar Gyms:", error.message, error.hint);
       throw error;
     }
@@ -109,9 +107,10 @@ export const toggleEstadoGimnasio = async (gymId, nuevoEstado) => {
 
 export const obtenerTodosLosSuperAdmins = async () => {
   try {
+    // 🎯 Agregado el campo 'enabled' para que el Front pueda ver si están bloqueados
     const { data, error } = await supabase
       .from('users')
-      .select('id, first_name, last_name, email, username, created_at')
+      .select('id, first_name, last_name, email, username, created_at, enabled')
       .eq('role', 'SUPER_ADMIN')
       .order('created_at', { ascending: false });
 
@@ -125,8 +124,6 @@ export const obtenerTodosLosSuperAdmins = async () => {
 
 export const eliminarSuperAdmin = async (userId) => {
   try {
-    // IMPORTANTE: Esto elimina el perfil de la tabla pública. 
-    // Debido al RLS que pusimos, sin perfil en 'users', el usuario no puede ver nada.
     const { error } = await supabase
       .from('users')
       .delete()
@@ -142,6 +139,7 @@ export const eliminarSuperAdmin = async (userId) => {
 
 export const actualizarSuperAdmin = async (userId, updateData) => {
   try {
+    // 🎯 Se elimina la inyección de password por seguridad (las contraseñas no van en texto plano)
     const dataToUpdate = {
       first_name: updateData.first_name,
       last_name: updateData.last_name,
@@ -149,11 +147,6 @@ export const actualizarSuperAdmin = async (userId, updateData) => {
       username: updateData.username,
       email: updateData.email
     };
-
-    // Si se proporcionó una contraseña, la incluimos
-    if (updateData.password && updateData.password.trim() !== "") {
-      dataToUpdate.password = updateData.password;
-    }
 
     const { data, error } = await supabase
       .from('users')
