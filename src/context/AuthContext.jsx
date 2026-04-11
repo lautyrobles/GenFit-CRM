@@ -1,10 +1,9 @@
-// src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { login as loginAPI } from "../assets/services/authService";
+import { sendOtpAPI, verifyCodeAPI } from "../assets/services/authService"; 
 import { registrarMovimiento } from "../assets/services/movimientosService";
 
 const AuthContext = createContext();
-const INACTIVITY_LIMIT = 15 * 60 * 1000; 
+const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutos en milisegundos
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -17,7 +16,6 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     userRef.current = user;
-    // Al cargar el usuario, inicializamos el gimnasio seleccionado
     if (user) {
       setSelectedGymId(user.gym_id);
     } else {
@@ -28,8 +26,6 @@ export const AuthProvider = ({ children }) => {
   /* ===================================================
       👑 LÓGICA DE SUPERADMIN (Cambio de Sucursal)
      =================================================== */
-  
-  // Esta función permite al SuperAdmin "saltar" entre datos de diferentes gyms
   const cambiarSucursal = useCallback((gymId) => {
     const role = userRef.current?.role?.replace("ROLE_", "").toUpperCase();
     if (role === "SUPER_ADMIN") {
@@ -131,43 +127,54 @@ export const AuthProvider = ({ children }) => {
   }, [user, updateActivity, checkInactivity]);
 
   /* ===================================================
-      🔐 LOGIN
+      📧 PASO 1: ENVIAR CÓDIGO (OTP)
      =================================================== */
-const login = async ({ usuario, password }) => {
-  try {
-    const data = await loginAPI(usuario, password);
-    if (!data) return null;
+  const sendOtp = async ({ email }) => {
+    try {
+      await sendOtpAPI(email);
+    } catch (err) {
+      throw err; 
+    }
+  };
 
-    const normalizedRole = data.role ? data.role.replace("ROLE_", "").toUpperCase() : "";
-    
-    // 🎯 ASEGURAMOS QUE EL GYM_ID ESTÉ PRESENTE
-    const fixedUser = { 
-      ...data, 
-      role: normalizedRole,
-      gym_id: data.gym_id // <--- Verifica que esto venga de la API
-    };
-    
-    localStorage.setItem("fitseoUser", JSON.stringify(fixedUser));
-    updateActivity(); 
+  /* ===================================================
+      ✅ PASO 2: VERIFICAR CÓDIGO Y LOGUEAR
+     =================================================== */
+  const verifyCode = async ({ email, token }) => {
+    try {
+      const data = await verifyCodeAPI(email, token);
+      if (!data) return null;
 
-    setUser(fixedUser);
-    // 🎯 FORZAMOS EL ESTADO DEL GYM SELECCIONADO
-    setSelectedGymId(fixedUser.gym_id); 
-    userRef.current = fixedUser;
-    return fixedUser;
-  } catch (err) {
-    throw err; 
-  }
-};
+      const normalizedRole = data.role ? data.role.replace("ROLE_", "").toUpperCase() : "";
+      
+      const fixedUser = { 
+        ...data, 
+        role: normalizedRole,
+        gym_id: data.gym_id 
+      };
+      
+      localStorage.setItem("fitseoUser", JSON.stringify(fixedUser));
+      updateActivity(); 
+
+      setUser(fixedUser);
+      setSelectedGymId(fixedUser.gym_id); 
+      userRef.current = fixedUser;
+      
+      return fixedUser;
+    } catch (err) {
+      throw err; 
+    }
+  };
 
   return (
     <AuthContext.Provider value={{ 
       user, 
-      login, 
+      sendOtp,       
+      verifyCode,    
       logout, 
       loadingInitial, 
-      selectedGymId, // 🔑 Exportamos el ID seleccionado
-      cambiarSucursal // 🔑 Exportamos la función de cambio
+      selectedGymId, 
+      cambiarSucursal 
     }}>
       {!loadingInitial && children}
     </AuthContext.Provider>
