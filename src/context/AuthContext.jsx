@@ -1,181 +1,82 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { sendOtpAPI, verifyCodeAPI } from "../assets/services/authService"; 
-import { registrarMovimiento } from "../assets/services/movimientosService";
+import { sendOtpAPI, verifyCodeAPI, supabase } from "../assets/services/authService";
 
 const AuthContext = createContext();
-const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutos en milisegundos
+const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutos
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loadingInitial, setLoadingInitial] = useState(true);
-  
-  // 🎯 ESTADO PARA MULTI-TENANCY GLOBAL (Selector de Gimnasio)
-  const [selectedGymId, setSelectedGymId] = useState(null);
-
   const userRef = useRef(null);
 
-  useEffect(() => {
-    userRef.current = user;
-    if (user) {
-      setSelectedGymId(user.gym_id);
-    } else {
-      setSelectedGymId(null);
-    }
-  }, [user]);
-
-  /* ===================================================
-      👑 LÓGICA DE SUPERADMIN (Cambio de Sucursal)
-     =================================================== */
-  const cambiarSucursal = useCallback((gymId) => {
-    const role = userRef.current?.role?.replace("ROLE_", "").toUpperCase();
-    if (role === "SUPER_ADMIN") {
-      console.log(`🌐 Cambiando contexto de datos al Gym: ${gymId}`);
-      setSelectedGymId(gymId);
-    }
-  }, []);
-
-  /* ===================================================
-      🔐 LOGOUT (Manual y Automático)
-     =================================================== */
-  const logout = useCallback(async (reason = "manual") => {
-    console.log(`🔒 Sesión finalizada (${reason}).`);
-    
-    if (userRef.current) {
-      const detalle = reason === "inactivity" 
-        ? "Sesión cerrada automáticamente por inactividad (15 min)."
-        : "El usuario cerró sesión de forma manual.";
-        
-      try {
-        await registrarMovimiento(userRef.current.id, 'Sistema', 'LOGOUT', detalle);
-      } catch (e) {
-        console.error("Error al registrar logout:", e);
-      }
-    }
-
-    localStorage.removeItem("fitseoUser");
-    localStorage.removeItem("lastActivity");
-    setUser(null);
-    userRef.current = null;
-    setSelectedGymId(null);
-
-    if (window.location.pathname !== "/login") {
-      window.location.href = "/login";
-    }
-  }, []);
-
+  // Actualizar la última actividad
   const updateActivity = useCallback(() => {
     localStorage.setItem("lastActivity", new Date().getTime().toString());
   }, []);
 
+  // Cerrar sesión
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem("fitseoUser");
+    localStorage.removeItem("lastActivity");
+    setUser(null);
+    userRef.current = null;
+    window.location.href = "/login";
+  }, []);
+
+  // Verificar inactividad
   const checkInactivity = useCallback(() => {
     const lastActivity = localStorage.getItem("lastActivity");
-    const storedUser = localStorage.getItem("fitseoUser");
-
-    if (lastActivity && storedUser) {
+    if (lastActivity && userRef.current) {
       const now = new Date().getTime();
       if (now - parseInt(lastActivity) > INACTIVITY_LIMIT) {
-        logout("inactivity");
+        logout();
       }
     }
   }, [logout]);
 
-  /* ===================================================
-      🔄 CARGA INICIAL
-     =================================================== */
+  // Carga inicial: Revisar si hay sesión activa
   useEffect(() => {
-    const initAuth = () => {
+    const initAuth = async () => {
       const storedUser = localStorage.getItem("fitseoUser");
-      const lastActivity = localStorage.getItem("lastActivity");
-
-      if (storedUser && lastActivity) {
-        const now = new Date().getTime();
-        if (now - parseInt(lastActivity) > INACTIVITY_LIMIT) {
-          logout("inactivity");
-        } else {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-            userRef.current = parsedUser;
-            updateActivity();
-          } catch (e) {
-            logout();
-          }
-        }
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        userRef.current = parsedUser;
+        updateActivity();
       }
       setLoadingInitial(false);
     };
-
     initAuth();
-  }, [logout, updateActivity]);
+  }, [updateActivity]);
 
-  /* ===================================================
-      🖱️ LISTENERS DE ACTIVIDAD
-     =================================================== */
+  // Listeners para detectar movimiento del usuario
   useEffect(() => {
     if (!user) return;
-
-    const handleUserActivity = () => updateActivity();
     const events = ["mousedown", "keydown", "scroll", "touchstart"];
-    events.forEach(event => window.addEventListener(event, handleUserActivity));
-    
-    const interval = setInterval(checkInactivity, 30000); 
-
+    events.forEach(e => window.addEventListener(e, updateActivity));
+    const interval = setInterval(checkInactivity, 30000);
     return () => {
-      events.forEach(event => window.removeEventListener(event, handleUserActivity));
+      events.forEach(e => window.removeEventListener(e, updateActivity));
       clearInterval(interval);
     };
   }, [user, updateActivity, checkInactivity]);
 
-  /* ===================================================
-      📧 PASO 1: ENVIAR CÓDIGO (OTP)
-     =================================================== */
   const sendOtp = async ({ email }) => {
-    try {
-      await sendOtpAPI(email);
-    } catch (err) {
-      throw err; 
-    }
+    return await sendOtpAPI(email);
   };
 
-  /* ===================================================
-      ✅ PASO 2: VERIFICAR CÓDIGO Y LOGUEAR
-     =================================================== */
   const verifyCode = async ({ email, token }) => {
-    try {
-      const data = await verifyCodeAPI(email, token);
-      if (!data) return null;
-
-      const normalizedRole = data.role ? data.role.replace("ROLE_", "").toUpperCase() : "";
-      
-      const fixedUser = { 
-        ...data, 
-        role: normalizedRole,
-        gym_id: data.gym_id 
-      };
-      
-      localStorage.setItem("fitseoUser", JSON.stringify(fixedUser));
-      updateActivity(); 
-
-      setUser(fixedUser);
-      setSelectedGymId(fixedUser.gym_id); 
-      userRef.current = fixedUser;
-      
-      return fixedUser;
-    } catch (err) {
-      throw err; 
-    }
+    const userData = await verifyCodeAPI(email, token);
+    localStorage.setItem("fitseoUser", JSON.stringify(userData));
+    setUser(userData);
+    userRef.current = userData;
+    updateActivity();
+    return userData;
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      sendOtp,       
-      verifyCode,    
-      logout, 
-      loadingInitial, 
-      selectedGymId, 
-      cambiarSucursal 
-    }}>
+    <AuthContext.Provider value={{ user, sendOtp, verifyCode, logout, loadingInitial }}>
       {!loadingInitial && children}
     </AuthContext.Provider>
   );

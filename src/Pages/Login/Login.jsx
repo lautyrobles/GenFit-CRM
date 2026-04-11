@@ -6,7 +6,6 @@ import { Mail, Loader2, Info, ShieldCheck, ArrowLeft } from "lucide-react";
 import { registrarMovimiento } from "../../assets/services/movimientosService";
 
 const Login = () => {
-  // Asegurate de que tu AuthContext tenga la lógica para enviar y verificar el OTP
   const { sendOtp, verifyCode } = useAuth(); 
   const navigate = useNavigate();
   
@@ -16,48 +15,64 @@ const Login = () => {
   const [error, setError] = useState("");
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    // Si es el OTP, limitamos a que solo acepte números por comodidad
+    if (e.target.name === "otp") {
+      const val = e.target.value.replace(/\D/g, "");
+      setFormData({ ...formData, otp: val });
+    } else {
+      setFormData({ ...formData, [e.target.name]: e.target.value });
+    }
   };
 
-  // --- PASO 1: Enviar correo con código ---
+  /* ===================================================
+      📧 PASO 1: Enviar correo con código
+     =================================================== */
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      // Llamamos a la función que dispara el supabase.auth.signInWithOtp()
       await sendOtp({ email: formData.email });
-      
-      // Si el correo se envía correctamente, pasamos a pedir el código
       setStep(2); 
     } catch (err) {
-      setError(err.message || "Hubo un error al enviar el código. Verificá tu correo.");
+      // Si el error es el 429 que vimos antes, damos un mensaje más humano
+      const msg = err.message.includes("rate limit") 
+        ? "Demasiados intentos. Por favor, espera unos minutos antes de pedir otro código."
+        : err.message || "No se pudo enviar el código. Verificá tu correo.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- PASO 2: Verificar el código ---
+  /* ===================================================
+      ✅ PASO 2: Verificar el código
+     =================================================== */
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      // Llamamos a la función que usa supabase.auth.verifyOtp()
       const loggedUser = await verifyCode({ 
         email: formData.email, 
         token: formData.otp 
       });
 
       if (loggedUser) {
-        await registrarMovimiento(
-          loggedUser.id, 
-          'Sistema', 
-          'LOGIN', 
-          `Sesión iniciada correctamente (Acceso sin contraseña).`
-        );
+        // Registrar el acceso en la tabla de movimientos
+        try {
+          await registrarMovimiento(
+            loggedUser.id, 
+            'Sistema', 
+            'LOGIN', 
+            `Sesión iniciada correctamente (OTP: ${formData.email}).`
+          );
+        } catch (movErr) {
+          console.error("Error al registrar movimiento:", movErr);
+        }
+        
         navigate("/"); 
       }
     } catch (err) {
@@ -76,7 +91,9 @@ const Login = () => {
             {step === 1 ? "Acceso al panel" : "Verificación de seguridad"}
           </h2>
           <p className={styles.subtitle}>
-            {step === 1 ? "Ingresá tu correo para recibir un código de acceso" : "Ingresá el código que enviamos a tu correo"}
+            {step === 1 
+              ? "Ingresá tu correo para recibir un código de acceso" 
+              : `Enviamos un código a ${formData.email}`}
           </p>
         </header>
 
@@ -85,7 +102,7 @@ const Login = () => {
           <div className={styles.infoBanner}>
             <Info className={styles.infoIcon} size={20} />
             <p>
-              Por seguridad, utilizamos un sistema de <strong>acceso sin contraseña</strong>. Te enviaremos un código de un solo uso a tu correo electrónico.
+              Por seguridad, utilizamos <strong>acceso sin contraseña</strong>. Te enviaremos un código de un solo uso.
             </p>
           </div>
         )}
@@ -115,7 +132,7 @@ const Login = () => {
               {loading ? (
                 <>
                   <Loader2 className={styles.spinner} size={18} />
-                  <span>Enviando código...</span>
+                  <span>Enviando...</span>
                 </>
               ) : (
                 "Recibir código de acceso"
@@ -135,12 +152,13 @@ const Login = () => {
                   type="text"
                   name="otp"
                   id="otp"
-                  placeholder="123456"
+                  placeholder="000000"
                   maxLength="6"
                   className={styles.otpInput}
                   value={formData.otp}
                   onChange={handleChange}
                   required
+                  autoFocus
                   autoComplete="one-time-code"
                 />
               </div>
@@ -152,7 +170,7 @@ const Login = () => {
               <button 
                 type="button" 
                 className={styles.backBtn} 
-                onClick={() => setStep(1)}
+                onClick={() => { setStep(1); setError(""); }}
                 disabled={loading}
               >
                 <ArrowLeft size={18} />
@@ -173,11 +191,11 @@ const Login = () => {
         )}
 
         <footer className={styles.footer}>
-          <p>Acceso exclusivo para el personal autorizado</p>
+          <p>Acceso exclusivo para personal autorizado de GenFit</p>
         </footer>
       </div>
     </div>
   );
 };
- 
+
 export default Login;
