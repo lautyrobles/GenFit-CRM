@@ -39,17 +39,15 @@ const Inicio = () => {
     const hoy = new Date();
     const ultimosMeses = [];
 
-    // 1. Generamos un esqueleto de los últimos 6 meses en 0
     for (let i = 5; i >= 0; i--) {
       const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
       ultimosMeses.push({
         name: mesesNombres[d.getMonth()],
-        fullName: `${d.getMonth() + 1}-${d.getFullYear()}`, // Clave única para agrupar
+        fullName: `${d.getMonth() + 1}-${d.getFullYear()}`,
         ingresos: 0
       });
     }
 
-    // 2. Mapeamos los pagos sobre ese esqueleto
     if (pagos && pagos.length > 0) {
       pagos.forEach(pago => {
         const fechaPago = new Date(pago.payment_date);
@@ -78,18 +76,29 @@ const Inicio = () => {
     }));
   };
 
+  // 👑 Lógica de permisos para SuperAdmin
+  const isSuperAdmin = user?.role === 'SUPERADMIN' || user?.role === 'SUPER_ADMIN';
+
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!user?.gym_id) return;
+      // 🛑 Si no es SuperAdmin y no tiene gimnasio, apagamos el loader y salimos
+      if (!isSuperAdmin && !user?.gym_id) {
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
+        
+        // 🎯 Si es SuperAdmin puede mandar null para traer data global
+        const targetGymId = isSuperAdmin ? (user?.gym_id || null) : user.gym_id;
+
         const [resStats, resIncome, resPlans, resPresent, resAlertas] = await Promise.all([
-          getSummaryStats(user.gym_id),
-          getIncomeHistory(user.gym_id),
-          getPlansDistribution(user.gym_id),
-          obtenerUsuariosActivosAhora(user.gym_id),
-          obtenerConteoAlertasMedicas(user.gym_id)
+          getSummaryStats(targetGymId),
+          getIncomeHistory(targetGymId),
+          getPlansDistribution(targetGymId),
+          obtenerUsuariosActivosAhora(targetGymId),
+          obtenerConteoAlertasMedicas(targetGymId)
         ]);
 
         if (resStats) {
@@ -111,7 +120,7 @@ const Inicio = () => {
     };
 
     fetchDashboardData();
-  }, [user?.gym_id]);
+  }, [user?.gym_id, isSuperAdmin]);
 
   if (loading) {
     return (
