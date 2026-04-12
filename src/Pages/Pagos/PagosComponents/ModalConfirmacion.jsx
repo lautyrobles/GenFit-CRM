@@ -13,27 +13,17 @@ const ModalConfirmacion = ({ datos, onBack, onSuccess, user }) => {
   const [errorMessage, setErrorMessage] = useState(""); // 👈 Estado para manejar errores sin alerts
 
 const ejecutarPago = async () => {
-  // 🛡️ GUARDIA: Si ya se está procesando o ya tuvo éxito, cancelamos
-  if (isProcessing || isSuccess) return;
-
   setIsProcessing(true);
-  setErrorMessage(""); // Limpiamos errores previos
-
   try {
-    // 1. Ejecutamos el registro (el service ahora es inmutable)
+    // Llamamos al servicio pasando los datos y el gym_id
     await registrarPago(datos, user.gym_id);
     
-    // 2. Registro de movimiento
-    try {
-      await registrarMovimiento(user.id, "Pagos", "COBRO", `Cobro a ${datos.clienteNombre}`, user.gym_id);
-    } catch (moveErr) {
-      console.warn("No se pudo registrar el movimiento, pero el pago sí se hizo.");
-    }
+    // Log de movimiento (opcional hacerlo aquí o dentro del service)
+    await registrarMovimiento(user.id, "Pagos", "COBRO", `Cobro a ${datos.clienteNombre}`, user.gym_id);
 
     setIsSuccess(true);
   } catch (e) {
-    console.error("Error en ejecutarPago:", e);
-    setErrorMessage(e.message || "Error al procesar el pago");
+    setErrorMessage(e.message);
   } finally {
     setIsProcessing(false);
   }

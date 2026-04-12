@@ -17,16 +17,15 @@ import {
 } from 'lucide-react';
 
 const Configuracion = () => {
-  // 🎯 Traemos selectedGymId para el filtrado multi-tenant
-  const { user, selectedGymId } = useAuth();
+  const { user } = useAuth();
   
-  const normalizeRole = (r) => {
-    if (!r) return "";
-    return r.replace("ROLE_", "").replace("_", "").toUpperCase();
-  };
-
+const normalizeRole = (r) => {
+  if (!r) return "";
+  return r.replace("ROLE_", "").replace("_", "").toUpperCase();
+};
   const currentUserRole = normalizeRole(user?.role) || "";
-  const isSuperAdmin = currentUserRole === "SUPERADMIN";
+
+  const isSuperAdmin = normalizeRole(user.role) === "SUPERADMIN";
 
   // --- Estados ---
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -56,7 +55,7 @@ const Configuracion = () => {
 
   const mapRoleToTipo = (roleRaw) => {
     const role = normalizeRole(roleRaw);
-    if (role === "SUPERADMIN") return "Superadministrador";
+    if (role === "SUPER_ADMIN") return "Superadministrador";
     if (role === "ADMIN") return "Administrador";
     if (role === "SUPERVISOR") return "Supervisor";
     return "Staff";
@@ -70,7 +69,7 @@ const Configuracion = () => {
   };
 
   const getAllowedTipos = () => {
-    if (currentUserRole === "SUPERADMIN") return ["Superadministrador", "Administrador", "Supervisor"];
+    if (currentUserRole === "SUPER_ADMIN") return ["Superadministrador", "Administrador", "Supervisor"];
     if (currentUserRole === "ADMIN") return ["Supervisor", "Staff"];
     return [];
   };
@@ -78,32 +77,29 @@ const Configuracion = () => {
   const allowedTipos = getAllowedTipos();
   const canCreateProfiles = allowedTipos.length > 0;
 
-  // --- Cargar Staff (Sincronizado con el Selector Global) ---
+  // --- Cargar Staff ---
   useEffect(() => {
-    const cargar = async () => {
-      // 🛡️ Si no hay un gimnasio seleccionado (y no es carga inicial), salimos
-      if (!selectedGymId) return;
+const cargar = async () => {
+  try {
+    setLoading(true);
+    const data = await getUsers(user.gym_id);
+    
+    // 🔥 FILTRO CRÍTICO: Solo mostramos personal operativo del gimnasio.
+    // Excluimos explícitamente a los SUPER_ADMIN.
+    const staffUsers = data.filter(u => {
+      const r = normalizeRole(u.role);
+      return ["ADMIN", "SUPERVISOR", "STAFF", "ENCARGADO"].includes(r);
+    });
 
-      try {
-        setLoading(true);
-        // 🎯 Usamos selectedGymId en lugar de user.gym_id para permitir el "Modo Dios"
-        const data = await getUsers(selectedGymId);
-        
-        const staffUsers = data.filter(u => {
-          const r = normalizeRole(u.role);
-          // Los SuperAdmins no se gestionan desde aquí, sino desde Gestión de Gimnasios
-          return ["ADMIN", "SUPERVISOR", "STAFF", "ENCARGADO"].includes(r);
-        });
-
-        setUsuarios(staffUsers.map(u => ({ ...u, normalizedRole: normalizeRole(u.role) })));
-      } catch (e) {
-        mostrarToast("Error al cargar staff", "error");
-      } finally {
-        setLoading(false);
-      }
-    };
+    setUsuarios(staffUsers.map(u => ({ ...u, normalizedRole: normalizeRole(u.role) })));
+  } catch (e) {
+    mostrarToast("Error al cargar staff", "error");
+  } finally {
+    setLoading(false);
+  }
+};
     cargar();
-  }, [selectedGymId]); // 🔄 Se vuelve a ejecutar cuando cambias de gimnasio en el Header
+  }, [user?.gym_id]);
 
   // --- Handlers ---
   const handleChange = (e) => {
@@ -150,7 +146,7 @@ const Configuracion = () => {
           email: nuevoUsuario.email, role: apiRole, normalizedRole: normalizeRole(apiRole),
         } : u));
 
-        await registrarMovimiento(user.id, "Configuración", "ACTUALIZACIÓN", `Modificó al operador ${nuevoUsuario.nombre}`, selectedGymId);
+        await registrarMovimiento(user.id, "Configuración", "ACTUALIZACIÓN", `Modificó al operador ${nuevoUsuario.nombre}`, user.gym_id);
         mostrarToast("Cambios guardados con éxito");
       } else {
         const created = await registerUser(
@@ -161,11 +157,11 @@ const Configuracion = () => {
             nuevoUsuario.password, 
             apiRole, 
             nuevoUsuario.dni, 
-            selectedGymId // 🎯 Se registra en el gimnasio actualmente seleccionado
+            user.gym_id 
         );
 
         setUsuarios(prev => [{ ...created, normalizedRole: normalizeRole(apiRole) }, ...prev]);
-        await registrarMovimiento(user.id, "Configuración", "ALTA", `Registró al nuevo operador: ${nuevoUsuario.nombre}`, selectedGymId);
+        await registrarMovimiento(user.id, "Configuración", "ALTA", `Registró al nuevo operador: ${nuevoUsuario.nombre}`, user.gym_id);
         mostrarToast("Operador registrado");
       }
       cerrarModal();

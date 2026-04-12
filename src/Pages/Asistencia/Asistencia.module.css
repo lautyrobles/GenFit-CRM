@@ -201,18 +201,6 @@
   cursor: not-allowed;
 }
 
-/* Nuevo estado para Gracia */
-.azul { background: #3b82f6; } /* Azul brillante para información/gracia */
-
-.btnCheckInAzul {
-  background: #eff6ff;
-  color: #1e40af;
-  border: 2px solid #bfdbfe;
-}
-.btnCheckInAzul:hover {
-  background: #dbeafe;
-}
-
 .socioInfo {
   padding: 24px;
   display: flex;

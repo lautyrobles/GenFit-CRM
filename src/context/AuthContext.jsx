@@ -133,32 +133,28 @@ export const AuthProvider = ({ children }) => {
   /* ===================================================
       🔐 LOGIN
      =================================================== */
-const login = async ({ usuario, password }) => {
-  try {
-    const data = await loginAPI(usuario, password);
-    if (!data) return null;
+  const login = async ({ usuario, password }) => {
+    try {
+      const data = await loginAPI(usuario, password);
+      if (!data) return null;
 
-    const normalizedRole = data.role ? data.role.replace("ROLE_", "").toUpperCase() : "";
-    
-    // 🎯 ASEGURAMOS QUE EL GYM_ID ESTÉ PRESENTE
-    const fixedUser = { 
-      ...data, 
-      role: normalizedRole,
-      gym_id: data.gym_id // <--- Verifica que esto venga de la API
-    };
-    
-    localStorage.setItem("fitseoUser", JSON.stringify(fixedUser));
-    updateActivity(); 
+      const normalizedRole = data.role ? data.role.replace("ROLE_", "").toUpperCase() : "";
+      if (normalizedRole === "CLIENT") {
+        throw new Error("Acceso denegado: Los clientes deben usar la App móvil.");
+      }
 
-    setUser(fixedUser);
-    // 🎯 FORZAMOS EL ESTADO DEL GYM SELECCIONADO
-    setSelectedGymId(fixedUser.gym_id); 
-    userRef.current = fixedUser;
-    return fixedUser;
-  } catch (err) {
-    throw err; 
-  }
-};
+      const fixedUser = { ...data, role: normalizedRole };
+      
+      localStorage.setItem("fitseoUser", JSON.stringify(fixedUser));
+      updateActivity(); 
+
+      setUser(fixedUser);
+      userRef.current = fixedUser;
+      return fixedUser;
+    } catch (err) {
+      throw err; 
+    }
+  };
 
   return (
     <AuthContext.Provider value={{ 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom"; 
 import styles from "./Asistencia.module.css";
-import { Search, CheckCircle, XCircle, Clock, UserCheck, QrCode, AlertCircle } from "lucide-react";
+import { Search, CheckCircle, XCircle, Clock, UserCheck, QrCode } from "lucide-react";
 import Loader from "../../Components/Loader/Loader";
 import { useAuth } from "../../context/AuthContext";
 
@@ -38,6 +38,7 @@ const Asistencia = () => {
     cargarHistorial();
   }, [cargarHistorial]);
 
+  // Búsqueda automática si viene del perfil del cliente
   useEffect(() => {
     if (state?.dni && user?.gym_id) {
       handleBuscar(null, state.dni);
@@ -72,24 +73,26 @@ const Asistencia = () => {
   };
 
   const calcularEstado = (s) => {
+    // 1. RESTRICCIONES (ROJO)
     if (!s.enabled) {
       return { status: "rojo", text: "Cuenta Inhabilitada", icon: <XCircle size={24}/> };
     }
     
+    // Verificamos si tiene plan y si está al día
     const suscripcion = s.subscriptions?.[0];
     const hoy = new Date();
     hoy.setHours(0,0,0,0);
     const vencimiento = suscripcion?.due_date ? new Date(suscripcion.due_date) : null;
     
-    if (!vencimiento) {
+    if (!s.plan_id || !vencimiento) {
       return { status: "rojo", text: "Sin Plan o Pago", icon: <XCircle size={24}/> };
     }
 
-    // --- 🎯 LÓGICA DE DÍAS Y GRACIA ---
-    const diffTime = vencimiento - hoy;
-    const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (vencimiento < hoy) {
+      return { status: "rojo", text: `Vencido (${vencimiento.toLocaleDateString()})`, icon: <XCircle size={24}/> };
+    }
 
-    // 1. REINCIDENCIA (AMARILLO) - Prioridad visual si ya entró
+    // 2. REINCIDENCIA - YA INGRESÓ (AMARILLO)
     const yaIngresoHoy = historial.find(log => log.user_id === s.id && log.access_granted);
     if (yaIngresoHoy) {
       const horaIngreso = new Date(yaIngresoHoy.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -100,38 +103,14 @@ const Asistencia = () => {
       };
     }
 
-    // 2. ACCESO OK (VERDE)
-    if (diasRestantes >= 0) {
-      return { 
-        status: "verde", 
-        text: `Acceso OK - Quedan ${diasRestantes} días`, 
-        icon: <CheckCircle size={24}/> 
-      };
-    }
-
-    // 3. PERIODO DE GRACIA (AZUL/INFO) - Hasta 5 días después del vencimiento
-    if (diasRestantes < 0 && diasRestantes >= -5) {
-      return { 
-        status: "azul", 
-        text: `Periodo de Gracia (${Math.abs(diasRestantes)} días de deuda)`, 
-        icon: <AlertCircle size={24} />,
-        isGrace: true
-      };
-    }
-
-    // 4. BLOQUEADO (ROJO)
-    return { 
-      status: "rojo", 
-      text: `Vencido hace ${Math.abs(diasRestantes)} días`, 
-      icon: <XCircle size={24}/> 
-    };
+    // 3. TODO CORRECTO (VERDE)
+    return { status: "verde", text: "Acceso Autorizado", icon: <CheckCircle size={24}/> };
   };
 
   const handleRegistrarEntrada = async () => {
     if (!socio || !user?.gym_id) return;
     
     const estadoInfo = calcularEstado(socio);
-    // Permitimos ingreso si es verde, amarillo o azul (gracia)
     const granted = estadoInfo.status !== "rojo";
     const msg = estadoInfo.text;
 
@@ -161,6 +140,7 @@ const Asistencia = () => {
       </div>
 
       <div className={styles.mainGrid}>
+        {/* PANEL IZQUIERDO: BUSCADOR Y CHECK-IN */}
         <div className={styles.checkinPanel}>
           <div className={styles.searchSection}>
             <div className={styles.searchHeader}>
@@ -213,21 +193,20 @@ const Asistencia = () => {
                     ${styles.btnCheckIn} 
                     ${estado.status === 'rojo' ? styles.btnCheckInRojo : 
                       estado.status === 'amarillo' ? styles.btnCheckInAmarillo : 
-                      estado.status === 'azul' ? styles.btnCheckInAzul :
                       styles.btnCheckInVerde}
                   `}
                   onClick={handleRegistrarEntrada}
                 >
                   <UserCheck size={20} />
                   {estado.status === 'rojo' ? 'Forzar Ingreso (Bloqueado)' : 
-                   estado.status === 'amarillo' ? 'Volver a Registrar' : 
-                   estado.status === 'azul' ? 'Permitir (Periodo de Gracia)' : 'Confirmar Ingreso'}
+                   estado.status === 'amarillo' ? 'Volver a Registrar' : 'Confirmar Ingreso'}
                 </button>
               </div>
             );
           })()}
         </div>
 
+        {/* PANEL DERECHO: HISTORIAL */}
         <div className={styles.historyPanel}>
           <div className={styles.historyHeader}>
             <h3>Ingresos de Hoy</h3>
