@@ -1,45 +1,19 @@
 import { supabase } from "./supabaseClient";
 
 /* ===================================================
-    📧 PASO 1: ENVIAR CÓDIGO (OTP)
+    🔐 LOGIN (Email + Password)
    =================================================== */
-export const sendOtpAPI = async (email) => {
+export const login = async (email, password) => {
   try {
-    const { data, error } = await supabase.auth.signInWithOtp({
+    // 1. Login contra Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: email,
-      options: {
-        // shouldCreateUser: false evita que cualquiera ponga un mail random y se cree una cuenta.
-        // Solo enviará el código si el usuario ya fue creado previamente por un Admin.
-        shouldCreateUser: false, 
-      }
+      password: password,
     });
 
-    if (error) throw error;
-    return data;
-  } catch (e) {
-    console.error("❌ Error enviando OTP:", e.message);
-    throw new Error("No se pudo enviar el código. Verificá que el correo esté registrado.");
-  }
-};
+    if (authError) throw new Error("Email o contraseña incorrectos.");
 
-/* ===================================================
-    ✅ PASO 2: VERIFICAR CÓDIGO Y TRAER DATOS
-   =================================================== */
-export const verifyCodeAPI = async (email, token) => {
-  try {
-    const cleanEmail = email.trim();
-    const cleanToken = token.trim();
-
-    // 2. Verificamos el código contra Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.verifyOtp({
-      email: cleanEmail,
-      token: cleanToken,
-      type: 'email', // <--- DEVOLVEMOS ESTO A 'email'
-    });
-
-    if (authError) throw new Error("El código es incorrecto o ha expirado.");
-
-    // ... (el resto del código queda exactamente igual)
+    // 2. Obtener datos del perfil completo (Incluyendo gym_id y rol)
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('*')
@@ -48,11 +22,13 @@ export const verifyCodeAPI = async (email, token) => {
 
     if (userError) throw new Error("Perfil de usuario no encontrado en la base de datos.");
 
+    // 3. Verificación de cuenta habilitada
     if (!userData.enabled) {
       await supabase.auth.signOut();
       throw new Error("Tu cuenta ha sido deshabilitada. Contacta al administrador.");
     }
 
+    // Retornamos el objeto completo para el AuthContext
     return {
       ...userData,
       token: authData.session.access_token,
@@ -61,7 +37,7 @@ export const verifyCodeAPI = async (email, token) => {
     };
 
   } catch (e) {
-    console.error("❌ Error verificando código:", e.message);
+    console.error("❌ Error login:", e.message);
     throw e;
   }
 };
@@ -71,15 +47,10 @@ export const verifyCodeAPI = async (email, token) => {
    =================================================== */
 export const crearUsuarioStaff = async (datosNuevoUsuario, creadorId, creadorRol, creadorGymId) => {
   try {
-    // Como ya no pedís contraseña en la interfaz, generamos una aleatoria segura 
-    // solo para cumplir con el requisito obligatorio de Supabase Auth.
-    // El usuario nunca la necesitará porque entrará con OTP (código al mail).
-    const dummyPassword = Math.random().toString(36).slice(-10) + "A1!@";
-
-    // 1. Registro en Supabase Auth
+    // 1. Registro en Supabase Auth con contraseña inicial
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: datosNuevoUsuario.email,
-      password: dummyPassword, 
+      password: datosNuevoUsuario.password, 
     });
 
     if (authError) throw new Error(`Error Auth: ${authError.message}`);
