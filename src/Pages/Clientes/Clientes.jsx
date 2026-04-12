@@ -15,12 +15,12 @@ import HistorialPagos from "./HistorialPagos"
 import Loader from "../../Components/Loader/Loader"
 import CustomersTable from '../../Components/CustomersTable/CustomersTable';
 import { Search, User, Mail, Phone, CreditCard, Calendar, Edit3, ArrowLeft, AlertCircle, Plus, MoreVertical, Trash2, Edit2 } from 'lucide-react'
-import { useAuth } from "../../context/AuthContext" 
+import { useAuth } from "../../context/AuthContext" // 👈 Importante
 
 const Clientes = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth(); 
+  const { user } = useAuth(); // 👈 Obtenemos el gym_id del contexto
   
   const qrProcesado = useRef(false);
 
@@ -64,6 +64,7 @@ const Clientes = () => {
     window.location.href = "/clientes"; 
   };
 
+  // 🔄 Carga de planes (Filtrado por Gym)
   useEffect(() => {
     if (!user?.gym_id) return;
     const loadPlanes = async () => {
@@ -75,13 +76,14 @@ const Clientes = () => {
     loadPlanes()
   }, [user?.gym_id]);
 
+  // 🔄 Carga de datos extra del cliente seleccionado (Pagos y Alertas)
   useEffect(() => {
     if (!cliente?.id || !user?.gym_id) return;
     const fetchDatosExtras = async () => {
       setPagosLoading(true); setAlertasLoading(true);
       try {
         const [dataPagos, dataAlertas] = await Promise.all([
-          obtenerPagos(user.gym_id), 
+          obtenerPagos(user.gym_id), // 👈 Pasamos gym_id
           obtenerAlertasMedicas(cliente.id)
         ]);
         const pagosFiltrados = dataPagos.filter(p => (p.users?.id === cliente.id) || (p.user_id === cliente.id));
@@ -100,6 +102,7 @@ const Clientes = () => {
     return () => window.removeEventListener("click", cerrar);
   }, []);
 
+  // 🔍 Búsqueda (Filtrada por Gym)
   const handleBuscar = async () => {
     if (!busqueda.trim() || !user?.gym_id) return;
     setLoading(true); setCliente(null);
@@ -172,6 +175,7 @@ const Clientes = () => {
         setAlertas(prev => prev.map(a => a.id === alertaEditandoId ? data : a));
         mostrarNotificacion("✅ Alerta actualizada");
       } else {
+        // 🎯 Inyectamos gym_id al crear la alerta médica
         const data = await crearAlertaMedica({ user_id: cliente.id, ...nuevaAlerta }, user.gym_id);
         setAlertas(prev => [data, ...prev]);
         mostrarNotificacion("✅ Alerta añadida");
@@ -196,17 +200,8 @@ const Clientes = () => {
 
   const estadoVisual = useMemo(() => {
     if (!cliente) return { texto: "", clase: "" };
-
-    const tieneSuscripcion = cliente.subscriptions && cliente.subscriptions.length > 0;
-
-    const cuotaAlDia = tieneSuscripcion && cliente.subscriptions.some(sub => {
-      if (!sub.due_date) return false;
-      const vencimiento = new Date(sub.due_date + "T23:59:59");
-      vencimiento.setDate(vencimiento.getDate() + 5);
-      return new Date() <= vencimiento;
-    });
-
-    return cuotaAlDia 
+    const estaActivoDB = cliente.enabled === true || cliente.enabled === "true" || cliente.enabled === "TRUE"; 
+    return estaActivoDB 
       ? { texto: "Socio Activo", clase: styles.statusActive } 
       : { texto: "Inactivo", clase: styles.statusInactive };
   }, [cliente]);
@@ -249,16 +244,18 @@ const Clientes = () => {
         <>
           {!cliente && (
             <div className={styles.tableFadeIn}>
+              {/* 🎯 Pasamos el gym_id a la tabla de clientes general */}
               <CustomersTable onSelectCliente={(c) => setCliente(c)} gymId={user?.gym_id} />
             </div>
           )}
 
           {cliente && (
             <div className={styles.dashboardGrid}>
+              {/* Card de Información Principal */}
               <div className={`${styles.card} ${styles.infoCard}`}>
                 <div className={styles.cardHeader}>
                   <div className={styles.userHead}>
-                    <div className={styles.avatarLarge}>{cliente.first_name?.[0] || ""}{cliente.last_name?.[0] || ""}</div>
+                    <div className={styles.avatarLarge}>{cliente.first_name?.[0]}{cliente.last_name?.[0]}</div>
                     <div className={styles.userNameBox}>
                       <h3>{cliente.first_name} {cliente.last_name}</h3>
                       <span className={estadoVisual.clase}>{estadoVisual.texto}</span>
@@ -310,6 +307,7 @@ const Clientes = () => {
 
               <div className={`${styles.card} ${styles.asistenciaCard}`}>
                 <div className={styles.cardHeader}><h3>Asistencia</h3><Calendar size={18}/></div>
+                {/* 🎯 Pasamos el socio al componente, el cual debería manejar el filtrado interno */}
                 <ClienteAsistencia socio={cliente} />
               </div>
 
@@ -337,6 +335,8 @@ const Clientes = () => {
           )}
         </>
       )}
+
+      {/* --- MODALES --- */}
 
       {mostrarModalAlerta && (
         <div className={styles.modalOverlay} onClick={() => setMostrarModalAlerta(false)}>

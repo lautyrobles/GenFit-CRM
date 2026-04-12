@@ -41,10 +41,7 @@ const CustomersTable = ({ onSelectCliente }) => {
   const [usuarios, setUsuarios] = useState([]);
   const [planesDisponibles, setPlanesDisponibles] = useState([]);
   const [mostrarModal, setMostrarModal] = useState(false);
-  
-  // Guardamos el ID del usuario para evitar bugs de edición al cambiar de página
-  const [editUserId, setEditUserId] = useState(null);
-  
+  const [editIndex, setEditIndex] = useState(null);
   const [toast, setToast] = useState({ message: "", type: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -64,6 +61,7 @@ const CustomersTable = ({ onSelectCliente }) => {
   });
 
   const fetchData = async () => {
+    // 🛡️ Seguridad: Si no hay gym_id, no disparamos la carga
     if (!user?.gym_id) return;
 
     try {
@@ -122,18 +120,9 @@ const CustomersTable = ({ onSelectCliente }) => {
   };
 
   const resolverEstadoCuota = (u) => {
-    // Verificamos si realmente tiene una suscripción vigente y aplicamos el periodo de gracia
-    const tieneSuscripcion = u.subscriptions && u.subscriptions.length > 0;
-
-    const cuotaAlDia = tieneSuscripcion && u.subscriptions.some(sub => {
-      if (!sub.due_date) return false;
-      const vencimiento = new Date(sub.due_date + "T23:59:59");
-      vencimiento.setDate(vencimiento.getDate() + 5); 
-      
-      return new Date() <= vencimiento;
-    });
-
-    return cuotaAlDia 
+    const estaActivoDB = u.enabled === true || u.enabled === "true" || u.enabled === "TRUE"; 
+    
+    return estaActivoDB 
       ? { texto: "Activo", clase: styles.active } 
       : { texto: "Inactivo", clase: styles.inactive };
   };
@@ -142,11 +131,11 @@ const CustomersTable = ({ onSelectCliente }) => {
     setNuevoUsuario({ dni: "", first_name: "", last_name: "", email: "", phone: "", plan_id: "" });
     setTieneAlerta(false);
     setAlertaMedica({ name: "", severity: "Baja", observation: "" });
-    setEditUserId(null); 
+    setEditIndex(null);
     setMostrarModal(true);
   };
 
-  const cerrarModal = () => { setMostrarModal(false); setEditUserId(null); };
+  const cerrarModal = () => { setMostrarModal(false); setEditIndex(null); };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -164,8 +153,10 @@ const CustomersTable = ({ onSelectCliente }) => {
 
     try {
       setSaving(true);
-      if (editUserId !== null) { 
-        await actualizarCliente(editUserId, nuevoUsuario);
+      if (editIndex !== null) {
+        // MODO EDICIÓN
+        const userId = usuariosPagina[editIndex].id;
+        await actualizarCliente(userId, nuevoUsuario);
         
         await registrarMovimiento(
           user.id, 'Clientes', 'ACTUALIZACIÓN',
@@ -175,8 +166,10 @@ const CustomersTable = ({ onSelectCliente }) => {
 
         mostrarToast("✅ Usuario actualizado");
       } else {
+        // MODO CREACIÓN
         const clienteCreado = await crearCliente(nuevoUsuario, user.gym_id);
         
+        // Si el admin marcó que tiene alerta médica, la creamos vinculada al gym
         if (tieneAlerta && clienteCreado?.id) {
           await crearAlertaMedica({ 
             user_id: clienteCreado.id, 
@@ -212,7 +205,9 @@ const CustomersTable = ({ onSelectCliente }) => {
       plan_id: u.plan_id ?? "",
     });
 
-    setEditUserId(u.id);
+    // Buscamos el índice relativo a la página actual para que handleSubmit funcione bien
+    const relativeIndex = usuariosPagina.findIndex(user => user.id === u.id);
+    setEditIndex(relativeIndex);
     setMostrarModal(true);
   };
 
@@ -231,7 +226,7 @@ const CustomersTable = ({ onSelectCliente }) => {
         <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && cerrarModal()}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
-              <h3>{editUserId !== null ? "Editar Cliente" : "Nuevo Cliente"}</h3>
+              <h3>{editIndex !== null ? "Editar Cliente" : "Nuevo Cliente"}</h3>
               <button className={styles.modalCloseBtn} onClick={cerrarModal}>&times;</button>
             </div>
             <form className={styles.modalBody} onSubmit={handleSubmit}>
@@ -250,7 +245,7 @@ const CustomersTable = ({ onSelectCliente }) => {
                 </select>
               </div>
 
-              {editUserId === null && (
+              {editIndex === null && (
                 <div className={styles.medicalSection}>
                   <div className={styles.medicalToggle}>
                     <input type="checkbox" id="medicalCheck" checked={tieneAlerta} onChange={(e) => setTieneAlerta(e.target.checked)} />
@@ -324,9 +319,7 @@ const CustomersTable = ({ onSelectCliente }) => {
                     return (
                       <tr key={u.id}>
                         <td className={styles.nameCell}>
-                          <div className={styles.avatar}>
-                            {u.first_name?.[0] || ""}{u.last_name?.[0] || ""}
-                          </div>
+                          <div className={styles.avatar}>{u.first_name[0]}{u.last_name[0]}</div>
                           <div className={styles.nameText}>
                             <p>{u.first_name} {u.last_name}</p>
                             <span>Cliente</span>
@@ -353,12 +346,7 @@ const CustomersTable = ({ onSelectCliente }) => {
             <div className={styles.paginador}>
               <button onClick={() => setCurrentPage(prev => prev - 1)} disabled={currentPage === 1}>Anterior</button>
               <span className={styles.paginaInfo}>Página {currentPage} de {totalPaginas}</span>
-              <button 
-                onClick={() => setCurrentPage(prev => prev + 1)} 
-                disabled={currentPage >= totalPaginas || totalPaginas === 0}
-              >
-                Siguiente
-              </button>
+              <button onClick={() => setCurrentPage(prev => prev + 1)} disabled={currentPage === totalPaginas}>Siguiente</button>
             </div>
           </>
         )}
