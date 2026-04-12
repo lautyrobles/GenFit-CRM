@@ -16,6 +16,7 @@
     "@mercadopago/sdk-react": "^1.0.6",
     "@supabase/supabase-js": "^2.86.0",
     "axios": "^1.13.1",
+    "emailjs": "^5.0.0",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.548.0",
     "react": "^19.1.1",

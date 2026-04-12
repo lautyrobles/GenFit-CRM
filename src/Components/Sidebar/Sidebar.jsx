@@ -17,24 +17,30 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const role = (user.roles?.[0] || user.role || "").replace("ROLE_", "").toUpperCase();
 
-  const canViewPagos = ["SUPER_ADMIN", "ADMIN", "ENCARGADO", "SUPERVISOR"].includes(role)
-  const canViewPlanes = ["SUPER_ADMIN", "ADMIN", "ENCARGADO", "SUPERVISOR"].includes(role)
-  const canViewCaja = ["SUPER_ADMIN", "ADMIN", "ENCARGADO", "SUPERVISOR"].includes(role)
+  const isSuperAdmin = role === "SUPER_ADMIN" || role === "SUPERADMINISTRADOR";
+  const isAdmin = role === "ADMIN" || role === "ADMINISTRADOR";
+  const isSupervisor = role === "SUPERVISOR";
+
+  const hasFullAccess = isSuperAdmin || isAdmin;
+
+  // Secciones que ven todos (Super Admin, Admin, Supervisor)
+  const canViewPagos = hasFullAccess || isSupervisor;
+  const canViewPlanes = hasFullAccess || isSupervisor;
+  const canViewCaja = hasFullAccess || isSupervisor;
   
-  const canViewPermisos = ["SUPER_ADMIN", "ADMIN"].includes(role)
-  const canViewMovimientos = ["SUPER_ADMIN", "ADMIN"].includes(role)
+  // Secciones que SOLO ven Super Admin y Admin
+  const canViewPermisos = hasFullAccess;
+  const canViewMovimientos = hasFullAccess;
 
   const nombreCompleto = user?.first_name && user?.last_name 
     ? `${user.first_name} ${user.last_name}` 
     : user?.name || "Usuario GenFIT";
 
   const mostrarRol = () => {
-    switch (role) {
-      case "SUPER_ADMIN": return "Super Admin"
-      case "ADMIN": return "Admin"
-      case "SUPERVISOR": return "Supervisor" 
-      default: return "Usuario"
-    }
+    if (isSuperAdmin) return "Super Admin";
+    if (isAdmin) return "Administrador";
+    if (isSupervisor) return "Supervisor";
+    return "Usuario";
   }
 
   // Función para cerrar el sidebar al clickear un link (solo relevante en móviles)

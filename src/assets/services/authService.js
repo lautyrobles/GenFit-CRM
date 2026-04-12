@@ -59,13 +59,32 @@ export const verifyCodeAPI = async (email, token) => {
 
     if (authError) throw new Error("Error interno al iniciar la sesión segura.");
 
+    // 4. LA SOLUCIÓN: Buscar los datos reales actualizados en la tabla staff
+    const { data: staffData, error: staffError } = await supabase
+      .from('staff')
+      .select('*')
+      .eq('email', safeEmail)
+      .single();
+
+    if (staffError || !staffData) {
+      console.warn("Usuario logueado pero no encontrado en la tabla pública staff");
+    }
+
+    // Retornamos combinando la sesión con los datos frescos de la base de datos
     return {
       id: authData.user.id,
       email: authData.user.email,
       token: authData.session.access_token,
       metadata: authData.user.user_metadata,
-      role: authData.user.user_metadata?.role || 'STAFF',
-      gym_id: authData.user.user_metadata?.gym_id || null
+      
+      // La prioridad la tiene la tabla staff, si no hay, cae al metadata
+      role: staffData?.role || authData.user.user_metadata?.role || 'STAFF',
+      gym_id: staffData?.gym_id || authData.user.user_metadata?.gym_id || null,
+      
+      // Agregamos info útil para la interfaz
+      first_name: staffData?.first_name || authData.user.user_metadata?.first_name || '',
+      last_name: staffData?.last_name || authData.user.user_metadata?.last_name || '',
+      dni: staffData?.dni || ''
     };
   } catch (e) {
     console.error("❌ Error verificando código:", e.message);

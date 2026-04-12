@@ -17,6 +17,9 @@ const Configuracion = () => {
 
   const normalizeRole = (r) => r ? r.replace("ROLE_", "").toUpperCase() : "";
   const currentUserRole = normalizeRole(user?.role) || normalizeRole(storedUser?.role) || "";
+  
+  const isSuperAdminLogueado = currentUserRole === "SUPER_ADMIN" || currentUserRole === "SUPERADMINISTRADOR";
+  const isAdminLogueado = currentUserRole === "ADMIN" || currentUserRole === "ADMINISTRADOR";
 
   // --- Estados ---
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -45,12 +48,10 @@ const Configuracion = () => {
   // --- Mapeo de Roles UI <-> API ---
   const mapRoleToTipo = (roleRaw) => {
     const role = normalizeRole(roleRaw);
-    switch (role) {
-      case "SUPER_ADMIN": return "Superadministrador";
-      case "ADMIN": return "Administrador";
-      case "SUPERVISOR": return "Supervisor";
-      default: return role;
-    }
+    if (role === "SUPER_ADMIN" || role === "SUPERADMINISTRADOR") return "Superadministrador";
+    if (role === "ADMIN" || role === "ADMINISTRADOR") return "Administrador";
+    if (role === "SUPERVISOR") return "Supervisor";
+    return role;
   };
 
   const mapTipoToRole = (tipo) => {
@@ -63,11 +64,11 @@ const Configuracion = () => {
   };
 
   const getAllowedTipos = () => {
-    switch (currentUserRole) {
-      case "SUPER_ADMIN": return ["Superadministrador", "Administrador", "Supervisor"];
-      case "ADMIN": return ["Supervisor"];
-      default: return [];
+    // Nadie puede crear un Super Admin desde la UI
+    if (isSuperAdminLogueado || isAdminLogueado) {
+      return ["Administrador", "Supervisor"];
     }
+    return [];
   };
 
   const allowedTipos = getAllowedTipos();
@@ -88,7 +89,7 @@ const Configuracion = () => {
         // Filtramos solo el personal del staff
         const staffUsers = data.filter(u => {
           const r = normalizeRole(u.role);
-          return ["SUPER_ADMIN", "ADMIN", "SUPERVISOR"].includes(r);
+          return ["SUPER_ADMIN", "SUPERADMINISTRADOR", "ADMIN", "ADMINISTRADOR", "SUPERVISOR"].includes(r);
         });
 
         const mappendUsers = staffUsers.map((u) => ({ 
@@ -98,7 +99,6 @@ const Configuracion = () => {
 
         setUsuarios(mappendUsers);
 
-        // 🎯 LÓGICA DE AUTO-APERTURA (Opcional, por consistencia con Clientes)
         const autoOpenId = location.state?.autoOpenUserId;
         if (autoOpenId) {
           const userToEdit = mappendUsers.find(u => u.id === autoOpenId);
@@ -272,20 +272,21 @@ const Configuracion = () => {
                 {usuariosPagina.map((u) => {
                   const targetRole = normalizeRole(u.role);
                   const isMe = u.id === user.id;
+                  const targetIsSuperAdmin = targetRole === "SUPER_ADMIN" || targetRole === "SUPERADMINISTRADOR";
                   
                   let canEdit = false;
                   let canDelete = false;
 
-                  if (currentUserRole === "SUPER_ADMIN") {
+                  if (isSuperAdminLogueado) {
                       canEdit = true;
                       canDelete = !isMe;
-                  } else if (currentUserRole === "ADMIN") {
-                      if (isMe) {
-                          canEdit = true;
+                  } else if (isAdminLogueado) {
+                      if (targetIsSuperAdmin) {
+                          canEdit = false;
                           canDelete = false;
-                      } else if (targetRole === "SUPERVISOR") {
+                      } else {
                           canEdit = true;
-                          canDelete = true;
+                          canDelete = !isMe;
                       }
                   }
 
@@ -294,8 +295,8 @@ const Configuracion = () => {
                       <td>
                         <div className={styles.userProfile}>
                           <div className={`${styles.avatarMini} ${
-                            targetRole === 'SUPER_ADMIN' ? styles.avatarSuper : 
-                            targetRole === 'ADMIN' ? styles.avatarAdmin : styles.avatarSupervisor
+                            targetIsSuperAdmin ? styles.avatarSuper : 
+                            (targetRole === 'ADMIN' || targetRole === 'ADMINISTRADOR') ? styles.avatarAdmin : styles.avatarSupervisor
                           }`}>
                             {(u.first_name?.[0] || u.name?.[0] || '') + (u.last_name?.[0] || u.lastName?.[0] || '')}
                           </div>
@@ -313,8 +314,8 @@ const Configuracion = () => {
                       </td>
                       <td>
                         <span className={`${styles.roleBadge} ${
-                          targetRole === 'SUPER_ADMIN' ? styles.badgeSuper : 
-                          targetRole === 'ADMIN' ? styles.badgeAdmin : styles.badgeSupervisor
+                          targetIsSuperAdmin ? styles.badgeSuper : 
+                          (targetRole === 'ADMIN' || targetRole === 'ADMINISTRADOR') ? styles.badgeAdmin : styles.badgeSupervisor
                         }`}>
                           <Shield size={12}/> {mapRoleToTipo(targetRole)}
                         </span>
@@ -426,8 +427,9 @@ const Configuracion = () => {
                     <select name="tipo" value={nuevoUsuario.tipo} onChange={handleChange} className={errors.tipo ? styles.inputError : ""} disabled={!!editUser && editUser.id === user.id}>
                       <option value="">Seleccionar rol...</option>
                       {allowedTipos.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
-                      {editUser && editUser.id === user.id && !allowedTipos.includes(mapRoleToTipo(editUser.role)) && (
-                          <option value={mapRoleToTipo(editUser.role)}>{mapRoleToTipo(editUser.role)}</option>
+                      {/* Permite mantener visible la opción Superadministrador si se está editando a uno, aunque no se pueda crear desde cero */}
+                      {editUser && mapRoleToTipo(editUser.role) === "Superadministrador" && (
+                        <option value="Superadministrador">Superadministrador</option>
                       )}
                     </select>
                   </div>
