@@ -58,8 +58,6 @@ export const crearCliente = async (cliente, gymId) => {
         .update({ 
           phone: cliente.phone, 
           plan_id: cliente.plan_id,
-          // Se mantiene true para que pueda acceder a la app móvil, 
-          // pero el control de acceso del gym lo bloqueará por no tener suscripción
           enabled: true
         })
         .eq('id', nuevoUsuario.id)
@@ -68,8 +66,17 @@ export const crearCliente = async (cliente, gymId) => {
 
       if (error) throw error;
 
-      // ❌ SE ELIMINÓ LA CREACIÓN AUTOMÁTICA DE SUSCRIPCIÓN.
-      // Ahora la suscripción solo se genera en registrarPago (paymentsService.js)
+      const hoy = new Date();
+      const due_date = new Date(hoy.getTime() + (30 * 24 * 60 * 60 * 1000));
+
+      await supabase.from('subscriptions').insert([{
+         user_id: nuevoUsuario.id, 
+         plan_id: cliente.plan_id || null, 
+         start_date: hoy.toISOString(), 
+         due_date: due_date.toISOString(), 
+         active: true,
+         gym_id: gymId
+      }]);
 
       return data; 
     }
