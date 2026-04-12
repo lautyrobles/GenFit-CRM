@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom' // 👈 Añadimos Navigate para protección
+import React, { useState } from 'react' // 👈 Añadimos useState
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import styles from './App.module.css'
 
 import Sidebar from './Components/Sidebar/Sidebar'
@@ -15,20 +15,17 @@ import Movimientos from './Pages/Movimientos/Movimientos'
 import RutinaNutricion from './Pages/Clientes/RutinaNutricion'
 import Asistencia from './Pages/Asistencia/Asistencia' 
 import CierreCaja from './Pages/CierreCaja/CierreCaja';
-import GestionGimnasios from './Components/GestionGimnasios'; // 👈 IMPORTANTE: Verifica que la ruta del archivo sea correcta
 import { useAuth } from './context/AuthContext'
 import AccessNotifier from './Components/AccessNotifier/AccessNotifier'
 
 const App = () => {
   const { user } = useAuth()
   
+  // 🍔 ESTADO PARA EL MENÚ HAMBURGUESA
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
   const closeSidebar = () => setIsSidebarOpen(false)
-
-  // Normalizamos el rol para validaciones de ruta
-  const role = user?.role?.replace("ROLE_", "").toUpperCase() || "";
 
   return (
     <Router>
@@ -36,10 +33,12 @@ const App = () => {
         
         <AccessNotifier />
 
+        {/* Pasamos el estado y la función de cierre al Sidebar */}
         {user && (
           <>
             <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
             
+            {/* Capa oscura que aparece solo en móvil cuando el sidebar está abierto */}
             {isSidebarOpen && (
               <div className={styles.sidebarOverlay} onClick={closeSidebar}></div>
             )}
@@ -49,6 +48,7 @@ const App = () => {
         <main className={user ? styles.mainContent : styles.loginMain}>
           {user ? (
             <div className={styles.contentWrapper}>
+              {/* Pasamos la función de apertura al Header */}
               <Header onOpenSidebar={toggleSidebar} />
 
               <Routes>
@@ -62,19 +62,6 @@ const App = () => {
                 <Route path="/cierre-caja" element={<CierreCaja />} />
                 <Route path="/rutinas" element={<RutinaNutricion />} />
                 <Route path="/asistencia" element={<Asistencia />} />
-                
-                {/* 👑 RUTA EXCLUSIVA PARA SUPERADMIN */}
-                <Route 
-                  path="/gestion-gimnasios" 
-                  element={
-                    role === 'SUPER_ADMIN' 
-                      ? <GestionGimnasios /> 
-                      : <Navigate to="/" />
-                  } 
-                />
-
-                {/* Redirección por si entran a una ruta que no existe */}
-                <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </div>
           ) : (

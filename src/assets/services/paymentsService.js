@@ -1,19 +1,31 @@
 import { supabase } from "./supabaseClient";
 
-/**
- * Obtiene el historial de pagos filtrado por Gimnasio
- */
-export const obtenerPagos = async (gymId) => {
+/* =========================================
+    💰 OBTENER TODOS LOS PAGOS (Historial)
+   ========================================= */
+export const obtenerPagos = async () => {
   try {
-    if (!gymId) throw new Error("Gym ID es requerido");
-
     const { data, error } = await supabase
       .from('payments')
       .select(`
-        id, amount, payment_date, payment_method, status, notes, created_at,
-        users (id, first_name, last_name, dni, email, plans (name))
+        id,
+        amount,
+        payment_date,
+        payment_method,
+        status,
+        notes,
+        created_at,
+        users (
+          id,
+          first_name,
+          last_name,
+          dni,
+          email,
+          plans (
+            name
+          )
+        )
       `)
-      .eq('gym_id', gymId)
       .order('payment_date', { ascending: false });
 
     if (error) throw error;
@@ -24,110 +36,83 @@ export const obtenerPagos = async (gymId) => {
   }
 };
 
-/**
- * Registra un pago, actualiza/crea suscripción y habilita al usuario.
- * Todo en un solo flujo de servicio.
- */
-export const registrarPago = async (pagoData, gymId) => {
+/* =========================================
+    ➕ REGISTRAR UN NUEVO PAGO
+   ========================================= */
+export const registrarPago = async (pagoData) => {
   try {
-    // 1. Normalización de IDs (Acepta tanto camelCase como snake_case)
+    // 👉 CLAVE 1: Normalizamos el ID del usuario para evitar errores
+    // Si viene desde ModalNuevoPago, se llama 'clienteId'. Si viene de otro lado, 'user_id'.
     const userIdFinal = pagoData.clienteId || pagoData.user_id;
-    const monto = pagoData.montoFinal || pagoData.amount;
-    const fechaPago = pagoData.fechaPago || pagoData.payment_date || new Date().toISOString();
-    
-    if (!userIdFinal) throw new Error("No se proporcionó un ID de usuario válido.");
-    if (!gymId) throw new Error("Gym ID es obligatorio para registrar el pago.");
 
-    // 2. Insertar el registro en la tabla PAYMENTS
+    if (!userIdFinal) {
+        throw new Error("No se proporcionó un ID de usuario válido para el pago.");
+    }
+
+    // 1. Guardamos el pago en la tabla payments
     const { data: paymentData, error: paymentError } = await supabase
       .from('payments')
-      .insert([{
+      .insert([
+        {
           user_id: userIdFinal,
-          amount: Number(monto),
-          payment_date: fechaPago, 
+          amount: pagoData.montoFinal || pagoData.amount, // Lo mismo para el monto
+          payment_date: pagoData.fechaPago || pagoData.payment_date || new Date().toISOString(), 
           payment_method: pagoData.metodoPago || pagoData.payment_method,
           status: pagoData.status || 'COMPLETED',
-          notes: pagoData.notes || null,
-          gym_id: gymId
-      }])
-      .select()
-      .single();
+          notes: pagoData.notes || null
+        }
+      ])
+      .select().single();
 
     if (paymentError) throw paymentError;
 
-    // 3. Lógica de Suscripción: Buscar si ya existe una para el usuario
-    const { data: sub, error: subFetchError } = await supabase
+    // 2. Buscamos la suscripción actual para saber la fecha de vencimiento actual
+    const { data: sub } = await supabase
       .from('subscriptions')
       .select('id, due_date')
       .eq('user_id', userIdFinal)
       .maybeSingle();
 
-    if (subFetchError) throw subFetchError;
-
-    // 4. Cálculo de Nueva Fecha de Vencimiento
     let nuevaFecha = new Date();
-    const hoy = new Date();
+    nuevaFecha.setHours(0,0,0,0);
 
+    // LÓGICA DE FECHAS (30 días + 5 de gracia)
     if (sub && sub.due_date) {
         const currentDue = new Date(sub.due_date);
+        currentDue.setHours(0,0,0,0);
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
         
-        // Calculamos la diferencia de días entre hoy y el vencimiento actual
-        const diffTime = currentDue.getTime() - hoy.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24));
+        const diffDays = Math.ceil((currentDue.getTime() - hoy.getTime()) / (1000 * 3600 * 24));
 
-        // Si falta poco para vencer o ya venció hace poco (margen de 5 días), acumulamos 30 días
-        // Si venció hace mucho, arrancamos 30 días desde hoy
         if (diffDays >= -5) {
+            // Si está al día o en los 5 días de tolerancia, suma 30 días a su fecha original
             nuevaFecha = new Date(currentDue.getTime() + (30 * 24 * 60 * 60 * 1000));
         } else {
+            // Si pasó la tolerancia, el mes nuevo arranca desde hoy
             nuevaFecha = new Date(hoy.getTime() + (30 * 24 * 60 * 60 * 1000));
         }
     } else {
         // Si no tiene suscripción previa, 30 días desde hoy
-        nuevaFecha = new Date(hoy.getTime() + (30 * 24 * 60 * 60 * 1000));
+        nuevaFecha = new Date(nuevaFecha.getTime() + (30 * 24 * 60 * 60 * 1000));
     }
 
-    const nuevaFechaISO = nuevaFecha.toISOString().split('T')[0];
-
-    // 5. Actualizar o Crear Suscripción
-    if (sub?.id) {
-        const { error: updateSubError } = await supabase
-          .from('subscriptions')
-          .update({ 
-            due_date: nuevaFechaISO, 
-            active: true,
-            amount_paid: Number(monto)
-          })
-          .eq('id', sub.id);
-        
-        if (updateSubError) throw updateSubError;
+    // 3. Actualizamos o insertamos la suscripción
+    if (sub && sub.id) {
+        await supabase.from('subscriptions').update({ due_date: nuevaFecha.toISOString(), active: true }).eq('id', sub.id);
     } else {
-        const { error: insertSubError } = await supabase
-          .from('subscriptions')
-          .insert([{
-              user_id: userIdFinal, 
-              plan_id: pagoData.plan_id || null, 
-              start_date: hoy.toISOString(), 
-              due_date: nuevaFechaISO, 
-              active: true, 
-              gym_id: gymId
-          }]);
-        
-        if (insertSubError) throw insertSubError;
+        // Si no tenemos el plan_id a mano, lo dejamos en nulo o buscamos el del usuario
+        await supabase.from('subscriptions').insert([{
+            user_id: userIdFinal, plan_id: pagoData.plan_id || null, start_date: new Date().toISOString(), due_date: nuevaFecha.toISOString(), active: true
+        }]);
     }
 
-    // 6. Habilitar al usuario en la tabla USERS
-    const { error: userUpdateError } = await supabase
-      .from('users')
-      .update({ enabled: true })
-      .eq('id', userIdFinal);
-
-    if (userUpdateError) throw userUpdateError;
+    // 👉 4. CLAVE: Volvemos a poner el booleano condition en TRUE al pagar
+    await supabase.from('users').update({ condition: true }).eq('id', userIdFinal);
 
     return paymentData;
-
   } catch (error) {
-    console.error("❌ Error en Service registrarPago:", error.message);
+    console.error("❌ Error al registrar pago:", error.message);
     throw error;
   }
 };

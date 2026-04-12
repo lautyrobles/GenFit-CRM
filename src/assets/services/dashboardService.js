@@ -1,40 +1,50 @@
 import { supabase } from "./supabaseClient";
 
-export const getSummaryStats = async (gymId) => {
-  if (!gymId) return null;
+/**
+ * Trae los 4 números clave para las StatCards
+ */
+export const getSummaryStats = async () => {
   try {
     const today = new Date();
+    const todayISO = today.toISOString();
     const nextWeek = new Date();
     nextWeek.setDate(nextWeek.getDate() + 7);
+    const nextWeekISO = nextWeek.toISOString();
+
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
 
-    const { count: activeUsers } = await supabase
+    // 1. Conteo de Socios Activos
+    const { count: activeUsers, error: err1 } = await supabase
       .from('users')
       .select('*', { count: 'exact', head: true })
-      .eq('gym_id', gymId)
       .eq('enabled', true)
       .eq('role', 'CLIENT');
 
-    const { data: payments } = await supabase
+    // 2. Ingresos del mes actual (Desde la tabla PAYMENTS)
+    const { data: payments, error: err2 } = await supabase
       .from('payments')
       .select('amount')
-      .eq('gym_id', gymId)
       .gte('payment_date', startOfMonth);
 
     const monthlyIncome = payments?.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0) || 0;
 
-    const { count: dueSoon } = await supabase
+    // 3. Vencimientos en los próximos 7 días
+    const { count: dueSoon, error: err3 } = await supabase
       .from('subscriptions')
       .select('*', { count: 'exact', head: true })
-      .eq('gym_id', gymId)
-      .gte('due_date', today.toISOString().split('T')[0])
-      .lte('due_date', nextWeek.toISOString().split('T')[0])
+      .gte('due_date', todayISO.split('T')[0])
+      .lte('due_date', nextWeekISO.split('T')[0])
       .eq('active', true);
 
-    const { count: medicalAlerts } = await supabase
-      .from('medical_alerts')
+    // 4. Alertas Médicas
+    const { count: medicalAlerts, error: err4 } = await supabase
+      .from('users')
       .select('*', { count: 'exact', head: true })
-      .eq('gym_id', gymId);
+      .not('medical_observations', 'is', null)
+      .neq('medical_observations', 'Sin observaciones')
+      .neq('medical_observations', '');
+
+    if (err1 || err2 || err3 || err4) throw new Error("Error en alguna métrica");
 
     return {
       activeUsers: activeUsers || 0,
@@ -48,8 +58,10 @@ export const getSummaryStats = async (gymId) => {
   }
 };
 
-export const getIncomeHistory = async (gymId) => {
-  if (!gymId) return [];
+/**
+ * Trae datos para el IncomeChart (Histórico de 6 meses desde PAYMENTS)
+ */
+export const getIncomeHistory = async () => {
   try {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -57,48 +69,79 @@ export const getIncomeHistory = async (gymId) => {
     const { data, error } = await supabase
       .from('payments')
       .select('amount, payment_date')
-      .eq('gym_id', gymId)
       .gte('payment_date', sixMonthsAgo.toISOString())
       .order('payment_date', { ascending: true });
 
     if (error) throw error;
-    return data;
+
+    const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    
+    // Inicializar los últimos 6 meses con 0 para que el gráfico no esté vacío
+    const last6Months = {};
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      last6Months[months[d.getMonth()]] = 0;
+    }
+
+    const grouped = data.reduce((acc, curr) => {
+      const date = new Date(curr.payment_date);
+      const monthName = months[date.getMonth()];
+      if (acc.hasOwnProperty(monthName)) {
+        acc[monthName] += Number(curr.amount);
+      }
+      return acc;
+    }, last6Months);
+
+    return Object.entries(grouped).map(([name, ingresos]) => ({ name, ingresos }));
   } catch (error) {
     console.error("Income History Error:", error);
     return [];
   }
 };
 
-export const getPlansDistribution = async (gymId) => {
-  if (!gymId) return [];
+/**
+ * Trae datos para el PlansChart
+ */
+export const getPlansDistribution = async () => {
   try {
     const { data, error } = await supabase
       .from('users')
       .select('plan_id, plans(name)')
-      .eq('gym_id', gymId)
       .eq('enabled', true)
       .eq('role', 'CLIENT');
 
     if (error) throw error;
-    return data;
+
+    const distribution = data.reduce((acc, curr) => {
+      const planName = curr.plans?.name || 'Sin Plan';
+      const existing = acc.find(item => item.name === planName);
+      if (existing) {
+        existing.value += 1;
+      } else {
+        acc.push({ name: planName, value: 1 });
+      }
+      return acc;
+    }, []);
+
+    return distribution;
   } catch (error) {
     console.error("Plans Distribution Error:", error);
     return [];
   }
 };
 
-export const obtenerConteoAlertasMedicas = async (gymId) => {
-  if (!gymId) return 0;
+export const obtenerConteoAlertasMedicas = async () => {
   try {
+    
     const { count, error } = await supabase
-      .from('medical_alerts')
-      .select('*', { count: 'exact', head: true })
-      .eq('gym_id', gymId);
+    .from('medical_alerts')
+    .select('user_id', { count: 'exact', head: true})
 
     if (error) throw error;
-    return count || 0;
+    return count || 0
   } catch (error) {
-    console.error('Error al obtener conteo de alertas:', error.message);
-    return 0;
+    console.error('Error al obtener conteo de las alertas:', error.message)
+    return 0
   }
-};
+}

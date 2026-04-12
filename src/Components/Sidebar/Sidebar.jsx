@@ -4,7 +4,7 @@ import React from 'react'
 import styles from './Sidebar.module.css'
 import { 
   Home, Users, CreditCard, Gift, HelpCircle, 
-  Activity, LogOut, CheckCircle, ClipboardList, Archive, X, Building2, ShieldCheck
+  Activity, LogOut, CheckCircle, ClipboardList, Apple, Archive, X
 } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import userIcon from '/src/assets/user-icon.png'
@@ -15,21 +15,14 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   if (!user) return null
 
-  // 1. Normalización estricta del rol para evitar fugas de seguridad visual
-  const rawRole = user?.role || "";
-  const role = rawRole.replace("ROLE_", "").toUpperCase();
+  const role = (user.roles?.[0] || user.role || "").replace("ROLE_", "").toUpperCase();
 
-  // 2. Definición de banderas de permisos
-  const isAdminOrHigher = ["SUPER_ADMIN", "ADMIN"].includes(role);
-  // Supervisor, Encargado, Admin y SuperAdmin pueden gestionar la operativa diaria
-  const isStaff = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR", "ENCARGADO"].includes(role);
-  const normalizeRole = (r) => {
-    if (!r) return "";
-    return r.replace("ROLE_", "").replace("_", "").toUpperCase();
-  };
+  const canViewPagos = ["SUPER_ADMIN", "ADMIN", "ENCARGADO", "SUPERVISOR"].includes(role)
+  const canViewPlanes = ["SUPER_ADMIN", "ADMIN", "ENCARGADO", "SUPERVISOR"].includes(role)
+  const canViewCaja = ["SUPER_ADMIN", "ADMIN", "ENCARGADO", "SUPERVISOR"].includes(role)
   
-  const isSuperAdmin = normalizeRole(user.role) === "SUPERADMIN";
-
+  const canViewPermisos = ["SUPER_ADMIN", "ADMIN"].includes(role)
+  const canViewMovimientos = ["SUPER_ADMIN", "ADMIN"].includes(role)
 
   const nombreCompleto = user?.first_name && user?.last_name 
     ? `${user.first_name} ${user.last_name}` 
@@ -37,19 +30,19 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const mostrarRol = () => {
     switch (role) {
-      case "SUPER_ADMIN": return "Desarrollador"
-      case "ADMIN": return "Dueño / Admin"
+      case "SUPER_ADMIN": return "Super Admin"
+      case "ADMIN": return "Admin"
       case "SUPERVISOR": return "Supervisor" 
-      default: return "Staff"
+      default: return "Usuario"
     }
   }
 
+  // Función para cerrar el sidebar al clickear un link (solo relevante en móviles)
   const handleNavLinkClick = () => {
     if (window.innerWidth <= 1024 && onClose) {
       onClose();
     }
   }
-
 
   return (
     <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''}`}>
@@ -58,27 +51,13 @@ const Sidebar = ({ isOpen, onClose }) => {
           <h1 className={styles.logo}>
             GenFIT <span>CRM</span>
           </h1>
+          {/* Botón X visible solo en móviles cuando el sidebar está abierto */}
           <button className={styles.closeBtnMobile} onClick={onClose}>
             <X size={24} />
           </button>
         </div>
 
         <nav className={styles.nav}>
-          {/* --- 👑 SECCIÓN EXCLUSIVA PARA DESARROLLADORES --- */}
-          {isSuperAdmin && (
-            <div className={styles.navGroup}>
-              <span className={styles.groupLabel}>Ecosistema SaaS</span>
-              <NavLink 
-                to="/gestion-gimnasios" 
-                onClick={handleNavLinkClick}
-                className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''} ${styles.superItem}`}
-              >
-                <Building2 size={18} /> <span>Gimnasios</span>
-              </NavLink>
-            </div>
-          )}
-
-          {/* --- SECCIÓN OPERATIVA --- */}
           <div className={styles.navGroup}>
             <span className={styles.groupLabel}>General</span>
             <NavLink 
@@ -94,34 +73,40 @@ const Sidebar = ({ isOpen, onClose }) => {
               onClick={handleNavLinkClick}
               className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
             >
-              <Users size={18} /> <span>Socios</span>
+              <Users size={18} /> <span>Clientes</span>
             </NavLink>
           </div>
 
-          {isStaff && (
+          {(canViewPagos || canViewPlanes || canViewCaja) && (
             <div className={styles.navGroup}>
               <span className={styles.groupLabel}>Gestión</span>
-              <NavLink 
-                to="/pagos" 
-                onClick={handleNavLinkClick}
-                className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
-              >
-                <CreditCard size={18} /> <span>Pagos</span>
-              </NavLink>
-              <NavLink 
-                to="/planes" 
-                onClick={handleNavLinkClick}
-                className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
-              >
-                <Gift size={18} /> <span>Planes</span>
-              </NavLink>
-              <NavLink 
-                to="/cierre-caja" 
-                onClick={handleNavLinkClick}
-                className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
-              >
-                <Archive size={18} /> <span>Caja Diaria</span>
-              </NavLink>
+              {canViewPagos && (
+                <NavLink 
+                  to="/pagos" 
+                  onClick={handleNavLinkClick}
+                  className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+                >
+                  <CreditCard size={18} /> <span>Pagos</span>
+                </NavLink>
+              )}
+              {canViewPlanes && (
+                <NavLink 
+                  to="/planes" 
+                  onClick={handleNavLinkClick}
+                  className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+                >
+                  <Gift size={18} /> <span>Planes</span>
+                </NavLink>
+              )}
+              {canViewCaja && (
+                <NavLink 
+                  to="/cierre-caja" 
+                  onClick={handleNavLinkClick}
+                  className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+                >
+                  <Archive size={18} /> <span>Caja Diaria</span>
+                </NavLink>
+              )}
             </div>
           )}
 
@@ -141,32 +126,54 @@ const Sidebar = ({ isOpen, onClose }) => {
             >
               <ClipboardList size={18} /> <span>Rutinas</span>
             </NavLink>
+            <div className={styles.navItemDisabled}>
+              <div className={styles.navItemMain}>
+                <Apple size={18} /> <span>Nutrición</span>
+              </div>
+              <span className={styles.badgePronto}>PRONTO</span>
+            </div>
           </div>
 
-          {/* --- SECCIÓN ADMINISTRATIVA --- */}
-          {isAdminOrHigher && (
+          {(canViewMovimientos || canViewPermisos) && (
             <div className={styles.navGroup}>
-              <span className={styles.groupLabel}>Administración</span>
-              <NavLink 
-                to="/movimientos" 
-                onClick={handleNavLinkClick}
-                className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
-              >
-                <Activity size={18} /> <span>Auditoría</span>
-              </NavLink>
-              <NavLink 
-                to="/configuracion" 
-                onClick={handleNavLinkClick}
-                className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
-              >
-                <ShieldCheck size={18} /> <span>Staff y Permisos</span>
-              </NavLink>
+              <span className={styles.groupLabel}>Admin</span>
+              {canViewMovimientos && (
+                <NavLink 
+                  to="/movimientos" 
+                  onClick={handleNavLinkClick}
+                  className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+                >
+                  <Activity size={18} /> <span>Movimientos</span>
+                </NavLink>
+              )}
+              {canViewPermisos && (
+                <NavLink 
+                  to="/configuracion" 
+                  onClick={handleNavLinkClick}
+                  className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ''}`}
+                >
+                  <HelpCircle size={18} /> <span>Permisos</span>
+                </NavLink>
+              )}
             </div>
           )}
         </nav>
       </div>
 
       <div className={styles.bottomSection}>
+        <div className={styles.supportCard}>
+          <div className={styles.supportContent}>
+            <HelpCircle size={20} className={styles.supportIcon} />
+            <div className={styles.supportText}>
+              <p className={styles.supportTitle}>¿Necesitás ayuda?</p>
+              <p className={styles.supportSub}>Estamos para asistirte</p>
+            </div>
+          </div>
+          <NavLink to="/soporte" onClick={handleNavLinkClick} className={styles.supportAction}>
+            Soporte Técnico
+          </NavLink>
+        </div>
+
         <div className={styles.userProfile}>
           <div className={styles.userAccount}>
             <div className={styles.avatarContainer}>
@@ -187,4 +194,4 @@ const Sidebar = ({ isOpen, onClose }) => {
   )
 }
 
-export default Sidebar;
+export default Sidebar

@@ -387,15 +387,3 @@
     padding: 6px 12px; /* Botones al mínimo tamaño legible */
   }
 }
-
-.navLink[href="/gestion-gimnasios"] {
-  margin-top: 10px;
-  border-top: 1px solid #f1f5f9;
-  padding-top: 15px;
-  color: #7c3aed; /* Un color distinto para que sepamos que es nivel Dios */
-}
-
-.superItem {
-  color: #7c3aed !important; /* Color violeta para que se note que es nivel admin global */
-  font-weight: 700;
-}
