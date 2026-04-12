@@ -1,5 +1,4 @@
 import { supabase } from "./supabaseClient";
-import { registerUser } from "./authService"; 
 
 export const obtenerClientes = async () => {
   try {
@@ -34,20 +33,24 @@ export const obtenerClientePorDocumento = async (dni) => {
 
 export const crearCliente = async (cliente) => {
   try {
-    // 1. Registro en Auth pasando OBJETO
-    const authData = await registerUser({
-        first_name: cliente.first_name,
-        last_name: cliente.last_name,
-        email: cliente.email,
-        dni: cliente.dni,
-        role: 'CLIENT',
-        gym_id: cliente.gym_id || null
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: cliente.email.trim().toLowerCase(),
+        password: String(cliente.dni), // <--- DNI COMO CONTRASEÑA
+        options: {
+          data: {
+            first_name: cliente.first_name,
+            last_name: cliente.last_name,
+            role: 'CLIENT',
+            dni: cliente.dni,
+            gym_id: cliente.gym_id || null
+          }
+        }
     });
 
-    const userId = authData?.user?.id || authData?.id;
+    if (authError) throw authError;
+    const userId = authData?.user?.id;
 
     if (userId) {
-      // 2. Insert/Update en tabla pública
       const { data, error } = await supabase
         .from('users')
         .upsert({
@@ -67,7 +70,6 @@ export const crearCliente = async (cliente) => {
 
       if (error) throw error;
 
-      // 3. Suscripción inicial
       const hoy = new Date();
       const due_date = new Date(hoy.getTime() + (30 * 24 * 60 * 60 * 1000));
       await supabase.from('subscriptions').insert([{
@@ -80,7 +82,6 @@ export const crearCliente = async (cliente) => {
 
       return data; 
     }
-    return authData;
   } catch (error) {
     console.error("❌ Error crear cliente:", error.message);
     throw error;

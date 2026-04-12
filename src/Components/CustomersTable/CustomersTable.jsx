@@ -41,7 +41,6 @@ const CustomersTable = ({ onSelectCliente }) => {
   const [saving, setSaving] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const location = useLocation();
-
   const itemsPerPage = 6; 
 
   const [nuevoUsuario, setNuevoUsuario] = useState({
