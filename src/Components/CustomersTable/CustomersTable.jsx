@@ -138,15 +138,14 @@ const CustomersTable = ({ onSelectCliente }) => {
         await registrarMovimiento(user.id, 'Clientes', 'ACTUALIZACIÓN', `Modificó datos de: ${nuevoUsuario.first_name} ${nuevoUsuario.last_name}`);
         mostrarToast("✅ Usuario actualizado");
       } else {
-        // 👉 AQUÍ ESTÁ LA MAGIA: Al crear, inyectamos el DNI como password
+        // 👉 AQUÍ ENVIAMOS EL DNI COMO PASSWORD
         const clienteCreado = await crearCliente({ 
           ...nuevoUsuario, 
-          password: nuevoUsuario.dni, // 🔑 Asigna el DNI como contraseña inicial
-          gym_id: user?.gym_id 
+          password: nuevoUsuario.dni 
         });
         
         if (tieneAlerta && clienteCreado?.id) {
-          await crearAlertaMedica({ ...alertaMedica, user_id: clienteCreado.id, gym_id: user?.gym_id });
+          await crearAlertaMedica({ ...alertaMedica, user_id: clienteCreado.id });
         }
         await registrarMovimiento(user.id, 'Clientes', 'CREACIÓN', `Dio de alta al socio: ${nuevoUsuario.first_name} ${nuevoUsuario.last_name}`);
         mostrarToast("✅ Socio registrado exitosamente");
