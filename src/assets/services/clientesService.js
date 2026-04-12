@@ -3,28 +3,26 @@ import { supabase } from './supabaseClient';
 export const obtenerClientes = async () => {
   try {
     const { data, error } = await supabase
-      .from('clientes')
+      .from('users')
       .select('*, plans(name)')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error("Error obteniendo clientes:", error);
     throw error;
   }
 };
 
 export const crearCliente = async (clienteData) => {
   try {
-    // Aseguramos que se envíe el password con el valor del DNI
     const datosGuardar = {
       ...clienteData,
-      password: clienteData.password || clienteData.dni,
+      password: clienteData.dni,
     };
 
     const { data, error } = await supabase
-      .from('clientes')
+      .from('users')
       .insert([datosGuardar])
       .select()
       .single();
@@ -32,7 +30,6 @@ export const crearCliente = async (clienteData) => {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error("Error al crear cliente:", error);
     throw error;
   }
 };
@@ -40,7 +37,7 @@ export const crearCliente = async (clienteData) => {
 export const obtenerClientePorDocumento = async (documento) => {
   try {
     const { data, error } = await supabase
-      .from('clientes')
+      .from('users')
       .select('*, plans(name)')
       .eq('dni', documento)
       .single();
@@ -48,7 +45,6 @@ export const obtenerClientePorDocumento = async (documento) => {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error("Error obteniendo cliente por documento:", error);
     throw error;
   }
 };
@@ -56,7 +52,7 @@ export const obtenerClientePorDocumento = async (documento) => {
 export const actualizarCliente = async (id, clienteData) => {
   try {
     const { data, error } = await supabase
-      .from('clientes')
+      .from('users')
       .update(clienteData)
       .eq('id', id)
       .select()
@@ -65,7 +61,6 @@ export const actualizarCliente = async (id, clienteData) => {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error("Error al actualizar cliente:", error);
     throw error;
   }
 };
@@ -73,14 +68,13 @@ export const actualizarCliente = async (id, clienteData) => {
 export const eliminarCliente = async (id) => {
   try {
     const { data, error } = await supabase
-      .from('clientes')
+      .from('users')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error("Error al eliminar cliente:", error);
     throw error;
   }
 };
