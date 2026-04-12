@@ -1,6 +1,7 @@
 // src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { login as loginAPI } from "../assets/services/authService";
+// 1. Importamos el servicio de movimientos
 import { registrarMovimiento } from "../assets/services/movimientosService";
 
 const AuthContext = createContext();
@@ -10,33 +11,14 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loadingInitial, setLoadingInitial] = useState(true);
   
-  // 🎯 ESTADO PARA MULTI-TENANCY GLOBAL (Selector de Gimnasio)
-  const [selectedGymId, setSelectedGymId] = useState(null);
-
+  // Referencia para acceder al estado actual del usuario dentro de funciones estables (useCallback)
+  // Esto es clave para que el logout sepa qué ID registrar sin depender del ciclo de renderizado
   const userRef = useRef(null);
 
+  // Sincronizamos la referencia cada vez que el usuario cambia
   useEffect(() => {
     userRef.current = user;
-    // Al cargar el usuario, inicializamos el gimnasio seleccionado
-    if (user) {
-      setSelectedGymId(user.gym_id);
-    } else {
-      setSelectedGymId(null);
-    }
   }, [user]);
-
-  /* ===================================================
-      👑 LÓGICA DE SUPERADMIN (Cambio de Sucursal)
-     =================================================== */
-  
-  // Esta función permite al SuperAdmin "saltar" entre datos de diferentes gyms
-  const cambiarSucursal = useCallback((gymId) => {
-    const role = userRef.current?.role?.replace("ROLE_", "").toUpperCase();
-    if (role === "SUPER_ADMIN") {
-      console.log(`🌐 Cambiando contexto de datos al Gym: ${gymId}`);
-      setSelectedGymId(gymId);
-    }
-  }, []);
 
   /* ===================================================
       🔐 LOGOUT (Manual y Automático)
@@ -44,23 +26,19 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(async (reason = "manual") => {
     console.log(`🔒 Sesión finalizada (${reason}).`);
     
+    // 2. Registramos el movimiento antes de limpiar los estados
     if (userRef.current) {
       const detalle = reason === "inactivity" 
         ? "Sesión cerrada automáticamente por inactividad (15 min)."
         : "El usuario cerró sesión de forma manual.";
         
-      try {
-        await registrarMovimiento(userRef.current.id, 'Sistema', 'LOGOUT', detalle);
-      } catch (e) {
-        console.error("Error al registrar logout:", e);
-      }
+      await registrarMovimiento(userRef.current.id, 'Sistema', 'LOGOUT', detalle);
     }
 
     localStorage.removeItem("fitseoUser");
     localStorage.removeItem("lastActivity");
     setUser(null);
     userRef.current = null;
-    setSelectedGymId(null);
 
     if (window.location.pathname !== "/login") {
       window.location.href = "/login";
@@ -78,7 +56,7 @@ export const AuthProvider = ({ children }) => {
     if (lastActivity && storedUser) {
       const now = new Date().getTime();
       if (now - parseInt(lastActivity) > INACTIVITY_LIMIT) {
-        logout("inactivity");
+        logout("inactivity"); // 👈 Pasamos la razón para el log
       }
     }
   }, [logout]);
@@ -138,7 +116,7 @@ export const AuthProvider = ({ children }) => {
       const data = await loginAPI(usuario, password);
       if (!data) return null;
 
-      const normalizedRole = data.role ? data.role.replace("ROLE_", "").toUpperCase() : "";
+      const normalizedRole = data.role ? data.role.toUpperCase() : "";
       if (normalizedRole === "CLIENT") {
         throw new Error("Acceso denegado: Los clientes deben usar la App móvil.");
       }
@@ -157,14 +135,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      login, 
-      logout, 
-      loadingInitial, 
-      selectedGymId, // 🔑 Exportamos el ID seleccionado
-      cambiarSucursal // 🔑 Exportamos la función de cambio
-    }}>
+    <AuthContext.Provider value={{ user, login, logout, loadingInitial }}>
       {!loadingInitial && children}
     </AuthContext.Provider>
   );
