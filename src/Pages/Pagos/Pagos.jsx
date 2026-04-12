@@ -18,10 +18,9 @@ const Pagos = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // 👑 Lógica de SUPERADMIN y permisos
-  const role = user?.role?.replace("_", "").toUpperCase() || "STAFF";
-  const isSuperAdmin = role === "SUPERADMIN";
-  const canRegisterPayments = ["SUPERADMIN", "ADMIN", "SUPERVISOR"].includes(role);
+  // Lógica de permisos basada en el rol del usuario
+  const role = user?.role || "USER";
+  const canRegisterPayments = ["SUPER_ADMIN", "ADMIN", "SUPERVISOR"].includes(role);
 
   // Estados Principales
   const [pagos, setPagos] = useState([]);
@@ -47,21 +46,16 @@ const Pagos = () => {
   };
 
   /**
-   * 🔄 Carga de historial corregida para acceso global
+   * 🔄 Carga de historial (Actualizado con gym_id)
    */
   const cargarHistorial = useCallback(async () => {
-    // 🛡️ CORRECCIÓN: Si no hay gym_id Y no es SuperAdmin, apagamos el loader y salimos
-    if (!user?.gym_id && !isSuperAdmin) {
-      setLoading(false);
-      return;
-    }
+    // 🛡️ Seguridad: Si no hay gym_id, no disparamos la carga para evitar errores de RLS
+    if (!user?.gym_id) return;
 
     try {
       setLoading(true);
-      // El SuperAdmin puede mandar null para traer data global
-      const targetGymId = isSuperAdmin ? (user?.gym_id || null) : user.gym_id;
-      
-      const data = await obtenerPagos(targetGymId);
+      // Pasamos el gym_id al servicio para filtrar los ingresos de este gimnasio
+      const data = await obtenerPagos(user.gym_id);
       
       const pagosFormateados = data.map(p => ({
         id: p.id,
@@ -79,12 +73,13 @@ const Pagos = () => {
       console.error("Error en Pagos:", e);
       mostrarToast("Error al sincronizar historial.", "error");
     } finally {
-      setLoading(false); // ✅ Garantizamos que el loader se apague siempre
+      setLoading(false);
     }
-  }, [user?.gym_id, isSuperAdmin]);
+  }, [user?.gym_id]);
 
   /**
    * 🎯 EFECTO PARA DETECTAR REDIRECCIÓN DESDE CLIENTES
+   * Permite abrir el modal de pago automáticamente si venimos del perfil de un socio
    */
   useEffect(() => {
     if (location.state?.abrirNuevoPago && location.state?.clienteData) {
