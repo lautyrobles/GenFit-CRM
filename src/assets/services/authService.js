@@ -1,27 +1,17 @@
 import { supabase } from './supabaseClient';
 
-// 🔥 LA CONTRASEÑA MAESTRA OCULTA
-// Es fundamental que sea la misma para todos los usuarios para el login por código.
 const MASTER_PASSWORD = 'GenFit_2026_Secure!';
 
-/* ===================================================
-    📧 PASO 1: GENERAR Y GUARDAR EL CÓDIGO TEMPORAL
-   =================================================== */
 export const sendOtpAPI = async (email) => {
   try {
     const safeEmail = email.trim().toLowerCase();
-    
-    // 1. Generamos un código de 6 dígitos al azar
     const codigoGenerado = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // 2. Lo guardamos en la tabla de códigos temporales
     const { error } = await supabase
       .from('codigos_temporales')
       .insert([{ email: safeEmail, codigo: codigoGenerado }]);
-
     if (error) throw error;
 
-    // 3. Retornamos los datos para enviarlos por EmailJS
     return { email: safeEmail, codigo: codigoGenerado };
   } catch (e) {
     console.error("❌ Error generando código:", e.message);
@@ -37,7 +27,10 @@ export const verifyCodeAPI = async (email, token) => {
     const safeEmail = email.trim().toLowerCase();
     const safeToken = token.replace(/\D/g, '');
 
-    // 1. Buscamos si el código coincide en la DB
+export const verifyCodeAPI = async (email, token) => {
+  try {
+    const safeEmail = email.trim().toLowerCase();
+    const safeToken = token.replace(/\D/g, ''); 
     const { data, error } = await supabase
       .from('codigos_temporales')
       .select('*')
@@ -52,21 +45,29 @@ export const verifyCodeAPI = async (email, token) => {
     // 2. Borramos el código usado por seguridad
     await supabase.from('codigos_temporales').delete().eq('id', data.id);
 
-    // 3. Logueamos al usuario usando la contraseña maestra de forma invisible
+      .single(); 
+    if (error || !data) throw new Error("El código es incorrecto o no existe.");
+    await supabase.from('codigos_temporales').delete().eq('id', data.id);
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: safeEmail,
       password: MASTER_PASSWORD
     });
-
     if (authError) throw new Error("Error interno al iniciar la sesión segura.");
-
+    const { data: staffData } = await supabase
+      .from('staff')
+      .select('*')
+      .eq('email', safeEmail)
+      .single();
     return {
       id: authData.user.id,
       email: authData.user.email,
       token: authData.session.access_token,
       metadata: authData.user.user_metadata,
-      role: authData.user.user_metadata?.role || 'STAFF',
-      gym_id: authData.user.user_metadata?.gym_id || null
+      role: staffData?.role || authData.user.user_metadata?.role || 'STAFF',
+      gym_id: staffData?.gym_id || authData.user.user_metadata?.gym_id || null,
+      first_name: staffData?.first_name || authData.user.user_metadata?.first_name || '',
+      last_name: staffData?.last_name || authData.user.user_metadata?.last_name || '',
+      dni: staffData?.dni || ''
     };
   } catch (e) {
     console.error("❌ Error verificando código:", e.message);
@@ -74,9 +75,7 @@ export const verifyCodeAPI = async (email, token) => {
   }
 };
 
-/* ===================================================
-    ⚙️ GESTIÓN DE STAFF
-   =================================================== */
+
 export const getUsers = async (gymId) => {
   try {
     let query = supabase.from('staff').select('*').order('id', { ascending: true });
@@ -87,9 +86,8 @@ export const getUsers = async (gymId) => {
   } catch (e) { throw e; }
 };
 
-export const crearUsuarioStaff = async (userData, adminId, adminRole, gymId) => {
+export const crearUsuarioStaff = async (userData) => {
   try {
-    // Al crear personal desde el CRM, forzamos la MASTER_PASSWORD
     const { data, error } = await supabase.auth.signUp({
       email: userData.email, 
       password: MASTER_PASSWORD, // 👈 Clave unificada para login OTP
@@ -97,8 +95,8 @@ export const crearUsuarioStaff = async (userData, adminId, adminRole, gymId) => 
         data: { 
           first_name: userData.first_name, 
           last_name: userData.last_name, 
-          role: userData.role, 
-          gym_id: userData.gym_id || gymId, 
+          role: userData.role || 'CLIENT', 
+          gym_id: userData.gym_id || null, 
           dni: userData.dni 
         } 
       },
@@ -142,9 +140,13 @@ export const logout = async () => {
   } catch (e) {}
 };
 
+
 /* ===================================================
     🛠️ ALIAS DE COMPATIBILIDAD
    =================================================== */
 // Esto evita errores de "export not found" en otros archivos que usen nombres viejos
 export const registerUser = crearUsuarioStaff;
+
+export const registerUser = crearUsuarioStaff; 
+
 export const login = verifyCodeAPI;

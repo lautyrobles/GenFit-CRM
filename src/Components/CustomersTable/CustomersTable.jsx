@@ -3,18 +3,11 @@ import styles from "./CustomersTable.module.css";
 import Loader from "../../Components/Loader/Loader";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation } from "react-router-dom";
-
-// 📦 Servicios
-import {
-  obtenerClientes,
-  crearCliente,
-  actualizarCliente,
-} from "../../assets/services/clientesService";
+import { obtenerClientes, crearCliente, actualizarCliente } from "../../assets/services/clientesService";
 import { obtenerPlanes } from "../../assets/services/planesService";
 import { crearAlertaMedica } from "../../assets/services/medicalService";
-import { registrarMovimiento } from "../../assets/services/movimientosService"; // 2. Servicio de Logs
+import { registrarMovimiento } from "../../assets/services/movimientosService";
 
-// Iconos refinados
 const SearchIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8"></circle>
@@ -37,7 +30,7 @@ const EditIcon = () => (
 );
 
 const CustomersTable = ({ onSelectCliente }) => {
-  const { user } = useAuth(); // 3. Extraemos el usuario administrativo logueado
+  const { user } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
   const [planesDisponibles, setPlanesDisponibles] = useState([]);
   const [mostrarModal, setMostrarModal] = useState(false);
@@ -60,32 +53,20 @@ const CustomersTable = ({ onSelectCliente }) => {
     name: "", severity: "Baja", observation: ""
   });
 
-const fetchData = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const [clientesData, planesData] = await Promise.all([
-        obtenerClientes(),
-        obtenerPlanes(),
-      ]);
-      
+      const [clientesData, planesData] = await Promise.all([obtenerClientes(), obtenerPlanes()]);
       setUsuarios(clientesData || []);
       setPlanesDisponibles(planesData || []);
-
-      // 🎯 LÓGICA DE VISUALIZACIÓN AUTOMÁTICA (MODO LECTURA)
       const autoOpenId = location.state?.autoOpenUserId;
-      
       if (autoOpenId && clientesData) {
         const clienteAVer = clientesData.find(u => u.id === autoOpenId);
-        
         if (clienteAVer) {
-          // Ejecutamos la selección del cliente para cargar su perfil completo
           onSelectCliente(clienteAVer);
-
-          // Limpiamos el estado de la navegación para evitar que se abra solo al refrescar
           window.history.replaceState({}, document.title);
         }
       }
-
     } catch (error) {
       mostrarToast("Error de conexión", "error");
     } finally {
@@ -121,7 +102,7 @@ const fetchData = async () => {
   };
 
   const resolverEstadoCuota = (u) => {
-    const estaActivoDB = u.enabled === true || u.condition === "true" || u.condition === "TRUE"; 
+    const estaActivoDB = u.enabled === true; 
     return estaActivoDB 
       ? { texto: "Activo", clase: styles.active } 
       : { texto: "Inactivo", clase: styles.inactive };
@@ -147,25 +128,22 @@ const fetchData = async () => {
     setTimeout(() => setToast({ message: "", type: "" }), 2500);
   };
 
-const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       setSaving(true);
       if (editIndex !== null) {
         const userId = usuariosPagina[editIndex].id;
-        
-        // Enviamos el objeto tal cual, el servicio se encarga de limpiar 'plans', 'subscriptions', etc.
         await actualizarCliente(userId, nuevoUsuario);
-        
-        await registrarMovimiento(
-          user.id, 'Clientes', 'ACTUALIZACIÓN',
-          `Modificó datos de: ${nuevoUsuario.first_name} ${nuevoUsuario.last_name}`
-        );
-
+        await registrarMovimiento(user.id, 'Clientes', 'ACTUALIZACIÓN', `Modificó datos de: ${nuevoUsuario.first_name} ${nuevoUsuario.last_name}`);
         mostrarToast("✅ Usuario actualizado");
       } else {
-        const clienteCreado = await crearCliente(nuevoUsuario);
-        // ... lógica de creación y alertas médicas que ya tenías ...
+        const clienteCreado = await crearCliente({ ...nuevoUsuario, gym_id: user?.gym_id });
+        if (tieneAlerta && clienteCreado?.id) {
+          await crearAlertaMedica({ ...alertaMedica, user_id: clienteCreado.id, gym_id: user?.gym_id });
+        }
+        await registrarMovimiento(user.id, 'Clientes', 'CREACIÓN', `Dio de alta al socio: ${nuevoUsuario.first_name} ${nuevoUsuario.last_name}`);
+        mostrarToast("✅ Socio registrado exitosamente");
       }
       await fetchData();
       cerrarModal();
@@ -176,21 +154,11 @@ const handleSubmit = async (e) => {
     }
   };
 
-const editarUsuario = (u) => {
-    // 🛡️ Mapeo limpio para el formulario
+  const editarUsuario = (u) => {
     setNuevoUsuario({
-      dni: u.dni ?? "",
-      first_name: u.first_name ?? "",
-      last_name: u.last_name ?? "",
-      email: u.email ?? "",
-      phone: u.phone ?? "",
-      plan_id: u.plan_id ?? "",
+      dni: u.dni ?? "", first_name: u.first_name ?? "", last_name: u.last_name ?? "",
+      email: u.email ?? "", phone: u.phone ?? "", plan_id: u.plan_id ?? "",
     });
-
-    const userIndex = usuarios.findIndex(user => user.id === u.id);
-    setEditIndex(userIndex); 
-    setMostrarModal(true);
-
     const relativeIndex = usuariosPagina.findIndex(user => user.id === u.id);
     setEditIndex(relativeIndex);
     setMostrarModal(true);
@@ -201,11 +169,7 @@ const editarUsuario = (u) => {
 
   return (
     <>
-      {toast.message && (
-        <div className={`${styles.toast} ${toast.type === "error" ? styles.toastError : styles.toastSuccess}`}>
-          {toast.message}
-        </div>
-      )}
+      {toast.message && <div className={`${styles.toast} ${toast.type === "error" ? styles.toastError : styles.toastSuccess}`}>{toast.message}</div>}
 
       {mostrarModal && (
         <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && cerrarModal()}>
@@ -287,37 +251,22 @@ const editarUsuario = (u) => {
             <div className={styles.tableWrapper}>
               <table className={styles.table}>
                 <thead>
-                  <tr>
-                    <th>Nombre y Apellido</th>
-                    <th>DNI</th>
-                    <th>Email</th>
-                    <th>Plan</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                  </tr>
+                  <tr><th>Nombre y Apellido</th><th>DNI</th><th>Email</th><th>Plan</th><th>Estado</th><th>Acciones</th></tr>
                 </thead>
                 <tbody>
                   {usuariosPagina.map((u) => {
                     const nombrePlan = resolverNombrePlan(u);
                     const estado = resolverEstadoCuota(u);
-                    
                     return (
                       <tr key={u.id}>
                         <td className={styles.nameCell}>
                           <div className={styles.avatar}>{u.first_name[0]}{u.last_name[0]}</div>
-                          <div className={styles.nameText}>
-                            <p>{u.first_name} {u.last_name}</p>
-                            <span>Cliente</span>
-                          </div>
+                          <div className={styles.nameText}><p>{u.first_name} {u.last_name}</p><span>Cliente</span></div>
                         </td>
                         <td>{u.dni || "-"}</td>
                         <td>{u.email}</td>
-                        <td>
-                          <span className={`${styles.planBadge} ${getPlanClass(nombrePlan)}`}>{nombrePlan}</span>
-                        </td>
-                        <td>
-                          <span className={estado.clase}>{estado.texto}</span>
-                        </td>
+                        <td><span className={`${styles.planBadge} ${getPlanClass(nombrePlan)}`}>{nombrePlan}</span></td>
+                        <td><span className={estado.clase}>{estado.texto}</span></td>
                         <td className={styles.actionsCell}>
                           <button className={styles.actionBtn} onClick={() => onSelectCliente(u)} title="Ver Perfil"><EyeIcon /></button>
                           <button className={styles.actionBtn} onClick={() => editarUsuario(u)} title="Editar"><EditIcon /></button>
