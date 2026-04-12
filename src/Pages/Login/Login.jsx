@@ -4,7 +4,6 @@ import styles from "./Login.module.css";
 import { useAuth } from "../../context/AuthContext";
 import { Mail, Loader2, Info, ShieldCheck, ArrowLeft } from "lucide-react"; 
 import { registrarMovimiento } from "../../assets/services/movimientosService";
-import emailjs from '@emailjs/browser'; 
 
 const Login = () => {
   const { sendOtp, verifyCode } = useAuth(); 
@@ -16,6 +15,7 @@ const Login = () => {
   const [error, setError] = useState("");
 
   const handleChange = (e) => {
+    // Si es el OTP, limitamos a que solo acepte números por comodidad
     if (e.target.name === "otp") {
       const val = e.target.value.replace(/\D/g, "");
       setFormData({ ...formData, otp: val });
@@ -25,7 +25,7 @@ const Login = () => {
   };
 
   /* ===================================================
-      📧 PASO 1: Generar código (Supabase) y enviarlo (EmailJS)
+      📧 PASO 1: Enviar correo con código
      =================================================== */
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
@@ -33,31 +33,21 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // 1. Generamos y guardamos el código en la BD temporal
-      const { email: safeEmail, codigo } = await sendOtp({ email: formData.email });
-      
-      // 2. Disparamos el correo real usando EmailJS
-      await emailjs.send(
-        'service_nbmafca',   // Ej: 'service_123xyz'
-        'template_rykza0d',  // Ej: 'template_abc890'
-        {
-          to_email: safeEmail,     // Manda el mail al usuario
-          codigo: codigo           // Inserta el número generado
-        },
-        'hEwd5jYf6MDsKm5NR'    // Tu Public Key de la cuenta
-      );
-
+      await sendOtp({ email: formData.email });
       setStep(2); 
     } catch (err) {
-      console.error(err);
-      setError(err.message || "No se pudo generar el código o enviar el correo.");
+      // Si el error es el 429 que vimos antes, damos un mensaje más humano
+      const msg = err.message.includes("rate limit") 
+        ? "Demasiados intentos. Por favor, espera unos minutos antes de pedir otro código."
+        : err.message || "No se pudo enviar el código. Verificá tu correo.";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
   /* ===================================================
-      ✅ PASO 2: Verificar contra la tabla temporal
+      ✅ PASO 2: Verificar el código
      =================================================== */
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
@@ -71,16 +61,16 @@ const Login = () => {
       });
 
       if (loggedUser) {
+        // Registrar el acceso en la tabla de movimientos
         try {
           await registrarMovimiento(
             loggedUser.id, 
             'Sistema', 
             'LOGIN', 
-            `Sesión iniciada correctamente.`,
-            loggedUser.gym_id
+            `Sesión iniciada correctamente (OTP: ${formData.email}).`
           );
         } catch (movErr) {
-          console.error("Aviso: No se pudo registrar el movimiento", movErr);
+          console.error("Error al registrar movimiento:", movErr);
         }
         
         navigate("/"); 
@@ -107,6 +97,7 @@ const Login = () => {
           </p>
         </header>
 
+        {/* CARTEL DE INFORMACIÓN (PASO 1) */}
         {step === 1 && (
           <div className={styles.infoBanner}>
             <Info className={styles.infoIcon} size={20} />
@@ -116,6 +107,7 @@ const Login = () => {
           </div>
         )}
 
+        {/* FORMULARIO PASO 1: SOLO CORREO */}
         {step === 1 && (
           <form onSubmit={handleEmailSubmit} className={styles.form}>
             <div className={styles.inputGroup}>
@@ -133,18 +125,23 @@ const Login = () => {
                 />
               </div>
             </div>
+
             {error && <div className={styles.error}>{error}</div>}
+
             <button type="submit" className={styles.submitBtn} disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className={styles.spinner} size={18} />
                   <span>Enviando...</span>
                 </>
-              ) : "Recibir código de acceso"}
+              ) : (
+                "Recibir código de acceso"
+              )}
             </button>
           </form>
         )}
 
+        {/* FORMULARIO PASO 2: CÓDIGO OTP */}
         {step === 2 && (
           <form onSubmit={handleOtpSubmit} className={styles.form}>
             <div className={styles.inputGroup}>
@@ -173,7 +170,7 @@ const Login = () => {
               <button 
                 type="button" 
                 className={styles.backBtn} 
-                onClick={() => { setStep(1); setError(""); setFormData({...formData, otp: ""}); }}
+                onClick={() => { setStep(1); setError(""); }}
                 disabled={loading}
               >
                 <ArrowLeft size={18} />
@@ -185,11 +182,17 @@ const Login = () => {
                     <Loader2 className={styles.spinner} size={18} />
                     <span>Verificando...</span>
                   </>
-                ) : "Verificar e Ingresar"}
+                ) : (
+                  "Verificar e Ingresar"
+                )}
               </button>
             </div>
           </form>
         )}
+
+        <footer className={styles.footer}>
+          <p>Acceso exclusivo para personal autorizado de GenFit</p>
+        </footer>
       </div>
     </div>
   );
