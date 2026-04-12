@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { sendOtpAPI, verifyCodeAPI, supabase } from "../assets/services/authService";
+import { sendOtpAPI, verifyCodeAPI } from "../assets/services/authService";
+import { supabase } from "../assets/services/supabaseClient";
 
 const AuthContext = createContext();
 const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutos
@@ -9,12 +10,10 @@ export const AuthProvider = ({ children }) => {
   const [loadingInitial, setLoadingInitial] = useState(true);
   const userRef = useRef(null);
 
-  // Actualizar la última actividad
   const updateActivity = useCallback(() => {
     localStorage.setItem("lastActivity", new Date().getTime().toString());
   }, []);
 
-  // Cerrar sesión
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
     localStorage.removeItem("fitseoUser");
@@ -24,7 +23,6 @@ export const AuthProvider = ({ children }) => {
     window.location.href = "/login";
   }, []);
 
-  // Verificar inactividad
   const checkInactivity = useCallback(() => {
     const lastActivity = localStorage.getItem("lastActivity");
     if (lastActivity && userRef.current) {
@@ -35,7 +33,6 @@ export const AuthProvider = ({ children }) => {
     }
   }, [logout]);
 
-  // Carga inicial: Revisar si hay sesión activa
   useEffect(() => {
     const initAuth = async () => {
       const storedUser = localStorage.getItem("fitseoUser");
@@ -50,14 +47,16 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, [updateActivity]);
 
-  // Listeners para detectar movimiento del usuario
   useEffect(() => {
     if (!user) return;
     const events = ["mousedown", "keydown", "scroll", "touchstart"];
-    events.forEach(e => window.addEventListener(e, updateActivity));
+    const handleActivity = () => updateActivity();
+    
+    events.forEach(e => window.addEventListener(e, handleActivity));
     const interval = setInterval(checkInactivity, 30000);
+    
     return () => {
-      events.forEach(e => window.removeEventListener(e, updateActivity));
+      events.forEach(e => window.removeEventListener(e, handleActivity));
       clearInterval(interval);
     };
   }, [user, updateActivity, checkInactivity]);

@@ -15,6 +15,10 @@ import {
 const Asistencia = () => {
   const { user } = useAuth();
   const { state } = useLocation(); 
+  
+  // 👑 Lógica de SUPERADMIN
+  const isSuperAdmin = user?.role?.replace("_", "").toUpperCase() === "SUPERADMIN";
+
   const [busqueda, setBusqueda] = useState(state?.dni || "");
   const [socio, setSocio] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -22,42 +26,59 @@ const Asistencia = () => {
   const [loadingHistorial, setLoadingHistorial] = useState(true);
   const [mensajeTemporal, setMensajeTemporal] = useState("");
 
+  /**
+   * 🔄 Carga de historial de hoy
+   */
   const cargarHistorial = useCallback(async () => {
-    if (!user?.gym_id) return;
+    // 🛡️ CORRECCIÓN: Permitir si es SuperAdmin aunque no tenga gym_id
+    if (!user?.gym_id && !isSuperAdmin) {
+      setLoadingHistorial(false);
+      return;
+    }
+
     try {
-      const data = await obtenerHistorialHoy(user.gym_id);
+      setLoadingHistorial(true);
+      // El SuperAdmin pide el historial global enviando null
+      const targetId = isSuperAdmin ? (user?.gym_id || null) : user.gym_id;
+      const data = await obtenerHistorialHoy(targetId);
       setHistorial(data || []);
     } catch (error) {
       console.error("Error al cargar historial", error);
     } finally {
-      setLoadingHistorial(false);
+      setLoadingHistorial(false); // ✅ Garantizamos que el loader se apague
     }
-  }, [user?.gym_id]);
+  }, [user?.gym_id, isSuperAdmin]);
 
   useEffect(() => {
     cargarHistorial();
   }, [cargarHistorial]);
 
   useEffect(() => {
-    if (state?.dni && user?.gym_id) {
+    if (state?.dni && (user?.gym_id || isSuperAdmin)) {
       handleBuscar(null, state.dni);
     }
-  }, [state, user?.gym_id]);
+  }, [state, user?.gym_id, isSuperAdmin]);
 
   const mostrarMensaje = (msg) => {
     setMensajeTemporal(msg);
     setTimeout(() => setMensajeTemporal(""), 3000);
   };
 
+  /**
+   * 🔍 Búsqueda de socio para ticar
+   */
   const handleBuscar = async (e, dniForzado = null) => {
     if (e) e.preventDefault();
     const dniLimpio = (dniForzado || busqueda).toString().trim();
-    if (!dniLimpio || !user?.gym_id) return;
+
+    // 🛡️ CORRECCIÓN: Permitir búsqueda si es SuperAdmin
+    if (!dniLimpio || (!user?.gym_id && !isSuperAdmin)) return;
     
     setLoading(true);
     setSocio(null);
     try {
-      const data = await buscarSocioParaAsistencia(dniLimpio, user.gym_id);
+      const targetId = isSuperAdmin ? (user?.gym_id || null) : user.gym_id;
+      const data = await buscarSocioParaAsistencia(dniLimpio, targetId);
       if (data) {
         setSocio(data);
       } else {
@@ -81,7 +102,6 @@ const Asistencia = () => {
       return { status: "rojo", text: "Sin Plan o Pago", icon: <XCircle size={24}/> };
     }
 
-    // --- 🎯 CÁLCULO DE DÍAS Y GRACIA SINCRONIZADO ---
     const hoyStr = new Date().toISOString().split('T')[0];
     const hoy = new Date(hoyStr + "T12:00:00").getTime();
     const vencimiento = new Date(suscripcion.due_date + "T12:00:00").getTime();
@@ -89,7 +109,6 @@ const Asistencia = () => {
     const diffTime = vencimiento - hoy;
     const diasRestantes = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-    // 1. REINCIDENCIA (AMARILLO)
     const yaIngresoHoy = historial.find(log => log.user_id === s.id && log.access_granted);
     if (yaIngresoHoy) {
       const horaIngreso = new Date(yaIngresoHoy.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -100,7 +119,6 @@ const Asistencia = () => {
       };
     }
 
-    // 2. ACCESO OK (VERDE)
     if (diasRestantes >= 0) {
       return { 
         status: "verde", 
@@ -109,7 +127,6 @@ const Asistencia = () => {
       };
     }
 
-    // 3. PERIODO DE GRACIA (AZUL/INFO)
     if (diasRestantes < 0 && diasRestantes >= -5) {
       return { 
         status: "azul", 
@@ -119,7 +136,6 @@ const Asistencia = () => {
       };
     }
 
-    // 4. BLOQUEADO (ROJO)
     return { 
       status: "rojo", 
       text: `Vencido hace ${Math.abs(diasRestantes)} días`, 
@@ -128,14 +144,16 @@ const Asistencia = () => {
   };
 
   const handleRegistrarEntrada = async () => {
-    if (!socio || !user?.gym_id) return;
+    // 🛡️ CORRECCIÓN: Permitir registro si es SuperAdmin
+    if (!socio || (!user?.gym_id && !isSuperAdmin)) return;
     
     const estadoInfo = calcularEstado(socio);
     const granted = estadoInfo.status !== "rojo";
     const msg = estadoInfo.text;
 
     try {
-      await registrarAsistenciaManual(socio.id, user.gym_id, granted, msg);
+      const targetId = isSuperAdmin ? (user?.gym_id || socio.gym_id) : user.gym_id;
+      await registrarAsistenciaManual(socio.id, targetId, granted, msg);
       mostrarMensaje("✅ Asistencia registrada");
       setSocio(null);
       setBusqueda("");
@@ -229,7 +247,7 @@ const Asistencia = () => {
 
         <div className={styles.historyPanel}>
           <div className={styles.historyHeader}>
-            <h3>Ingresos de Hoy</h3>
+            <h3>Ingresos de Hoy {isSuperAdmin && "(Global)"}</h3>
             <Clock size={18} className={styles.titleIcon} />
           </div>
           
