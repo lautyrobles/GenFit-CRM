@@ -1,141 +1,81 @@
-// src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { login as loginAPI } from "../assets/services/authService";
-// 1. Importamos el servicio de movimientos
-import { registrarMovimiento } from "../assets/services/movimientosService";
+import { sendOtpAPI, verifyCodeAPI } from "../assets/services/authService";
+import { supabase } from "../assets/services/supabaseClient";
 
 const AuthContext = createContext();
-const INACTIVITY_LIMIT = 15 * 60 * 1000; 
+const INACTIVITY_LIMIT = 15 * 60 * 1000; // 15 minutos
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loadingInitial, setLoadingInitial] = useState(true);
-  
-  // Referencia para acceder al estado actual del usuario dentro de funciones estables (useCallback)
-  // Esto es clave para que el logout sepa qué ID registrar sin depender del ciclo de renderizado
   const userRef = useRef(null);
-
-  // Sincronizamos la referencia cada vez que el usuario cambia
-  useEffect(() => {
-    userRef.current = user;
-  }, [user]);
-
-  /* ===================================================
-      🔐 LOGOUT (Manual y Automático)
-     =================================================== */
-  const logout = useCallback(async (reason = "manual") => {
-    console.log(`🔒 Sesión finalizada (${reason}).`);
-    
-    // 2. Registramos el movimiento antes de limpiar los estados
-    if (userRef.current) {
-      const detalle = reason === "inactivity" 
-        ? "Sesión cerrada automáticamente por inactividad (15 min)."
-        : "El usuario cerró sesión de forma manual.";
-        
-      await registrarMovimiento(userRef.current.id, 'Sistema', 'LOGOUT', detalle);
-    }
-
-    localStorage.removeItem("fitseoUser");
-    localStorage.removeItem("lastActivity");
-    setUser(null);
-    userRef.current = null;
-
-    if (window.location.pathname !== "/login") {
-      window.location.href = "/login";
-    }
-  }, []);
 
   const updateActivity = useCallback(() => {
     localStorage.setItem("lastActivity", new Date().getTime().toString());
   }, []);
 
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    localStorage.removeItem("fitseoUser");
+    localStorage.removeItem("lastActivity");
+    setUser(null);
+    userRef.current = null;
+    window.location.href = "/login";
+  }, []);
+
   const checkInactivity = useCallback(() => {
     const lastActivity = localStorage.getItem("lastActivity");
-    const storedUser = localStorage.getItem("fitseoUser");
-
-    if (lastActivity && storedUser) {
+    if (lastActivity && userRef.current) {
       const now = new Date().getTime();
       if (now - parseInt(lastActivity) > INACTIVITY_LIMIT) {
-        logout("inactivity"); // 👈 Pasamos la razón para el log
+        logout();
       }
     }
   }, [logout]);
 
-  /* ===================================================
-      🔄 CARGA INICIAL
-     =================================================== */
   useEffect(() => {
-    const initAuth = () => {
+    const initAuth = async () => {
       const storedUser = localStorage.getItem("fitseoUser");
-      const lastActivity = localStorage.getItem("lastActivity");
-
-      if (storedUser && lastActivity) {
-        const now = new Date().getTime();
-        if (now - parseInt(lastActivity) > INACTIVITY_LIMIT) {
-          logout("inactivity");
-        } else {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            setUser(parsedUser);
-            userRef.current = parsedUser;
-            updateActivity();
-          } catch (e) {
-            logout();
-          }
-        }
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        userRef.current = parsedUser;
+        updateActivity();
       }
       setLoadingInitial(false);
     };
-
     initAuth();
-  }, [logout, updateActivity]);
+  }, [updateActivity]);
 
-  /* ===================================================
-      🖱️ LISTENERS DE ACTIVIDAD
-     =================================================== */
   useEffect(() => {
     if (!user) return;
-
-    const handleUserActivity = () => updateActivity();
     const events = ["mousedown", "keydown", "scroll", "touchstart"];
-    events.forEach(event => window.addEventListener(event, handleUserActivity));
+    const handleActivity = () => updateActivity();
     
-    const interval = setInterval(checkInactivity, 30000); 
-
+    events.forEach(e => window.addEventListener(e, handleActivity));
+    const interval = setInterval(checkInactivity, 30000);
+    
     return () => {
-      events.forEach(event => window.removeEventListener(event, handleUserActivity));
+      events.forEach(e => window.removeEventListener(e, handleActivity));
       clearInterval(interval);
     };
   }, [user, updateActivity, checkInactivity]);
 
-  /* ===================================================
-      🔐 LOGIN
-     =================================================== */
-  const login = async ({ usuario, password }) => {
-    try {
-      const data = await loginAPI(usuario, password);
-      if (!data) return null;
+  const sendOtp = async ({ email }) => {
+    return await sendOtpAPI(email);
+  };
 
-      const normalizedRole = data.role ? data.role.toUpperCase() : "";
-      if (normalizedRole === "CLIENT") {
-        throw new Error("Acceso denegado: Los clientes deben usar la App móvil.");
-      }
-
-      const fixedUser = { ...data, role: normalizedRole };
-      
-      localStorage.setItem("fitseoUser", JSON.stringify(fixedUser));
-      updateActivity(); 
-
-      setUser(fixedUser);
-      userRef.current = fixedUser;
-      return fixedUser;
-    } catch (err) {
-      throw err; 
-    }
+  const verifyCode = async ({ email, token }) => {
+    const userData = await verifyCodeAPI(email, token);
+    localStorage.setItem("fitseoUser", JSON.stringify(userData));
+    setUser(userData);
+    userRef.current = userData;
+    updateActivity();
+    return userData;
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loadingInitial }}>
+    <AuthContext.Provider value={{ user, sendOtp, verifyCode, logout, loadingInitial }}>
       {!loadingInitial && children}
     </AuthContext.Provider>
   );
