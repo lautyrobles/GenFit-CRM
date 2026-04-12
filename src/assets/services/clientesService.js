@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient";
-import { crearUsuarioStaff } from "./authService"; // 👈 Actualizado a la función universal
+import { registerUser } from "./authService"; 
 
 export const obtenerClientes = async (gymId) => {
   if (!gymId) return [];
@@ -38,39 +38,29 @@ export const obtenerClientePorDocumento = async (dni, gymId) => {
   }
 };
 
-/**
- * Crea un nuevo cliente de la app utilizando la lógica centralizada de Staff.
- * @param {Object} cliente - Datos del cliente desde el formulario.
- * @param {Object} adminActual - Objeto del usuario logueado (necesario para heredar gym_id y validar permisos).
- */
-export const crearCliente = async (cliente, adminActual) => {
-  if (!adminActual?.gym_id) throw new Error("Gimnasio del administrador no especificado");
-  
+export const crearCliente = async (cliente, gymId) => {
+  if (!gymId) throw new Error("Gimnasio no especificado");
   try {
-    // 1. Utilizamos la función universal para crear el usuario en Auth y DB
-    // Se usa el DNI como contraseña temporal (luego el usuario podrá cambiarla en la app)
-    const nuevoUsuario = await crearUsuarioStaff(
-      {
-        email: cliente.email,
-        password: String(cliente.dni), 
-        first_name: cliente.first_name,
-        last_name: cliente.last_name,
-        dni: cliente.dni,
-        role: 'CLIENT' // Forzamos el rol de cliente final
-      },
-      adminActual.id,
-      adminActual.role,
-      adminActual.gym_id
+    const nuevoUsuario = await registerUser(
+        cliente.first_name,
+        cliente.last_name,
+        cliente.email,
+        String(cliente.dni), 
+        String(cliente.dni), 
+        'CLIENT',            
+        cliente.dni,
+        gymId
     );
 
     if (nuevoUsuario && nuevoUsuario.id) {
-      // 2. Actualizamos los campos adicionales que no maneja la función base de Auth
       const { data, error } = await supabase
         .from('users')
         .update({ 
           phone: cliente.phone, 
           plan_id: cliente.plan_id,
-          enabled: true // Permitimos el acceso a la app, el control de entrada es por suscripción
+          // Se mantiene true para que pueda acceder a la app móvil, 
+          // pero el control de acceso del gym lo bloqueará por no tener suscripción
+          enabled: true
         })
         .eq('id', nuevoUsuario.id)
         .select()
@@ -78,8 +68,9 @@ export const crearCliente = async (cliente, adminActual) => {
 
       if (error) throw error;
 
-      // Importante: No creamos suscripción aquí. 
-      // Se genera en registrarPago (paymentsService.js) para asegurar el cobro.
+      // ❌ SE ELIMINÓ LA CREACIÓN AUTOMÁTICA DE SUSCRIPCIÓN.
+      // Ahora la suscripción solo se genera en registrarPago (paymentsService.js)
+
       return data; 
     }
   } catch (error) {
