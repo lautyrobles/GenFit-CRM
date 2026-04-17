@@ -17,31 +17,50 @@ export const obtenerMovimientos = async () => {
     // 2. Extraemos los IDs de usuario únicos que hay en esos logs
     const userIds = [...new Set(logs.map(log => log.user_id).filter(id => id != null))];
 
-    let usersData = [];
+    let allUsersData = [];
 
-    // 3. Si hay usuarios, los buscamos todos de una sola vez
+    // 3. Buscamos esos IDs en las dos tablas (Staff y Clientes)
     if (userIds.length > 0) {
-      const { data: users, error: usersError } = await supabase
-        .from('users')
+      // 3A. Buscamos en la tabla STAFF (Operadores del CRM)
+      const { data: staffData } = await supabase
+        .from('staff')
         .select('id, first_name, last_name, email, role')
         .in('id', userIds);
         
-      if (!usersError && users) {
-        usersData = users;
+      if (staffData) {
+        allUsersData = [...allUsersData, ...staffData];
+      }
+
+      // 3B. Buscamos en la tabla USERS (Clientes - Ajustado a tu estructura real)
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, username, email')
+        .in('id', userIds);
+
+      if (usersData) {
+        // Formateamos para que Movimientos.jsx lo lea igual que al staff
+        const formattedUsers = usersData.map(u => ({
+          id: u.id,
+          first_name: u.username || 'Cliente',
+          last_name: '',
+          email: u.email,
+          role: 'CLIENT'
+        }));
+        allUsersData = [...allUsersData, ...formattedUsers];
       }
     }
 
     // 4. Cruzamos los datos manualmente (Mapeo)
     const dataConUsuarios = logs.map(log => {
-      const usuarioDelLog = usersData.find(u => u.id === log.user_id);
+      const usuarioDelLog = allUsersData.find(u => u.id === log.user_id);
       
       return {
         id: log.id,
         created_at: log.created_at,
         module: log.module,
         action: log.action,
-        details: log.details || log.detail, // Por si acaso
-        users: usuarioDelLog || null // Si no lo encuentra, queda null y tu front dirá "Usuario eliminado"
+        details: log.details || log.detail,
+        users: usuarioDelLog || null 
       };
     });
 

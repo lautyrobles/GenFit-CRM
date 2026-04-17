@@ -13,13 +13,14 @@ const Header = ({ onOpenSidebar }) => { // 👈 Recibimos la función para abrir
   const getSectionTitle = (path) => {
     const titles = {
       '/': 'Dashboard',
-      '/clientes': 'Gestión de Clientes',
+      '/clientes': 'Gestión de Usuarios',
       '/pagos': 'Pagos y Facturación',
-      '/planes': 'Planes de Entrenamiento',
-      '/movimientos': 'Caja Diaria',
+      '/planes': 'Planes y suscripciones',
+      '/movimientos': 'Historial de Movimientos',
       '/configuracion': 'Permisos y Acceso',
       '/asistencia': 'Control de Asistencia',
-      '/nutricion': 'Módulo de Nutrición'
+      '/nutricion': 'Nutrición',
+      '/cierre-caja': 'Control de caja'
     }
     return titles[path] || 'Panel';
   }
