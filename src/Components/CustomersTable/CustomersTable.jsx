@@ -7,6 +7,7 @@ import { obtenerClientes, crearCliente, actualizarCliente } from "../../assets/s
 import { obtenerPlanes } from "../../assets/services/planesService";
 import { crearAlertaMedica } from "../../assets/services/medicalService";
 import { registrarMovimiento } from "../../assets/services/movimientosService";
+import { supabase } from "../../assets/services/supabaseClient";
 
 const SearchIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -34,7 +35,7 @@ const CustomersTable = ({ onSelectCliente }) => {
   const [usuarios, setUsuarios] = useState([]);
   const [planesDisponibles, setPlanesDisponibles] = useState([]);
   const [mostrarModal, setMostrarModal] = useState(false);
-  const [editIndex, setEditIndex] = useState(null);
+  const [editUserId, setEditUserId] = useState(null);
   const [toast, setToast] = useState({ message: "", type: "" });
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -42,7 +43,7 @@ const CustomersTable = ({ onSelectCliente }) => {
   const [busqueda, setBusqueda] = useState("");
   const location = useLocation();
 
-  const itemsPerPage = 6; 
+  const itemsPerPage = 6;
 
   const [nuevoUsuario, setNuevoUsuario] = useState({
     dni: "", first_name: "", last_name: "", email: "", phone: "", plan_id: "",
@@ -56,9 +57,21 @@ const CustomersTable = ({ onSelectCliente }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [clientesData, planesData] = await Promise.all([obtenerClientes(), obtenerPlanes()]);
+
+      // 👇 Traemos clientes CON subscriptions incluidas directamente desde Supabase
+      const { data: clientesData, error } = await supabase
+        .from('users')
+        .select('*, plans(id, name, price), subscriptions(id, due_date, active)')
+        .eq('role', 'CLIENT')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const planesData = await obtenerPlanes();
+
       setUsuarios(clientesData || []);
       setPlanesDisponibles(planesData || []);
+
       const autoOpenId = location.state?.autoOpenUserId;
       if (autoOpenId && clientesData) {
         const clienteAVer = clientesData.find(u => u.id === autoOpenId);
@@ -96,15 +109,24 @@ const CustomersTable = ({ onSelectCliente }) => {
 
   const resolverNombrePlan = (u) => {
     if (u.plans?.name) return u.plans.name;
-    const idPlan = u.plan_id; 
-    const planEncontrado = planesDisponibles.find((p) => String(p.id) === String(idPlan));
+    const planEncontrado = planesDisponibles.find((p) => String(p.id) === String(u.plan_id));
     return planEncontrado ? planEncontrado.name : "Sin Plan";
   };
 
+  // 👇 Ahora calcula el estado real en base a due_date + período de gracia de 5 días
   const resolverEstadoCuota = (u) => {
-    const estaActivoDB = u.enabled === true; 
-    return estaActivoDB 
-      ? { texto: "Activo", clase: styles.active } 
+    const subs = u.subscriptions;
+    if (!subs || subs.length === 0) return { texto: "Inactivo", clase: styles.inactive };
+
+    const activa = subs.some(sub => {
+      if (!sub.due_date) return false;
+      const vencimiento = new Date(sub.due_date + "T23:59:59");
+      vencimiento.setDate(vencimiento.getDate() + 5); // 5 días de gracia
+      return new Date() <= vencimiento;
+    });
+
+    return activa
+      ? { texto: "Activo", clase: styles.active }
       : { texto: "Inactivo", clase: styles.inactive };
   };
 
@@ -112,11 +134,11 @@ const CustomersTable = ({ onSelectCliente }) => {
     setNuevoUsuario({ dni: "", first_name: "", last_name: "", email: "", phone: "", plan_id: "" });
     setTieneAlerta(false);
     setAlertaMedica({ name: "", severity: "Baja", observation: "" });
-    setEditIndex(null);
+    setEditUserId(null);
     setMostrarModal(true);
   };
 
-  const cerrarModal = () => { setMostrarModal(false); setEditIndex(null); };
+  const cerrarModal = () => { setMostrarModal(false); setEditUserId(null); };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -132,18 +154,12 @@ const CustomersTable = ({ onSelectCliente }) => {
     e.preventDefault();
     try {
       setSaving(true);
-      if (editIndex !== null) {
-        const userId = usuariosPagina[editIndex].id;
-        await actualizarCliente(userId, nuevoUsuario);
+      if (editUserId !== null) {
+        await actualizarCliente(editUserId, nuevoUsuario);
         await registrarMovimiento(user.id, 'Clientes', 'ACTUALIZACIÓN', `Modificó datos de: ${nuevoUsuario.first_name} ${nuevoUsuario.last_name}`);
         mostrarToast("✅ Usuario actualizado");
       } else {
-        // 👉 AQUÍ ENVIAMOS EL DNI COMO PASSWORD
-        const clienteCreado = await crearCliente({ 
-          ...nuevoUsuario, 
-          password: nuevoUsuario.dni 
-        });
-        
+        const clienteCreado = await crearCliente({ ...nuevoUsuario, password: nuevoUsuario.dni });
         if (tieneAlerta && clienteCreado?.id) {
           await crearAlertaMedica({ ...alertaMedica, user_id: clienteCreado.id });
         }
@@ -164,8 +180,7 @@ const CustomersTable = ({ onSelectCliente }) => {
       dni: u.dni ?? "", first_name: u.first_name ?? "", last_name: u.last_name ?? "",
       email: u.email ?? "", phone: u.phone ?? "", plan_id: u.plan_id ?? "",
     });
-    const relativeIndex = usuariosPagina.findIndex(user => user.id === u.id);
-    setEditIndex(relativeIndex);
+    setEditUserId(u.id);
     setMostrarModal(true);
   };
 
@@ -180,7 +195,7 @@ const CustomersTable = ({ onSelectCliente }) => {
         <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && cerrarModal()}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
-              <h3>{editIndex !== null ? "Editar Cliente" : "Nuevo Cliente"}</h3>
+              <h3>{editUserId !== null ? "Editar Cliente" : "Nuevo Cliente"}</h3>
               <button className={styles.modalCloseBtn} onClick={cerrarModal}>&times;</button>
             </div>
             <form className={styles.modalBody} onSubmit={handleSubmit}>
@@ -199,7 +214,7 @@ const CustomersTable = ({ onSelectCliente }) => {
                 </select>
               </div>
 
-              {editIndex === null && (
+              {editUserId === null && (
                 <div className={styles.medicalSection}>
                   <div className={styles.medicalToggle}>
                     <input type="checkbox" id="medicalCheck" checked={tieneAlerta} onChange={(e) => setTieneAlerta(e.target.checked)} />
@@ -245,7 +260,7 @@ const CustomersTable = ({ onSelectCliente }) => {
           <div className={styles.actionsHeader}>
             <div className={styles.searchContainer}>
               <span className={styles.searchIcon}><SearchIcon /></span>
-              <input type="text" placeholder="Buscar cliente..." value={busqueda} onChange={(e) => {setBusqueda(e.target.value); setCurrentPage(1);}} className={styles.searchInput} />
+              <input type="text" placeholder="Buscar cliente..." value={busqueda} onChange={(e) => { setBusqueda(e.target.value); setCurrentPage(1); }} className={styles.searchInput} />
             </div>
             <button className={styles.btnCrear} onClick={abrirModalCrear}>+ Nuevo usuario</button>
           </div>
@@ -265,7 +280,7 @@ const CustomersTable = ({ onSelectCliente }) => {
                     return (
                       <tr key={u.id}>
                         <td className={styles.nameCell}>
-                          <div className={styles.avatar}>{u.first_name[0]}{u.last_name[0]}</div>
+                          <div className={styles.avatar}>{u.first_name?.[0]}{u.last_name?.[0]}</div>
                           <div className={styles.nameText}><p>{u.first_name} {u.last_name}</p><span>Cliente</span></div>
                         </td>
                         <td>{u.dni || "-"}</td>
@@ -285,7 +300,7 @@ const CustomersTable = ({ onSelectCliente }) => {
             <div className={styles.paginador}>
               <button onClick={() => setCurrentPage(prev => prev - 1)} disabled={currentPage === 1}>Anterior</button>
               <span className={styles.paginaInfo}>Página {currentPage} de {totalPaginas}</span>
-              <button onClick={() => setCurrentPage(prev => prev + 1)} disabled={currentPage === totalPaginas}>Siguiente</button>
+              <button onClick={() => setCurrentPage(prev => prev + 1)} disabled={currentPage >= totalPaginas || totalPaginas === 0}>Siguiente</button>
             </div>
           </>
         )}

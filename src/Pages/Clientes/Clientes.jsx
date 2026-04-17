@@ -208,9 +208,22 @@ const handleVolverAlListado = () => {
 
   const estadoVisual = useMemo(() => {
     if (!cliente) return { texto: "", clase: "" };
-    const estaActivoDB = cliente.enabled === true || cliente.enabled === "true" || cliente.enabled === "TRUE"; 
-    return estaActivoDB 
-      ? { texto: "Socio Activo", clase: styles.statusActive } 
+    
+    console.log("CLIENTE subscriptions:", JSON.stringify(cliente.subscriptions, null, 2));
+    console.log("CLIENTE enabled:", cliente.enabled);
+
+    const subs = cliente.subscriptions;
+    if (!subs || subs.length === 0) return { texto: "Inactivo", clase: styles.statusInactive };
+
+    const activa = subs.some(sub => {
+      if (!sub.due_date) return false;
+      const vencimiento = new Date(sub.due_date + "T23:59:59");
+      vencimiento.setDate(vencimiento.getDate() + 5); // 5 días de gracia
+      return new Date() <= vencimiento;
+    });
+
+    return activa
+      ? { texto: "Socio Activo", clase: styles.statusActive }
       : { texto: "Inactivo", clase: styles.statusInactive };
   }, [cliente]);
 
